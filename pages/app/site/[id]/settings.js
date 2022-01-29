@@ -107,7 +107,7 @@ export default function SiteSettings() {
       if (available) {
         setSubdomainError(null);
       } else {
-        setSubdomainError(`${debouncedSubdomain}.vercel.pub`);
+        setSubdomainError(`${debouncedSubdomain}.therunclub.xyz`);
       }
     }
   }, [debouncedSubdomain]);
@@ -120,14 +120,14 @@ export default function SiteSettings() {
           duration: 10000,
         }}
       />
-      <div className="max-w-screen-xl mx-auto px-10 sm:px-20 mt-20 mb-16">
-        <h1 className="font-cal text-5xl mb-12">Site Settings</h1>
-        <div className="mb-28 flex flex-col space-y-12">
+      <div className="max-w-screen-xl px-10 mx-auto mt-20 mb-16 sm:px-20">
+        <h1 className="mb-12 text-5xl font-cal">Site Settings</h1>
+        <div className="flex flex-col space-y-12 mb-28">
           <div className="flex flex-col space-y-6">
-            <h2 className="font-cal text-2xl">Site Name</h2>
-            <div className="border border-gray-700 rounded-lg overflow-hidden flex items-center max-w-lg">
+            <h2 className="text-2xl font-cal">Site Name</h2>
+            <div className="flex items-center max-w-lg overflow-hidden border border-gray-700 rounded-lg">
               <input
-                className="w-full px-5 py-3 font-cal text-gray-700 bg-white border-none focus:outline-none focus:ring-0 rounded-none placeholder-gray-400"
+                className="w-full px-5 py-3 text-gray-700 placeholder-gray-400 bg-white border-none rounded-none font-cal focus:outline-none focus:ring-0"
                 type="text"
                 name="name"
                 placeholder="Untitled Site"
@@ -139,10 +139,10 @@ export default function SiteSettings() {
             </div>
           </div>
           <div className="flex flex-col space-y-6">
-            <h2 className="font-cal text-2xl">Site Description</h2>
-            <div className="border border-gray-700 rounded-lg overflow-hidden flex items-center max-w-lg">
+            <h2 className="text-2xl font-cal">Site Description</h2>
+            <div className="flex items-center max-w-lg overflow-hidden border border-gray-700 rounded-lg">
               <textarea
-                className="w-full px-5 py-3 font-cal text-gray-700 bg-white border-none focus:outline-none focus:ring-0 rounded-none placeholder-gray-400"
+                className="w-full px-5 py-3 text-gray-700 placeholder-gray-400 bg-white border-none rounded-none font-cal focus:outline-none focus:ring-0"
                 type="text"
                 name="description"
                 rows="3"
@@ -155,10 +155,10 @@ export default function SiteSettings() {
             </div>
           </div>
           <div className="flex flex-col space-y-6">
-            <h2 className="font-cal text-2xl">Subdomain</h2>
-            <div className="border border-gray-700 rounded-lg flex items-center max-w-lg">
+            <h2 className="text-2xl font-cal">Subdomain</h2>
+            <div className="flex items-center max-w-lg border border-gray-700 rounded-lg">
               <input
-                className="w-1/2 px-5 py-3 font-cal text-gray-700 bg-white border-none focus:outline-none focus:ring-0 rounded-none rounded-l-lg placeholder-gray-400"
+                className="w-1/2 px-5 py-3 text-gray-700 placeholder-gray-400 bg-white border-none rounded-none rounded-l-lg font-cal focus:outline-none focus:ring-0"
                 type="text"
                 name="subdomain"
                 placeholder="subdomain"
@@ -167,8 +167,8 @@ export default function SiteSettings() {
                   setData((data) => ({ ...data, subdomain: e.target.value }))
                 }
               />
-              <div className="w-1/2 h-12 flex justify-center items-center font-cal rounded-r-lg border-l border-gray-600 bg-gray-100">
-                vercel.pub
+              <div className="flex items-center justify-center w-1/2 h-12 bg-gray-100 border-l border-gray-600 rounded-r-lg font-cal">
+                therunclub.xyz
               </div>
             </div>
             {subdomainError && (
@@ -179,7 +179,7 @@ export default function SiteSettings() {
             )}
           </div>
           <div className="flex flex-col space-y-6">
-            <h2 className="font-cal text-2xl">Custom Domain</h2>
+            <h2 className="text-2xl font-cal">Custom Domain</h2>
             {!data.customDomain && (
               <form
                 onSubmit={async (e) => {
@@ -202,11 +202,11 @@ export default function SiteSettings() {
                     }
                   });
                 }}
-                className="flex justify-start items-center space-x-3 max-w-lg"
+                className="flex items-center justify-start max-w-lg space-x-3"
               >
-                <div className="border border-gray-700 flex-auto rounded-lg overflow-hidden">
+                <div className="flex-auto overflow-hidden border border-gray-700 rounded-lg">
                   <input
-                    className="w-full px-5 py-3 font-cal text-gray-700 bg-white border-none focus:outline-none focus:ring-0 rounded-none placeholder-gray-400"
+                    className="w-full px-5 py-3 text-gray-700 placeholder-gray-400 bg-white border-none rounded-none font-cal focus:outline-none focus:ring-0"
                     type="text"
                     name="customDomain"
                     autoComplete="off"
@@ -236,7 +236,7 @@ export default function SiteSettings() {
               </form>
             )}
             {error && (
-              <div className="text-red-500 text-left w-full max-w-2xl mt-5 text-sm flex items-center space-x-2">
+              <div className="flex items-center w-full max-w-2xl mt-5 space-x-2 text-sm text-left text-red-500">
                 <svg
                   viewBox="0 0 24 24"
                   width="20"
@@ -288,8 +288,8 @@ export default function SiteSettings() {
             )}
             {data.customDomain && <DomainCard data={data} setData={setData} />}
           </div>
-          <div className="flex flex-col space-y-6 relative">
-            <h2 className="font-cal text-2xl">Thumbnail Image</h2>
+          <div className="relative flex flex-col space-y-6">
+            <h2 className="text-2xl font-cal">Thumbnail Image</h2>
             <div
               className={`${
                 data.image ? "" : "animate-pulse bg-gray-300 h-150"
@@ -301,7 +301,7 @@ export default function SiteSettings() {
                 {({ open }) => (
                   <button
                     onClick={open}
-                    className="absolute w-full h-full rounded-md bg-gray-200 z-10 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-all ease-linear duration-200"
+                    className="absolute z-10 flex flex-col items-center justify-center w-full h-full transition-all duration-200 ease-linear bg-gray-200 rounded-md opacity-0 hover:opacity-100"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -331,8 +331,8 @@ export default function SiteSettings() {
               )}
             </div>
             <div className="w-full h-10" />
-            <div className="flex flex-col space-y-6 max-w-lg">
-              <h2 className="font-cal text-2xl">Delete Site</h2>
+            <div className="flex flex-col max-w-lg space-y-6">
+              <h2 className="text-2xl font-cal">Delete Site</h2>
               <p>
                 Permanently delete your site and all of its contents from our
                 platform. This action is not reversible – please continue with
@@ -342,7 +342,7 @@ export default function SiteSettings() {
                 onClick={() => {
                   setShowDeleteModal(true);
                 }}
-                className="bg-red-500 text-white border-red-500 hover:text-red-500 hover:bg-white px-5 py-3 max-w-max font-cal border-solid border rounded-md focus:outline-none transition-all ease-in-out duration-150"
+                className="px-5 py-3 text-white transition-all duration-150 ease-in-out bg-red-500 border border-red-500 border-solid rounded-md hover:text-red-500 hover:bg-white max-w-max font-cal focus:outline-none"
               >
                 Delete Site
               </button>
@@ -356,18 +356,18 @@ export default function SiteSettings() {
             event.preventDefault();
             await deleteSite(siteId);
           }}
-          className="inline-block w-full max-w-md pt-8 overflow-hidden text-center align-middle transition-all bg-white shadow-xl rounded-lg"
+          className="inline-block w-full max-w-md pt-8 overflow-hidden text-center align-middle transition-all bg-white rounded-lg shadow-xl"
         >
-          <h2 className="font-cal text-2xl mb-6">Delete Site</h2>
-          <div className="grid gap-y-5 w-5/6 mx-auto">
-            <p className="text-gray-600 mb-3">
+          <h2 className="mb-6 text-2xl font-cal">Delete Site</h2>
+          <div className="grid w-5/6 mx-auto gap-y-5">
+            <p className="mb-3 text-gray-600">
               Are you sure you want to delete your site? This action is not
               reversible. Type in the full name of your site (<b>{data.name}</b>
               ) to confirm.
             </p>
-            <div className="border border-gray-700 rounded-lg flex flex-start items-center overflow-hidden">
+            <div className="flex items-center overflow-hidden border border-gray-700 rounded-lg flex-start">
               <input
-                className="w-full px-5 py-3 text-gray-700 bg-white border-none focus:outline-none focus:ring-0 rounded-none rounded-r-lg placeholder-gray-400"
+                className="w-full px-5 py-3 text-gray-700 placeholder-gray-400 bg-white border-none rounded-none rounded-r-lg focus:outline-none focus:ring-0"
                 type="text"
                 name="name"
                 placeholder={data.name}
@@ -375,10 +375,10 @@ export default function SiteSettings() {
               />
             </div>
           </div>
-          <div className="flex justify-between items-center mt-10 w-full">
+          <div className="flex items-center justify-between w-full mt-10">
             <button
               type="button"
-              className="w-full px-5 py-5 text-sm text-gray-400 hover:text-black border-t border-gray-300 rounded-bl focus:outline-none focus:ring-0 transition-all ease-in-out duration-150"
+              className="w-full px-5 py-5 text-sm text-gray-400 transition-all duration-150 ease-in-out border-t border-gray-300 rounded-bl hover:text-black focus:outline-none focus:ring-0"
               onClick={() => setShowDeleteModal(false)}
             >
               CANCEL
@@ -399,8 +399,8 @@ export default function SiteSettings() {
         </form>
       </Modal>
 
-      <footer className="h-20 z-20 fixed bottom-0 inset-x-0 border-solid border-t border-gray-500 bg-white">
-        <div className="max-w-screen-xl mx-auto px-10 sm:px-20 h-full flex justify-end items-center">
+      <footer className="fixed inset-x-0 bottom-0 z-20 h-20 bg-white border-t border-gray-500 border-solid">
+        <div className="flex items-center justify-end h-full max-w-screen-xl px-10 mx-auto sm:px-20">
           <button
             onClick={() => {
               saveSiteSettings(data);

@@ -92,17 +92,17 @@ export default function PostSettings() {
             duration: 10000,
           }}
         />
-        <div className="max-w-screen-xl mx-auto px-10 sm:px-20 mt-20 mb-16">
-          <h1 className="font-cal text-5xl mb-12">Post Settings</h1>
-          <div className="mb-28 flex flex-col space-y-12">
+        <div className="max-w-screen-xl px-10 mx-auto mt-20 mb-16 sm:px-20">
+          <h1 className="mb-12 text-5xl font-cal">Post Settings</h1>
+          <div className="flex flex-col space-y-12 mb-28">
             <div className="space-y-6">
-              <h2 className="font-cal text-2xl">Post Slug</h2>
-              <div className="border border-gray-700 rounded-lg flex items-center max-w-lg">
-                <span className="px-5 font-cal rounded-l-lg border-r border-gray-600">
-                  {settings?.site.subdomain}.vercel.pub/
+              <h2 className="text-2xl font-cal">Post Slug</h2>
+              <div className="flex items-center max-w-lg border border-gray-700 rounded-lg">
+                <span className="px-5 border-r border-gray-600 rounded-l-lg font-cal">
+                  {settings?.site.subdomain}.therunclub.xyz/
                 </span>
                 <input
-                  className="w-full px-5 py-3 font-cal text-gray-700 bg-white border-none focus:outline-none focus:ring-0 rounded-none rounded-r-lg placeholder-gray-400"
+                  className="w-full px-5 py-3 text-gray-700 placeholder-gray-400 bg-white border-none rounded-none rounded-r-lg font-cal focus:outline-none focus:ring-0"
                   type="text"
                   name="slug"
                   placeholder="post-slug"
@@ -114,7 +114,7 @@ export default function PostSettings() {
               </div>
             </div>
             <div className="space-y-6">
-              <h2 className="font-cal text-2xl">Thumbnail Image</h2>
+              <h2 className="text-2xl font-cal">Thumbnail Image</h2>
               <div
                 className={`${
                   data.image ? "" : "animate-pulse bg-gray-300 h-150"
@@ -126,7 +126,7 @@ export default function PostSettings() {
                   {({ open }) => (
                     <button
                       onClick={open}
-                      className="absolute w-full h-full rounded-md bg-gray-200 z-10 flex flex-col justify-center items-center opacity-0 hover:opacity-100 transition-all ease-linear duration-200"
+                      className="absolute z-10 flex flex-col items-center justify-center w-full h-full transition-all duration-200 ease-linear bg-gray-200 rounded-md opacity-0 hover:opacity-100"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -157,8 +157,8 @@ export default function PostSettings() {
               </div>
 
               <div className="w-full h-10" />
-              <div className="flex flex-col space-y-6 max-w-lg">
-                <h2 className="font-cal text-2xl">Delete Post</h2>
+              <div className="flex flex-col max-w-lg space-y-6">
+                <h2 className="text-2xl font-cal">Delete Post</h2>
                 <p>
                   Permanently delete your post and all of its contents from our
                   platform. This action is not reversible – please continue with
@@ -168,7 +168,7 @@ export default function PostSettings() {
                   onClick={() => {
                     setShowDeleteModal(true);
                   }}
-                  className="bg-red-500 text-white border-red-500 hover:text-red-500 hover:bg-white px-5 py-3 max-w-max font-cal border-solid border rounded-md focus:outline-none transition-all ease-in-out duration-150"
+                  className="px-5 py-3 text-white transition-all duration-150 ease-in-out bg-red-500 border border-red-500 border-solid rounded-md hover:text-red-500 hover:bg-white max-w-max font-cal focus:outline-none"
                 >
                   Delete Post
                 </button>
@@ -182,19 +182,19 @@ export default function PostSettings() {
               event.preventDefault();
               await deletePost(postId);
             }}
-            className="inline-block w-full max-w-md pt-8 overflow-hidden text-center align-middle transition-all bg-white shadow-xl rounded-lg"
+            className="inline-block w-full max-w-md pt-8 overflow-hidden text-center align-middle transition-all bg-white rounded-lg shadow-xl"
           >
-            <h2 className="font-cal text-2xl mb-6">Delete Post</h2>
-            <div className="grid gap-y-5 w-5/6 mx-auto">
-              <p className="text-gray-600 mb-3">
+            <h2 className="mb-6 text-2xl font-cal">Delete Post</h2>
+            <div className="grid w-5/6 mx-auto gap-y-5">
+              <p className="mb-3 text-gray-600">
                 Are you sure you want to delete your post? This action is not
                 reversible.
               </p>
             </div>
-            <div className="flex justify-between items-center mt-10 w-full">
+            <div className="flex items-center justify-between w-full mt-10">
               <button
                 type="button"
-                className="w-full px-5 py-5 text-sm text-gray-400 hover:text-black border-t border-gray-300 rounded-bl focus:outline-none focus:ring-0 transition-all ease-in-out duration-150"
+                className="w-full px-5 py-5 text-sm text-gray-400 transition-all duration-150 ease-in-out border-t border-gray-300 rounded-bl hover:text-black focus:outline-none focus:ring-0"
                 onClick={() => setShowDeleteModal(false)}
               >
                 CANCEL
@@ -214,8 +214,8 @@ export default function PostSettings() {
             </div>
           </form>
         </Modal>
-        <footer className="h-20 z-20 fixed bottom-0 inset-x-0 border-solid border-t border-gray-500 bg-white">
-          <div className="max-w-screen-xl mx-auto px-10 sm:px-20 h-full flex justify-end items-center">
+        <footer className="fixed inset-x-0 bottom-0 z-20 h-20 bg-white border-t border-gray-500 border-solid">
+          <div className="flex items-center justify-end h-full max-w-screen-xl px-10 mx-auto sm:px-20">
             <button
               onClick={() => {
                 savePostSettings(data);

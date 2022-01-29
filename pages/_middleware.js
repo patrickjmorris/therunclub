@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 
 export default function middleware(req) {
   const { pathname } = req.nextUrl; // get pathname of request (e.g. /blog-slug)
-  const hostname = req.headers.get("host"); // get hostname of request (e.g. demo.vercel.pub)
+  const hostname = req.headers.get("host"); // get hostname of request (e.g. demo.therunclub.xyz)
 
   // only for demo purposes – remove this if you want to use your root domain as the landing page
-  if (hostname === "vercel.pub" || hostname === "platforms.vercel.app") {
-    return NextResponse.redirect("https://demo.vercel.pub");
+  if (hostname === "therunclub.xyz" || hostname === "platforms.vercel.app") {
+    return NextResponse.redirect("https://demo.therunclub.xyz");
   }
 
   const currentHost =
     process.env.NODE_ENV === "production" && process.env.VERCEL === "1"
-      ? hostname.replace(`.vercel.pub`, "")
+      ? hostname.replace(`.therunclub.xyz`, "")
       : hostname.replace(`.localhost:3000`, "");
 
   if (pathname.startsWith(`/_sites`)) {

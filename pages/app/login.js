@@ -12,7 +12,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="flex flex-col justify-center min-h-screen py-12 bg-gray-100 sm:px-6 lg:px-8">
       <Head>
         <title>{pageTitle}</title>
         <link rel="icon" href={logo} />
@@ -41,17 +41,17 @@ export default function Login() {
       </Head>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <img
-          className="mx-auto h-12 w-auto"
+          className="w-auto h-12 mx-auto"
           src="/logo.png"
           alt="Platforms Starter Kit"
         />
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="mt-6 text-3xl font-extrabold text-center text-gray-900">
           Platforms Starter Kit
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-sm text-center text-gray-600">
           Build multi-tenant applications with custom domains. <br /> Read the{" "}
           <a
-            href="https://demo.vercel.pub/platforms-starter-kit"
+            href="https://demo.therunclub.xyz/platforms-starter-kit"
             target="_blank"
             className="font-medium text-black hover:text-gray-800"
           >
@@ -60,8 +60,8 @@ export default function Login() {
         </p>
       </div>
 
-      <div className="mt-8 mx-auto sm:w-full w-11/12 sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-md sm:rounded-lg sm:px-10">
+      <div className="w-11/12 mx-auto mt-8 sm:w-full sm:max-w-md">
+        <div className="px-4 py-8 bg-white shadow-md sm:rounded-lg sm:px-10">
           <button
             disabled={loading}
             onClick={() => {

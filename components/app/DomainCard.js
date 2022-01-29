@@ -13,12 +13,12 @@ const DomainCard = ({ data, setData }) => {
   const [removing, setRemoving] = useState(false);
 
   return (
-    <div className="w-full max-w-2xl mt-10 border border-black rounded-lg py-10">
-      <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 justify-between px-10">
+    <div className="w-full max-w-2xl py-10 mt-10 border border-black rounded-lg">
+      <div className="flex flex-col justify-between px-10 space-y-4 sm:flex-row sm:space-x-4">
         <a
           href={`http://${data.customDomain}`}
           target="_blank"
-          className="text-xl font-semibold flex justify-center sm:justify-start items-center"
+          className="flex items-center justify-center text-xl font-semibold sm:justify-start"
         >
           {data.customDomain}
           <span className="inline-block ml-2">
@@ -77,7 +77,7 @@ const DomainCard = ({ data, setData }) => {
         </div>
       </div>
 
-      <div className="flex items-center space-x-3 my-3 px-10">
+      <div className="flex items-center px-10 my-3 space-x-3">
         <svg
           viewBox="0 0 24 24"
           width="24"
@@ -114,7 +114,7 @@ const DomainCard = ({ data, setData }) => {
 
       {!valid && (
         <>
-          <div className="w-full border-t border-gray-100 mt-5 mb-8" />
+          <div className="w-full mt-5 mb-8 border-t border-gray-100" />
 
           <div className="px-10">
             <div className="flex justify-start space-x-4">
@@ -143,21 +143,21 @@ const DomainCard = ({ data, setData }) => {
               <p className="my-5 text-sm">
                 Set the following record on your DNS provider to continue:
               </p>
-              <div className="flex justify-start items-center space-x-10 bg-gray-50 p-2 rounded-md">
+              <div className="flex items-center justify-start p-2 space-x-10 rounded-md bg-gray-50">
                 <div>
                   <p className="text-sm font-bold">Type</p>
-                  <p className="text-sm font-mono mt-2">{recordType}</p>
+                  <p className="mt-2 font-mono text-sm">{recordType}</p>
                 </div>
                 <div>
                   <p className="text-sm font-bold">Name</p>
-                  <p className="text-sm font-mono mt-2">
+                  <p className="mt-2 font-mono text-sm">
                     {recordType == "CNAME" ? "www" : "@"}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-bold">Value</p>
-                  <p className="text-sm font-mono mt-2">
-                    {recordType == "CNAME" ? `cname.vercel.pub` : `76.76.21.21`}
+                  <p className="mt-2 font-mono text-sm">
+                    {recordType == "CNAME" ? `cname.therunclub.xyz` : `76.76.21.21`}
                   </p>
                 </div>
               </div>

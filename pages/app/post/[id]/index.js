@@ -127,7 +127,7 @@ export default function Post() {
       }),
     });
     await response.json();
-    router.push(`https://${post.site.subdomain}.vercel.pub/${post.slug}`);
+    router.push(`https://${post.site.subdomain}.therunclub.xyz/${post.slug}`);
   };
 
   if (isValidating)
@@ -140,18 +140,18 @@ export default function Post() {
   return (
     <>
       <Layout siteId={post?.site.id}>
-        <div className="max-w-screen-xl mx-auto px-10 sm:px-20 mt-10 mb-16">
+        <div className="max-w-screen-xl px-10 mx-auto mt-10 mb-16 sm:px-20">
           <TextareaAutosize
             name="title"
             onInput={(e) => setData({ ...data, title: e.target.value })}
-            className="w-full px-2 py-4 text-gray-800 placeholder-gray-400 mt-6 text-5xl font-cal resize-none border-none focus:outline-none focus:ring-0"
+            className="w-full px-2 py-4 mt-6 text-5xl text-gray-800 placeholder-gray-400 border-none resize-none font-cal focus:outline-none focus:ring-0"
             placeholder="Untitled Post"
             value={data.title}
           />
           <TextareaAutosize
             name="description"
             onInput={(e) => setData({ ...data, description: e.target.value })}
-            className="w-full px-2 py-3 text-gray-800 placeholder-gray-400 text-xl mb-3 resize-none border-none focus:outline-none focus:ring-0"
+            className="w-full px-2 py-3 mb-3 text-xl text-gray-800 placeholder-gray-400 border-none resize-none focus:outline-none focus:ring-0"
             placeholder="No description provided. Click to edit."
             value={data.description}
           />
@@ -167,7 +167,7 @@ export default function Post() {
           <TextareaAutosize
             name="content"
             onInput={(e) => setData({ ...data, content: e.target.value })}
-            className="w-full px-2 py-3 text-gray-800 placeholder-gray-400 text-lg mb-5 resize-none border-none focus:outline-none focus:ring-0"
+            className="w-full px-2 py-3 mb-5 text-lg text-gray-800 placeholder-gray-400 border-none resize-none focus:outline-none focus:ring-0"
             placeholder={`Write some content. Markdown supported:
 
 # A H1 header
@@ -201,8 +201,8 @@ Ordered lists look like:
             value={data.content}
           />
         </div>
-        <footer className="h-20 z-5 fixed bottom-0 inset-x-0 border-solid border-t border-gray-500 bg-white">
-          <div className="max-w-screen-xl mx-auto px-10 sm:px-20 h-full flex justify-between items-center">
+        <footer className="fixed inset-x-0 bottom-0 h-20 bg-white border-t border-gray-500 border-solid z-5">
+          <div className="flex items-center justify-between h-full max-w-screen-xl px-10 mx-auto sm:px-20">
             <div className="text-sm">
               <strong>
                 <p>{post?.published ? "Published" : "Draft"}</p>

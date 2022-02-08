@@ -12,7 +12,7 @@ export default function Home() {
       </Head>
         {/* <AudioPlayer /> */}
         <div className="max-w-xl px-6 py-12 mx-auto">
-          <h1 className="mb-12 text-5xl font-bold">Our favorite running podcasts</h1>
+          <h1 className="mb-12 text-5xl font-bold">Running Podcasts</h1>
           <div className="grid grid-cols-2 gap-4">
             {FEEDS.map((feed) => (
               <Link key={feed.slug} href={`/podcasts/${feed.slug}`}>

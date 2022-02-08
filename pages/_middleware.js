@@ -28,8 +28,10 @@ export default function middleware(req) {
         return NextResponse.redirect("/");
       }
       return NextResponse.rewrite(`/app${pathname}`);
-    } else if (hostname === "localhost:3000") {
-      return NextResponse.rewrite(`/home`);
+    }  else if (hostname === "localhost:3000" && pathname !== "/") {
+      return;
+    }  else if (hostname === "localhost:3000") {
+      return NextResponse.rewrite(`/home/`);
     } else {
       return NextResponse.rewrite(`/_sites/${currentHost}${pathname}`);
     }

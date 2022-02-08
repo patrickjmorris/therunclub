@@ -67,7 +67,7 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
   const feed = FEEDS.find((feed) => feed.slug === params.slug);
   const detailedFeed = await getFeed(feed.url);
-  const itemsForIndex = detailedFeed.items.map(selectProps("guid", "title", "isoDate", "itunes", "enclosure")).slice(0,20);
+  const itemsForIndex = detailedFeed.items.map(selectProps("guid", "title", "isoDate", "itunes", "enclosure"));
   const singleEpisode = itemsForIndex.find((item) => slugify(item.title) === params.episode)
   return {
     props: {

@@ -1,5 +1,5 @@
 import { Component } from "react";
-import Head from "next/head";
+import Script from "next/script";
 
 export default class CloudinaryUploadWidget extends Component {
   constructor(props) {
@@ -32,15 +32,10 @@ export default class CloudinaryUploadWidget extends Component {
   render() {
     return (
       <>
-        <Head>
-          // this is Next.js specific, but if you're using something like Create
-          React App, // you could download the script in componentDidMount using
-          this method: https://stackoverflow.com/a/34425083/1424568
-          <script
+          <Script
             src="https://widget.cloudinary.com/v2.0/global/all.js"
-            type="text/javascript"
-          />
-        </Head>
+          ></Script>
+        
         {this.props.children({ open: this.open })}
       </>
     );

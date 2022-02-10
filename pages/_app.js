@@ -7,7 +7,7 @@ export default function App({
   pageProps: { session, ...pageProps },
 }) {
   return (
-    <PlausibleProvider domain="demo.therunclub.xyz">
+    <PlausibleProvider domain="therunclub.xyz">
       <SessionProvider session={session}>
         <Component {...pageProps} />
       </SessionProvider>

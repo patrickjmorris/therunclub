@@ -51,16 +51,15 @@ export async function getStaticPaths() {
   const allPodcastEpisodes = titleEpisodes.flatMap(episode => (
       episode.allFeeds
   ));
-  // console.log(allPodcastEpisodes.find((feed) => feed.slug === params.slug))
   const data = allPodcastEpisodes.map(episode => (
     {params: {
       slug: slugify(episode.podcastTitle),
       episode: slugify(episode.podcastEpisode) 
     }
-  }))
+  })).slice(0,10)
   return {
     paths: data,
-    fallback: false,
+    fallback: 'blocking',
   };
 }   
 

@@ -53,7 +53,6 @@ export async function getStaticPaths() {
       episode
   ));
   const data = allPodcastEpisodes.map(episode => (
-    console.log(allPodcastEpisodes),
     {params: {
       slug: slugify(episode.podcastTitle),
       episode: slugify(episode.podcastEpisode),

@@ -48,15 +48,17 @@ export default function Feed({  singleEpisode, itunes, title, description }) {
 
 export async function getStaticPaths() {
   const titleEpisodes = await getFeedEpisodes()
-  const allPodcastEpisodes = titleEpisodes.flatMap(episode => (
-      episode.allFeeds
+  const limitEpisodes = titleEpisodes.map(episode => episode.allFeeds.slice(0,10))
+  const allPodcastEpisodes = limitEpisodes.flatMap(episode => (
+      episode
   ));
   const data = allPodcastEpisodes.map(episode => (
+    console.log(allPodcastEpisodes),
     {params: {
       slug: slugify(episode.podcastTitle),
-      episode: slugify(episode.podcastEpisode) 
+      episode: slugify(episode.podcastEpisode),
     }
-  })).slice(0,10)
+  }))
   return {
     paths: data,
     fallback: 'blocking',

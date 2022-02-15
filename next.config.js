@@ -4,6 +4,8 @@ module.exports = {
       "res.cloudinary.com",
       "abs.twimg.com",
       "pbs.twimg.com",
+      "yt3.ggpht.com", 
+      "i.ytimg.com",
       "api.producthunt.com",
       "avatars.githubusercontent.com",
       "d3t3ozftmdmh3i.cloudfront.net",

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import linkifyHtml from "linkifyjs/html";
+import linkifyHtml from 'linkify-html';
 import classNames from "classnames";
 import { formatDistance } from "date-fns";
 import { getChannelInfo, getAllPlaylistItems } from "lib/youtube";
@@ -97,7 +97,7 @@ export default function Channel({ title, videos }) {
   <>
     <div className="aspect-w-16 aspect-h-9">
                 <iframe
-                  src={`https://www.youtube.com/embed/${videos[currentVideoIndex].snippet.resourceId.videoId}?autoplay=1`}
+                  src={`https://www.youtube-nocookie.com/embed/${videos[currentVideoIndex].snippet.resourceId.videoId}?autoplay=1`}
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen

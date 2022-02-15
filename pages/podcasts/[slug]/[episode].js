@@ -2,7 +2,7 @@ import { FEEDS, getFeed, getFeedEpisodes } from "@/lib/podcast";
 import { format } from "date-fns";
 import BlurImage from "@/components/BlurImage";
 import selectProps from "@/lib/selectProps";
-import { Anchorme } from 'react-anchorme';
+import linkifyHtml from 'linkify-html';
 import {slugify} from "@/lib/util"
 import Link from "next/link";
 
@@ -19,7 +19,12 @@ export default function Feed({  singleEpisode, itunes, title, description }) {
             layout="responsive"
             objectFit="cover"
             />
-            <Anchorme>{description}</Anchorme>
+            <p
+                className="prose"
+                dangerouslySetInnerHTML={{
+                  __html: linkifyHtml(description),
+                }}
+              ></p>
             <Link href={`/podcasts/${slugify(title)}`}><a>See more from {title}</a></Link>
      </div>     
       <div className="space-y-4">

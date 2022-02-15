@@ -1,7 +1,7 @@
 import { FEEDS, getFeed, getFeedEpisodes } from "@/lib/podcast";
 import { format } from "date-fns";
 import BlurImage from "@/components/BlurImage";
-import { Anchorme } from 'react-anchorme';
+import linkifyHtml from 'linkify-html';
 import Link from "next/link";
 import {slugify} from "@/lib/util";
 
@@ -20,7 +20,12 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
             layout="responsive"
             objectFit="cover"
             />
-            <Anchorme>{description}</Anchorme>
+            <p
+                className="prose"
+                dangerouslySetInnerHTML={{
+                  __html: linkifyHtml(description),
+                }}
+              ></p>
      {lastBuildDate ? <p>Last Updated: {format(new Date(lastBuildDate), "PPP")}</p>: ''}
      </div>     
       <div className="space-y-4">
@@ -43,8 +48,18 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
             </a>
           </Link>
           {
-              item.description ? <p className="">{item.description}</p> :
-              item.contentSnippet ? <p className="">{item.contentSnippet}</p> : ''
+              item.description ?  <p
+                className="prose"
+                dangerouslySetInnerHTML={{
+                  __html: linkifyHtml(item.description),
+                }}
+              ></p> :
+              item.contentSnippet ?  <p
+                className="prose"
+                dangerouslySetInnerHTML={{
+                  __html: linkifyHtml(item.contentSnippet),
+                }}
+              ></p> : ''
             }
             <div>{format(new Date(item.isoDate), "PPP")}</div>
             </div>

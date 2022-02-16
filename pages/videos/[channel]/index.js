@@ -2,7 +2,7 @@ import { useState } from 'react'
 import linkifyHtml from 'linkify-html';
 import classNames from "classnames";
 import { formatDistance } from "date-fns";
-import { getChannelInfo, getAllPlaylistItems } from "lib/youtube";
+import { getChannelInfo, getAllPlaylistItems, CHANNELS } from "lib/youtube";
 import Image from "next/image";
 
 export default function Channel({ title, videos }) {
@@ -156,26 +156,35 @@ export default function Channel({ title, videos }) {
     </div>)
 };
 
+export async function getStaticPaths() {
+  const data = CHANNELS.map(id => (
+      {params: {
+          channel: id
+    }
+}))
+  return {
+    paths: data,
+    fallback: 'blocking',
+  };
+} 
 
-export async function getServerSideProps({ query }) {
-const { id } = query;
+export async function getStaticProps({ params }) {
+    const info = await getChannelInfo(params.channel);
 
-const info = await getChannelInfo(id);
+    if (info ?? info.pageInfo.totalResults === 0) {
+        return {
+        notFound: true,
+        };
+    }
 
-if (info.pageInfo.totalResults === 0) {
+    const playlistId = info.items[0].contentDetails.relatedPlaylists.uploads;
+    const title = info.items[0].snippet.title;
+    const videos = await getAllPlaylistItems(playlistId);
     return {
-    notFound: true,
+        props: {
+        title,
+        videos,
+        },
     };
 }
 
-const playlistId = info.items[0].contentDetails.relatedPlaylists.uploads;
-const title = info.items[0].snippet.title;
-const videos = await getAllPlaylistItems(playlistId);
-
-return {
-    props: {
-    title,
-    videos,
-    },
-};
-}

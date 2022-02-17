@@ -4,6 +4,7 @@ import classNames from "classnames";
 import { formatDistance } from "date-fns";
 import { getChannelInfo, getAllPlaylistItems, CHANNELS } from "lib/youtube";
 import Image from "next/image";
+import Link from 'next/link';
 
 export default function Channel({ title, videos }) {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(null);
@@ -114,6 +115,9 @@ export default function Channel({ title, videos }) {
                   ),
                 }}
               ></p>
+              <Link className="block p-4 border border-gray-200 rounded-lg hover:border-gray-500"
+            href={`/videos/${videos[currentVideoIndex].snippet.channelId}/${videos[currentVideoIndex].snippet.resourceId.videoId}`}><a>Go to video page</a></Link>
+            <a></a>
             </>
           )}
         </div>
@@ -171,7 +175,7 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
     const info = await getChannelInfo(params.channel);
 
-    if (info ?? info.pageInfo.totalResults === 0) {
+    if (info.pageInfo.totalResults === 0) {
         return {
         notFound: true,
         };

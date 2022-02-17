@@ -1,4 +1,4 @@
-import { getChannelInfo, getAllPlaylistItems, CHANNELS } from "lib/youtube";
+import { getChannelInfo, getAllPlaylistItems,getPlaylistItems, CHANNELS } from "lib/youtube";
 import Link from "next/link";
 import Image from "next/image";
 import { format } from "date-fns";
@@ -40,14 +40,7 @@ export async function getStaticProps() {
   const channelInfos = await Promise.all(
     CHANNELS.map((channelId) => getChannelInfo(channelId))
   );
-
-  const channelPlaylists = channelInfos.map((channelInfo) => channelInfo.items[0].contentDetails.relatedPlaylists.uploads)
-  // console.log(JSON.stringify(channelInfos, null, 2));
-  // console.log(channelPlaylists)
-  // const videos = await Promise.all(
-  //   channelPlaylists.map((channelPlaylist) => getAllPlaylistItems(channelPlaylist))
-  // );
-  console.log(channelPlaylists)
+  
   return {
     props: {
       channelInfos,

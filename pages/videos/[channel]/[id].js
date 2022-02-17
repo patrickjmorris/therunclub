@@ -1,34 +1,34 @@
-import { useState } from 'react'
 import linkifyHtml from 'linkify-html';
-import classNames from "classnames";
 import { formatDistance } from "date-fns";
-import { getChannelInfo, getAllPlaylistItems, CHANNELS } from "lib/youtube";
-import Image from "next/image";
+import { getChannelInfo, getPlaylistItems, getVideoInfo, CHANNELS } from "lib/youtube";
 
-export default function Channel({ title, videos }) {
+export default function Video({ video, id }) {
   return (
     <div>
       <div className="max-w-6xl p-4 mx-auto lg:p-8">
         <h1 className="my-4 text-2xl font-bold sm:text-3xl lg:text-4xl">
-          {title}
+          {video.title}
         </h1>
   <>
     <div className="aspect-w-16 aspect-h-9">
         <iframe
-          src={`https://www.youtube-nocookie.com/embed/${videos[currentVideoIndex].snippet.resourceId.videoId}?autoplay=1`}
+          src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1`}
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
         ></iframe>
       </div>
       <h2 className="my-6 text-3xl font-medium">
-        {videos[currentVideoIndex].snippet.title}
+        {video.title}
       </h2>
+      <p className="mt-2 text-gray-700 text-s">
+          Published {formatDistance(new Date(video.publishedAt), new Date())}
+      </p>
       <p
         className="prose"
         dangerouslySetInnerHTML={{
           __html: linkifyHtml(
-            videos[currentVideoIndex].snippet.description?.replace(/\n/g, " <br />")
+            video.description?.replace(/\n/g, " <br />")
           ),
         }}
       ></p>
@@ -39,10 +39,22 @@ export default function Channel({ title, videos }) {
 };
 
 export async function getStaticPaths() {
-  const channelData = CHANNELS.map(id => id)
-  const playlistId = channelData.info.items[0].contentDetails.relatedPlaylists.uploads;
-  const videos = await getAllPlaylistItems(playlistId);
-  const data = videos.map(
+  const channelInfos = await Promise.all(
+    CHANNELS.map((channelId) => getChannelInfo(channelId))
+  );
+
+  const channelPlaylists = channelInfos.map((channelInfo) => channelInfo.items[0].contentDetails.relatedPlaylists.uploads)
+  // console.log(JSON.stringify(channelInfos, null, 2));
+  const videos = await Promise.all(
+    channelPlaylists.map((channelPlaylist) => getPlaylistItems(channelPlaylist)
+    )
+  );
+  
+  const allVideos = videos.flatMap(video => (
+    video
+  ));
+  
+  const data = allVideos.map(
     (
       {
         snippet: {
@@ -50,7 +62,8 @@ export async function getStaticPaths() {
           resourceId: { videoId },
         },
       },
-    ) => { return ({channel: channelId, id: videoId})})
+    ) => { return ({params: {channel: channelId, id: videoId}})})
+    // console.log(data)
     return {
       paths: data,
       fallback: 'blocking',
@@ -58,22 +71,12 @@ export async function getStaticPaths() {
 } 
 
 export async function getStaticProps({ params }) {
-const info = await getChannelInfo(params.channel);
-
-if (info.pageInfo.totalResults === 0) {
-    return {
-    notFound: true,
-    };
-}
-
-const playlistId = info.items[0].contentDetails.relatedPlaylists.uploads;
-const title = info.items[0].snippet.title;
-const videos = await getAllPlaylistItems(playlistId);
-
+const video = await getVideoInfo(params.id);
+// console.log(video.items[0].snippet)
 return {
     props: {
-    title,
-    videos,
+      video: video.items[0].snippet,
+      id: params.id
     },
 };
 }

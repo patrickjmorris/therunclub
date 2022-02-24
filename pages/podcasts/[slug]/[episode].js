@@ -1,4 +1,4 @@
-import { FEEDS, getFeed, getFeedEpisodes } from "@/lib/podcast";
+import { FEEDS, getFeed, getFeedEpisodes, getHomeFeedEpisodes } from "@/lib/podcast";
 import { format } from "date-fns";
 import BlurImage from "@/components/BlurImage";
 import selectProps from "@/lib/selectProps";
@@ -74,6 +74,7 @@ export async function getStaticProps({ params }) {
   const detailedFeed = await getFeed(feed.url);
   const itemsForIndex = detailedFeed.items.map(selectProps("guid", "title", "isoDate", "itunes", "enclosure"));
   const singleEpisode = itemsForIndex.find((item) => slugify(item.title) === params.episode)
+  // console.log(await getHomeFeedEpisodes())
   return {
     props: {
       feed,

@@ -1,4 +1,5 @@
 const defaultTheme = require("tailwindcss/defaultTheme");
+const colors = require('tailwindcss/colors')
 
 module.exports = {
   content: [
@@ -14,6 +15,10 @@ module.exports = {
     extend: {
       colors: {
         current: "currentColor",
+        teal: colors.teal,
+        cyan: colors.cyan,
+        rose: colors.rose,
+        blue: colors.blue
       },
       width: {
         1536: "1536px",

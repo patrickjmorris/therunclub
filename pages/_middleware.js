@@ -39,7 +39,7 @@ export default function middleware(req) {
       hostname === "therunclub.vercel.app" || 
       hostname === "therunclub.xyz"
       ) {
-        url.pathname = `/home`;
+        url.pathname = `/`;
         return NextResponse.rewrite(url);
       } else {
         url.pathname = `/_sites/${currentHost}${pathname}`;

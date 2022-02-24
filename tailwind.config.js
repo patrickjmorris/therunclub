@@ -17,6 +17,8 @@ module.exports = {
         current: "currentColor",
         teal: colors.teal,
         cyan: colors.cyan,
+        rose: colors.rose,
+        blue: colors.blue
       },
       width: {
         1536: "1536px",

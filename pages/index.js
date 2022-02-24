@@ -1,115 +1,21 @@
 import { Fragment } from 'react'
 import { Popover, Transition } from '@headlessui/react'
 import {
-  CloudUploadIcon,
-  CogIcon,
-  LockClosedIcon,
   MenuIcon,
-  RefreshIcon,
-  ServerIcon,
-  ShieldCheckIcon,
   XIcon,
 } from '@heroicons/react/outline'
 import { ChevronRightIcon, ExternalLinkIcon } from '@heroicons/react/solid'
+import { getChannelInfo, getPlaylistItems, CHANNELS } from "lib/youtube";
+import {getHomeFeedEpisodes} from "@/lib/podcast"
+import { orderBy } from "lodash";
+import {slugify} from "@/lib/util"
 
 const navigation = [
   { name: 'Podcasts', href: '/podcasts' },
   { name: 'Videos', href: '/videos' },
-  { name: 'Training', href: '/training' },
-  { name: 'Company', href: '#' },
+  { name: 'About', href: '/about' },
 ]
-const features = [
-  {
-    name: 'Push to Deploy',
-    description: 'Ac tincidunt sapien vehicula erat auctor pellentesque rhoncus. Et magna sit morbi vitae lobortis.',
-    icon: CloudUploadIcon,
-  },
-  {
-    name: 'SSL Certificates',
-    description: 'Qui aut temporibus nesciunt vitae dicta repellat sit dolores pariatur. Temporibus qui illum aut.',
-    icon: LockClosedIcon,
-  },
-  {
-    name: 'Simple Queues',
-    description: 'Rerum quas incidunt deleniti quaerat suscipit mollitia. Amet repellendus ut odit dolores qui.',
-    icon: RefreshIcon,
-  },
-  {
-    name: 'Advanced Security',
-    description: 'Ullam laboriosam est voluptatem maxime ut mollitia commodi. Et dignissimos suscipit perspiciatis.',
-    icon: ShieldCheckIcon,
-  },
-  {
-    name: 'Powerful API',
-    description:
-      'Ab a facere voluptatem in quia corrupti veritatis aliquam. Veritatis labore quaerat ipsum quaerat id.',
-    icon: CogIcon,
-  },
-  {
-    name: 'Database Backups',
-    description: 'Quia qui et est officia cupiditate qui consectetur. Ratione similique et impedit ea ipsum et.',
-    icon: ServerIcon,
-  },
-]
-const blogPosts = [
-  {
-    id: 1,
-    title: 'Boost your conversion rate',
-    href: '#',
-    date: 'Mar 16, 2020',
-    datetime: '2020-03-16',
-    category: { name: 'Article', href: '#' },
-    imageUrl:
-      'https://images.unsplash.com/photo-1496128858413-b36217c2ce36?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1679&q=80',
-    preview:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Architecto accusantium praesentium eius, ut atque fuga culpa, similique sequi cum eos quis dolorum.',
-    author: {
-      name: 'Roel Aufderehar',
-      imageUrl:
-        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-      href: '#',
-    },
-    readingLength: '6 min',
-  },
-  {
-    id: 2,
-    title: 'How to use search engine optimization to drive sales',
-    href: '#',
-    date: 'Mar 10, 2020',
-    datetime: '2020-03-10',
-    category: { name: 'Video', href: '#' },
-    imageUrl:
-      'https://images.unsplash.com/photo-1547586696-ea22b4d4235d?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1679&q=80',
-    preview:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Velit facilis asperiores porro quaerat doloribus, eveniet dolore. Adipisci tempora aut inventore optio animi., tempore temporibus quo laudantium.',
-    author: {
-      name: 'Brenna Goyette',
-      imageUrl:
-        'https://images.unsplash.com/photo-1550525811-e5869dd03032?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-      href: '#',
-    },
-    readingLength: '4 min',
-  },
-  {
-    id: 3,
-    title: 'Improve your customer experience',
-    href: '#',
-    date: 'Feb 12, 2020',
-    datetime: '2020-02-12',
-    category: { name: 'Case Study', href: '#' },
-    imageUrl:
-      'https://images.unsplash.com/photo-1492724441997-5dc865305da7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1679&q=80',
-    preview:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Sint harum rerum voluptatem quo recusandae magni placeat saepe molestiae, sed excepturi cumque corporis perferendis hic.',
-    author: {
-      name: 'Daniela Metz',
-      imageUrl:
-        'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-      href: '#',
-    },
-    readingLength: '11 min',
-  },
-]
+
 const footerNavigation = {
   solutions: [
     { name: 'Marketing', href: '#' },
@@ -122,18 +28,6 @@ const footerNavigation = {
     { name: 'Documentation', href: '#' },
     { name: 'Guides', href: '#' },
     { name: 'API Status', href: '#' },
-  ],
-  company: [
-    { name: 'About', href: '#' },
-    { name: 'Blog', href: '#' },
-    { name: 'Jobs', href: '#' },
-    { name: 'Press', href: '#' },
-    { name: 'Partners', href: '#' },
-  ],
-  legal: [
-    { name: 'Claim', href: '#' },
-    { name: 'Privacy', href: '#' },
-    { name: 'Terms', href: '#' },
   ],
   social: [
     {
@@ -184,23 +78,10 @@ const footerNavigation = {
         </svg>
       ),
     },
-    {
-      name: 'Dribbble',
-      href: '#',
-      icon: (props) => (
-        <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
-          <path
-            fillRule="evenodd"
-            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.51 0 10-4.48 10-10S17.51 2 12 2zm6.605 4.61a8.502 8.502 0 011.93 5.314c-.281-.054-3.101-.629-5.943-.271-.065-.141-.12-.293-.184-.445a25.416 25.416 0 00-.564-1.236c3.145-1.28 4.577-3.124 4.761-3.362zM12 3.475c2.17 0 4.154.813 5.662 2.148-.152.216-1.443 1.941-4.48 3.08-1.399-2.57-2.95-4.675-3.189-5A8.687 8.687 0 0112 3.475zm-3.633.803a53.896 53.896 0 013.167 4.935c-3.992 1.063-7.517 1.04-7.896 1.04a8.581 8.581 0 014.729-5.975zM3.453 12.01v-.26c.37.01 4.512.065 8.775-1.215.25.477.477.965.694 1.453-.109.033-.228.065-.336.098-4.404 1.42-6.747 5.303-6.942 5.629a8.522 8.522 0 01-2.19-5.705zM12 20.547a8.482 8.482 0 01-5.239-1.8c.152-.315 1.888-3.656 6.703-5.337.022-.01.033-.01.054-.022a35.318 35.318 0 011.823 6.475 8.4 8.4 0 01-3.341.684zm4.761-1.465c-.086-.52-.542-3.015-1.659-6.084 2.679-.423 5.022.271 5.314.369a8.468 8.468 0 01-3.655 5.715z"
-            clipRule="evenodd"
-          />
-        </svg>
-      ),
-    },
   ],
 }
 
-export default function Example() {
+export default function HomePage({sortedHomeData, sortedPodcastFeed}) {
   return (
     <div className="bg-white">
       <div className="relative overflow-hidden">
@@ -213,7 +94,7 @@ export default function Example() {
               <div className="flex items-center flex-1">
                 <div className="flex items-center justify-between w-full md:w-auto">
                   <a href="#">
-                    <span className="sr-only">Workflow</span>
+                    <span className="sr-only">The Run Club</span>
                     <img
                       className="w-auto h-8 sm:h-10"
                       src="https://tailwindui.com/img/logos/workflow-mark-teal-200-cyan-400.svg"
@@ -244,10 +125,10 @@ export default function Example() {
                   Log in
                 </a>
                 <a
-                  href="#"
+                  href="/discord"
                   className="inline-flex items-center px-4 py-2 text-base font-medium text-white bg-gray-600 border border-transparent rounded-md hover:bg-gray-700"
                 >
-                  Start free trial
+                  Sign Up
                 </a>
               </div>
             </nav>
@@ -296,7 +177,7 @@ export default function Example() {
                       href="#"
                       className="block w-full px-4 py-3 font-medium text-center text-white rounded-md shadow bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
                     >
-                      Start free trial
+                      Sign up
                     </a>
                   </div>
                   <div className="px-5 mt-6">
@@ -318,16 +199,16 @@ export default function Example() {
               <div className="lg:grid lg:grid-cols-2 lg:gap-8">
                 <div className="max-w-md px-4 mx-auto sm:max-w-2xl sm:px-6 sm:text-center lg:px-0 lg:text-left lg:flex lg:items-center">
                   <div className="lg:py-24">
-                    <a
-                      href="https://discord.com/"
+                    {/* <a
+                      href="#"
                       className="inline-flex items-center p-1 pr-2 text-white bg-black rounded-full sm:text-base lg:text-sm xl:text-base hover:text-gray-200"
                     >
                       <span className="px-3 py-0.5 text-white text-xs font-semibold leading-5 uppercase tracking-wide bg-gradient-to-r from-teal-500 to-cyan-600 rounded-full">
-                        Start Chatting
+                        We're hiring
                       </span>
-                      <span className="ml-4 text-sm">Join us on Discord</span>
+                      <span className="ml-4 text-sm">Visit our careers page</span>
                       <ChevronRightIcon className="w-5 h-5 ml-2 text-gray-500" aria-hidden="true" />
-                    </a>
+                    </a> */}
                     <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-white sm:mt-5 sm:text-6xl lg:mt-6 xl:text-6xl">
                       <span className="block">A better way for</span>
                       <span className="block pb-3 text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-cyan-400 sm:pb-5">
@@ -335,8 +216,7 @@ export default function Example() {
                       </span>
                     </h1>
                     <p className="text-base text-gray-300 sm:text-xl lg:text-lg xl:text-xl">
-                      Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui Lorem cupidatat commodo. Elit
-                      sunt amet fugiat veniam occaecat fugiat.
+                      Find, listen and watch to the best running content all in one spot. Jump into the chat to talk about the latest gear, training questions, and race results.
                     </p>
                     <div className="mt-10 sm:mt-12">
                       <form action="#" className="sm:max-w-xl sm:mx-auto lg:mx-0">
@@ -361,14 +241,6 @@ export default function Example() {
                             </button>
                           </div>
                         </div>
-                        <p className="mt-3 text-sm text-gray-300 sm:mt-4">
-                          Start your free 14-day trial, no credit card necessary. By providing your email, you agree to
-                          our{' '}
-                          <a href="#" className="font-medium text-white">
-                            terms of service
-                          </a>
-                          .
-                        </p>
                       </form>
                     </div>
                   </div>
@@ -377,8 +249,8 @@ export default function Example() {
                   <div className="max-w-md px-4 mx-auto sm:max-w-2xl sm:px-6 lg:max-w-none lg:px-0">
                     {/* Illustration taken from Lucid Illustrations: https://lucid.pixsellz.io/ */}
                     <img
-                      className="w-full lg:absolute lg:inset-y-0 lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
-                      src="https://tailwindui.com/img/component-images/cloud-illustration-teal-cyan.svg"
+                      className="w-full rounded-lg lg:absolute lg:inset-y-0 lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
+                      src="https://cdn.dribbble.com/users/29836/screenshots/4532142/media/4bb496e2fe6d15a2c391fd6e7f32859f.jpg"
                       alt=""
                     />
                   </div>
@@ -391,13 +263,12 @@ export default function Example() {
           <div className="relative pt-16 bg-gray-50 sm:pt-24 lg:pt-32">
             <div className="max-w-md px-4 mx-auto text-center sm:px-6 sm:max-w-3xl lg:px-8 lg:max-w-7xl">
               <div>
-                <h2 className="text-base font-semibold tracking-wider uppercase text-cyan-600">Serverless</h2>
+                <h2 className="text-base font-semibold tracking-wider uppercase text-cyan-600">Running Content</h2>
                 <p className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                  No server? No problem.
+                  Your favorite running podcasts and videos
                 </p>
                 <p className="mx-auto mt-5 text-xl text-gray-500 max-w-prose">
-                  Phasellus lorem quam molestie id quisque diam aenean nulla in. Accumsan in quis quis nunc, ullamcorper
-                  malesuada. Eleifend condimentum id viverra nulla.
+                  Enjoy and explore all the amazing content being produced for runners. Whether it's a podcasts of some friends chatting about the latest race results or a video about the latest shoe release, we've got you covered. 
                 </p>
               </div>
               <div className="mt-12 -mb-10 sm:-mb-24 lg:-mb-80">
@@ -410,128 +281,108 @@ export default function Example() {
             </div>
           </div>
 
-          {/* Feature section with grid */}
-          <div className="relative py-16 bg-white sm:py-24 lg:py-32">
-            <div className="max-w-md px-4 mx-auto text-center sm:max-w-3xl sm:px-6 lg:px-8 lg:max-w-7xl">
-              <h2 className="text-base font-semibold tracking-wider uppercase text-cyan-600">Deploy faster</h2>
-              <p className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                Everything you need to deploy your app
-              </p>
-              <p className="mx-auto mt-5 text-xl text-gray-500 max-w-prose">
-                Phasellus lorem quam molestie id quisque diam aenean nulla in. Accumsan in quis quis nunc, ullamcorper
-                malesuada. Eleifend condimentum id viverra nulla.
-              </p>
-              <div className="mt-12">
-                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                  {features.map((feature) => (
-                    <div key={feature.name} className="pt-6">
-                      <div className="flow-root px-6 pb-8 rounded-lg bg-gray-50">
-                        <div className="-mt-6">
-                          <div>
-                            <span className="inline-flex items-center justify-center p-3 rounded-md shadow-lg bg-gradient-to-r from-teal-500 to-cyan-600">
-                              <feature.icon className="w-6 h-6 text-white" aria-hidden="true" />
-                            </span>
-                          </div>
-                          <h3 className="mt-8 text-lg font-medium tracking-tight text-gray-900">{feature.name}</h3>
-                          <p className="mt-5 text-base text-gray-500">{feature.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Testimonial section */}
-          <div className="pb-16 bg-gradient-to-r from-teal-500 to-cyan-600 lg:pb-0 lg:z-10 lg:relative">
-            <div className="lg:mx-auto lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-3 lg:gap-8">
-              <div className="relative lg:-my-8">
-                <div aria-hidden="true" className="absolute inset-x-0 top-0 bg-white h-1/2 lg:hidden" />
-                <div className="max-w-md px-4 mx-auto sm:max-w-3xl sm:px-6 lg:p-0 lg:h-full">
-                  <div className="overflow-hidden shadow-xl aspect-w-10 aspect-h-6 rounded-xl sm:aspect-w-16 sm:aspect-h-7 lg:aspect-none lg:h-full">
-                    <img
-                      className="object-cover lg:h-full lg:w-full"
-                      src="https://images.unsplash.com/photo-1520333789090-1afc82db536a?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2102&q=80"
-                      alt=""
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-12 lg:m-0 lg:col-span-2 lg:pl-8">
-                <div className="max-w-md px-4 mx-auto sm:max-w-2xl sm:px-6 lg:px-0 lg:py-20 lg:max-w-none">
-                  <blockquote>
-                    <div>
-                      <svg
-                        className="w-12 h-12 text-white opacity-25"
-                        fill="currentColor"
-                        viewBox="0 0 32 32"
-                        aria-hidden="true"
-                      >
-                        <path d="M9.352 4C4.456 7.456 1 13.12 1 19.36c0 5.088 3.072 8.064 6.624 8.064 3.36 0 5.856-2.688 5.856-5.856 0-3.168-2.208-5.472-5.088-5.472-.576 0-1.344.096-1.536.192.48-3.264 3.552-7.104 6.624-9.024L9.352 4zm16.512 0c-4.8 3.456-8.256 9.12-8.256 15.36 0 5.088 3.072 8.064 6.624 8.064 3.264 0 5.856-2.688 5.856-5.856 0-3.168-2.304-5.472-5.184-5.472-.576 0-1.248.096-1.44.192.48-3.264 3.456-7.104 6.528-9.024L25.864 4z" />
-                      </svg>
-                      <p className="mt-6 text-2xl font-medium text-white">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed urna nulla vitae laoreet augue.
-                        Amet feugiat est integer dolor auctor adipiscing nunc urna, sit.
-                      </p>
-                    </div>
-                    <footer className="mt-6">
-                      <p className="text-base font-medium text-white">Judith Black</p>
-                      <p className="text-base font-medium text-cyan-100">CEO at PureInsights</p>
-                    </footer>
-                  </blockquote>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Blog section */}
+          {/* Podcast section */}
           <div className="relative py-16 bg-gray-50 sm:py-24 lg:py-32">
             <div className="relative">
               <div className="max-w-md px-4 mx-auto text-center sm:max-w-3xl sm:px-6 lg:px-8 lg:max-w-7xl">
-                <h2 className="text-base font-semibold tracking-wider uppercase text-cyan-600">Learn</h2>
+                <h2 className="text-base font-semibold tracking-wider uppercase text-cyan-600">Podcasts</h2>
                 <p className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                  Helpful Resources
+                  Find your favorite running podcasts
                 </p>
                 <p className="mx-auto mt-5 text-xl text-gray-500 max-w-prose">
-                  Phasellus lorem quam molestie id quisque diam aenean nulla in. Accumsan in quis quis nunc, ullamcorper
-                  malesuada. Eleifend condimentum id viverra nulla.
+                  For some people, running is a great way to socialize and talk about whatever is on one's mind. A lot of times those chats are abaout running! For the moments when you're not running or when you're out solo, find your next podast on The Run Club.
                 </p>
               </div>
               <div className="grid max-w-md gap-8 px-4 mx-auto mt-12 sm:max-w-lg sm:px-6 lg:px-8 lg:grid-cols-3 lg:max-w-7xl">
-                {blogPosts.map((post) => (
-                  <div key={post.id} className="flex flex-col overflow-hidden rounded-lg shadow-lg">
+                {sortedPodcastFeed.map((podcast) => (
+                  <div key={podcast.fullThing.podcastTitle} className="flex flex-col overflow-hidden rounded-lg shadow-lg">
                     <div className="flex-shrink-0">
-                      <img className="object-cover w-full h-48" src={post.imageUrl} alt="" />
+                      <img className="object-cover w-full h-48" src={podcast.fullThing.lastEpisode.itunes.image ?? podcast.fullThing.itunes.image} alt={podcast.fullThing.lastEpisode.title} />
                     </div>
                     <div className="flex flex-col justify-between flex-1 p-6 bg-white">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-cyan-600">
-                          <a href={post.category.href} className="hover:underline">
-                            {post.category.name}
+                          <a href={`/podcasts/${slugify(podcast.fullThing.podcastTitle)}`} className="hover:underline">
+                            {podcast.fullThing.podcastTitle}
                           </a>
                         </p>
-                        <a href={post.href} className="block mt-2">
-                          <p className="text-xl font-semibold text-gray-900">{post.title}</p>
-                          <p className="mt-3 text-base text-gray-500">{post.preview}</p>
+                        <a href={`/podcasts/${slugify(podcast.fullThing.podcastTitle)}/${slugify(podcast.fullThing.lastEpisode.title)}`} className="block mt-2">
+                          <p className="text-xl font-semibold text-gray-900">{podcast.fullThing.lastEpisode.title}</p>
                         </a>
                       </div>
                       <div className="flex items-center mt-6">
                         <div className="flex-shrink-0">
-                          <a href={post.author.href}>
-                            <img className="w-10 h-10 rounded-full" src={post.author.imageUrl} alt={post.author.name} />
+                          <a href={`/podcasts/slugify(${podcast.fullThing.podcastTitle})`}>
+                            <img className="w-10 h-10 rounded-full" src={podcast.fullThing.itunes.image} alt={podcast.fullThing.podcastTitle} />
                           </a>
                         </div>
                         <div className="ml-3">
                           <p className="text-sm font-medium text-gray-900">
-                            <a href={post.author.href} className="hover:underline">
-                              {post.author.name}
+                            <a href={`/podcasts/slugify(${podcast.fullThing.podcastTitle})`} className="hover:underline">
+                              {podcast.fullThing.podcastTitle}
                             </a>
                           </p>
                           <div className="flex space-x-1 text-sm text-gray-500">
-                            <time dateTime={post.datetime}>{post.date}</time>
+                            <time dateTime={podcast.fullThing.lastEpisode.pubDate}>{podcast.fullThing.lastEpisode.pubDate}</time>
                             <span aria-hidden="true">&middot;</span>
-                            <span>{post.readingLength} read</span>
+                            <span>{podcast.fullThing.lastEpisode.enclosure.length} read</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="pb-16 bg-gradient-to-r from-teal-500 to-cyan-600 lg:pb-0 lg:z-10 lg:relative">
+            <div className="pb-16"></div>
+          </div>
+
+          {/* Video section */}
+          <div className="relative py-16 bg-gray-50 sm:py-24 lg:py-32">
+            <div className="relative">
+              <div className="max-w-md px-4 mx-auto text-center sm:max-w-3xl sm:px-6 lg:px-8 lg:max-w-7xl">
+                <h2 className="text-base font-semibold tracking-wider uppercase text-cyan-600">Videos</h2>
+                <p className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                  The Best of Running Youtube
+                </p>
+                <p className="mx-auto mt-5 text-xl text-gray-500 max-w-prose">
+                  Catch the latest race highlights and newest shoe and gear releases. 
+                </p>
+              </div>
+              <div className="grid max-w-md gap-8 px-4 mx-auto mt-12 sm:max-w-lg sm:px-6 lg:px-8 lg:grid-cols-3 lg:max-w-7xl">
+                {sortedHomeData.map((video) => (
+                  <div key={video.channelSummary.title} className="flex flex-col overflow-hidden rounded-lg shadow-lg">
+                    <div className="flex-shrink-0">
+                      <img className="object-cover w-full h-48" src={video.channelSummary.videos.snippet.thumbnails.medium.url} alt="" />
+                    </div>
+                    <div className="flex flex-col justify-between flex-1 p-6 bg-white">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-cyan-600">
+                          <a href={`/videos/${video.channelSummary.videos.snippet.videoOwnerChannelId}`} className="hover:underline">
+                            {video.channelSummary.title}
+                          </a>
+                        </p>
+                        <a href={`/videos/${video.channelSummary.videos.snippet.videoOwnerChannelId}/${video.channelSummary.videos.snippet.resourceId.videoId}`} className="block mt-2">
+                          <p className="text-xl font-semibold text-gray-900">{video.channelSummary.videos.snippet.title}</p>
+                        </a>
+                      </div>
+                      <div className="flex items-center mt-6">
+                        <div className="flex-shrink-0">
+                          <a href={`/videos/${video.channelSummary.videos.snippet.videoOwnerChannelId}`}>
+                            <img className="w-10 h-10 rounded-full" src={video.channelSummary.thumbnail} alt={video.channelSummary.title} />
+                          </a>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">
+                            <a href='#' className="hover:underline">
+                              {video.channelSummary.title}
+                            </a>
+                          </p>
+                          <div className="flex space-x-1 text-sm text-gray-500">
+                            <time dateTime={video.channelSummary.videos.snippet.publishedAt}>{video.channelSummary.videos.snippet.publishedAt}</time>
                           </div>
                         </div>
                       </div>
@@ -547,24 +398,22 @@ export default function Example() {
             <div className="relative h-56 bg-indigo-600 sm:h-72 md:absolute md:left-0 md:h-full md:w-1/2">
               <img
                 className="object-cover w-full h-full"
-                src="https://images.unsplash.com/photo-1525130413817-d45c1d127c42?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1920&q=60&sat=-100"
-                alt=""
+                src="https://images.unsplash.com/photo-1509486432407-f8fb9cc99acd?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=798&q=80"
+                alt="Track"
               />
               <div
                 aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-r from-teal-500 to-cyan-600 mix-blend-multiply"
+                className="absolute inset-0 bg-gradient-to-r from-red-500 to-blue-600 mix-blend-multiply"
               />
             </div>
             <div className="relative max-w-md px-4 py-12 mx-auto sm:max-w-7xl sm:px-6 sm:py-20 md:py-28 lg:px-8 lg:py-32">
               <div className="md:ml-auto md:w-1/2 md:pl-10">
                 <h2 className="text-base font-semibold tracking-wider text-gray-300 uppercase">
-                  Award winning support
+                  Chat with runners
                 </h2>
-                <p className="mt-2 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">We’re here to help</p>
+                <p className="mt-2 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">The Voice of Runners</p>
                 <p className="mt-3 text-lg text-gray-300">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Et, egestas tempus tellus etiam sed. Quam a
-                  scelerisque amet ullamcorper eu enim et fermentum, augue. Aliquet amet volutpat quisque ut interdum
-                  tincidunt duis.
+                  We provide a moderated, and civilized space to talk all things running and athletics. Join topics that are relevant to your interests and geographic region.
                 </p>
                 <div className="mt-8">
                   <div className="inline-flex rounded-md shadow">
@@ -572,7 +421,7 @@ export default function Example() {
                       href="#"
                       className="inline-flex items-center justify-center px-5 py-3 text-base font-medium text-gray-900 bg-white border border-transparent rounded-md hover:bg-gray-50"
                     >
-                      Visit the help center
+                      Join our Discord
                       <ExternalLinkIcon className="w-5 h-5 ml-3 -mr-1 text-gray-400" aria-hidden="true" />
                     </a>
                   </div>
@@ -632,36 +481,10 @@ export default function Example() {
                     </ul>
                   </div>
                 </div>
-                <div className="md:grid md:grid-cols-2 md:gap-8">
-                  <div>
-                    <h3 className="text-sm font-semibold tracking-wider text-gray-400 uppercase">Company</h3>
-                    <ul role="list" className="mt-4 space-y-4">
-                      {footerNavigation.company.map((item) => (
-                        <li key={item.name}>
-                          <a href={item.href} className="text-base text-gray-500 hover:text-gray-900">
-                            {item.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="mt-12 md:mt-0">
-                    <h3 className="text-sm font-semibold tracking-wider text-gray-400 uppercase">Legal</h3>
-                    <ul role="list" className="mt-4 space-y-4">
-                      {footerNavigation.legal.map((item) => (
-                        <li key={item.name}>
-                          <a href={item.href} className="text-base text-gray-500 hover:text-gray-900">
-                            {item.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
               </div>
             </div>
             <div className="py-8 mt-12 border-t border-gray-200">
-              <p className="text-base text-gray-400 xl:text-center">&copy; 2020 Workflow, Inc. All rights reserved.</p>
+              <p className="text-base text-gray-400 xl:text-center">&copy; 2022 The Run Club. All rights reserved.</p>
             </div>
           </div>
         </footer>
@@ -669,3 +492,41 @@ export default function Example() {
     </div>
   )
 }
+
+
+
+export async function getStaticProps() {
+  const channelInfos = await Promise.all(
+    CHANNELS.map((channelId) => getChannelInfo(channelId)
+    ));
+    
+  const channelPlaylists = 
+    channelInfos.map( async (channel) => {
+      const videos = await getPlaylistItems(channel.items[0].contentDetails.relatedPlaylists.uploads)
+      const channelSummary = {};
+      
+      channelSummary.title = channel.items[0].snippet.title;
+      // channelSummary.id = channel.items[0].snippet.channelId;
+      channelSummary.thumbnail = channel.items[0].snippet.thumbnails.medium.url;
+      channelSummary.playlistId = channel.items[0].contentDetails.relatedPlaylists.uploads
+      // channelSummary.videos = videos.slice(0,1);
+      channelSummary.videos = videos[0];
+      // console.log(JSON.stringify(channelSummary, null, 2));
+      return {
+         channelSummary
+        }
+    }
+    );
+
+    const homeData = await Promise.all(channelPlaylists)
+    const sortedHomeData = orderBy(homeData, "channelSummary.videos.snippet.publishedAt", "desc").slice(0,6)
+    const podcastHomeFeed = await getHomeFeedEpisodes()
+    const sortedPodcastFeed = orderBy(podcastHomeFeed, "fullThing.lastEpisode.pubDate", "desc").slice(0,6)
+
+    return {
+      props: {
+        sortedHomeData,
+        sortedPodcastFeed
+      }
+    };
+  };

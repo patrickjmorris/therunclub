@@ -7,6 +7,10 @@ import {slugify} from "@/lib/util"
 import Link from "next/link";
 
 export default function Feed({  singleEpisode, itunes, title, description }) {
+  const options = {
+    rel: 'noopener',
+    target: 'blank'
+  }
   return (
     <div className="max-w-xl px-6 py-12 mx-auto">
     <div className="p-4">
@@ -22,7 +26,7 @@ export default function Feed({  singleEpisode, itunes, title, description }) {
             <p
                 className="prose"
                 dangerouslySetInnerHTML={{
-                  __html: linkifyHtml(description),
+                  __html: linkifyHtml(description, options),
                 }}
               ></p>
             <Link href={`/podcasts/${slugify(title)}`}><a>See more from {title}</a></Link>
@@ -84,6 +88,6 @@ export async function getStaticProps({ params }) {
       title: detailedFeed.title,
       description: detailedFeed.description,
     },
-    revalidate: 1,
+    revalidate: 60 * 60 ,
   };
 }

@@ -3,6 +3,11 @@ import { formatDistance } from "date-fns";
 import { getChannelInfo, getPlaylistItems, getVideoInfo, CHANNELS } from "lib/youtube";
 
 export default function Video({ video, id }) {
+  const options = {
+    rel: 'noopener',
+    target: 'blank'
+  }
+
   return (
     <div>
       <div className="max-w-6xl p-4 mx-auto lg:p-8">
@@ -28,7 +33,7 @@ export default function Video({ video, id }) {
         className="prose"
         dangerouslySetInnerHTML={{
           __html: linkifyHtml(
-            video.description?.replace(/\n/g, " <br />")
+            video.description?.replace(/\n/g, " <br />"), options
           ),
         }}
       ></p>
@@ -78,5 +83,6 @@ return {
       video: video.items[0].snippet,
       id: params.id
     },
+    revalidate: 60 * 60
 };
 }

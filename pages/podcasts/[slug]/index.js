@@ -7,6 +7,11 @@ import {slugify} from "@/lib/util";
 
 
 export default function Feed({ items, itunes, feed, description, lastBuildDate }) {
+  const options = {
+    rel: 'noopener',
+    target: 'blank'
+  }
+
   return (
     <div className="max-w-xl px-6 py-12 mx-auto">
     <Link href='/podcasts'><a>See more Podcasts</a></Link>
@@ -23,7 +28,7 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
             <p
                 className="prose"
                 dangerouslySetInnerHTML={{
-                  __html: linkifyHtml(description),
+                  __html: linkifyHtml(description, options),
                 }}
               ></p>
      {lastBuildDate ? <p>Last Updated: {format(new Date(lastBuildDate), "PPP")}</p>: ''}
@@ -51,13 +56,13 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
               item.description ?  <p
                 className="prose"
                 dangerouslySetInnerHTML={{
-                  __html: linkifyHtml(item.description),
+                  __html: linkifyHtml(item.description, options),
                 }}
               ></p> :
               item.contentSnippet ?  <p
                 className="prose"
                 dangerouslySetInnerHTML={{
-                  __html: linkifyHtml(item.contentSnippet),
+                  __html: linkifyHtml(item.contentSnippet, options),
                 }}
               ></p> : ''
             }
@@ -100,6 +105,6 @@ export async function getStaticProps({ params }) {
       description: detailedFeed.description,
       author: detailedFeed.itunes.author ?? detailedFeed.creator
     },
-    revalidate: 1,
+    revalidate: 60 * 60,
   };
 }

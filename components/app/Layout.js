@@ -11,7 +11,7 @@ export default function Layout({ siteId, children }) {
   const title = "The Run Club";
   const description =
     "Building and supporting the running community";
-  const logo = "/favicon.ico";
+  const logo = "/favicon.png";
   const router = useRouter();
   const sitePage = router.pathname.startsWith("/app/site/[id]");
   const postPage = router.pathname.startsWith("/app/post/[id]");

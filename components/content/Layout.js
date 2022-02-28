@@ -1,11 +1,42 @@
 import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import Cookies from "js-cookie";
+import { Popover, Transition } from '@headlessui/react'
+import {
+  MenuIcon,
+  XIcon,
+} from '@heroicons/react/outline'
 
-export default function Layout({ meta, children, subdomain }) {
+export default function Layout({ meta, children }) {
+  const [scrolled, setScrolled] = useState(false);
 
+  const onScroll = useCallback(() => {
+    setScrolled(window.pageYOffset > 20);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [onScroll]);
+
+  const [closeModal, setCloseModal] = useState(Cookies.get("closeModal"));
+
+  useEffect(() => {
+    if (closeModal) {
+      Cookies.set("closeModal", true);
+    } else {
+      Cookies.remove("closeModal");
+    }
+  }, [closeModal]);
+
+  const navigation = [
+    { name: 'Podcasts', href: '/podcasts' },
+    { name: 'Videos', href: '/videos' },
+    { name: 'About', href: '/about' },
+  ]
+  
   return (
     <div>
       <Head>
@@ -34,104 +65,119 @@ export default function Layout({ meta, children, subdomain }) {
         <meta name="twitter:title" content={meta?.title} />
         <meta name="twitter:description" content={meta?.description} />
         <meta name="twitter:image" content={meta?.ogImage} />
-        {subdomain != "demo" && <meta name="robots" content="noindex" />}
       </Head>
-      <div
-        className={`fixed w-full ${
-          scrolled ? "drop-shadow-md" : ""
-        }  top-0 left-0 right-0 h-16 bg-white z-30 transition-all ease duration-150 flex`}
-      >
-        <div className="flex items-center justify-center h-full max-w-screen-xl px-10 mx-auto space-x-5 sm:px-20">
-          <Link href="/">
-            <a className="flex items-center justify-center">
-              <div className="inline-block w-8 h-8 overflow-hidden align-middle rounded-full">
-                <Image
-                  src={meta?.logo}
-                  width={40}
-                  height={40}
-                  alt={meta?.title}
-                />
-              </div>
-              <span className="inline-block ml-3 font-medium truncate">
-                {meta?.title}
-              </span>
-            </a>
-          </Link>
-        </div>
-      </div>
-
-      <div className="mt-20">{children}</div>
-
-      {subdomain == "demo" && (
-        <div
-          className={`${
-            closeModal ? "h-14 lg:h-auto" : "lg:h-auto sm:h-40 h-60"
-          } max-w-screen-xl xl:mx-auto mx-5 rounded-lg px-5 lg:pt-3 pt-0 pb-3 flex flex-col lg:flex-row space-y-3 lg:space-y-0 justify-between items-center sticky bottom-5 bg-white border-t-4 border-black
-          drop-shadow-lg transition-all ease-in-out duration-150`}
-        >
-          <button
-            onClick={() => setCloseModal(!closeModal)}
-            className={`${
-              closeModal ? "rotate-180" : "rotate-0"
-            } lg:hidden absolute top-2 right-3 text-black transition-all ease-in-out duration-150`}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="30"
-              height="30"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-              shapeRendering="geometricPrecision"
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-          <div className="text-center lg:text-left">
-            <p className="text-lg text-black font-cal sm:text-2xl">
-              Platforms Starter Kit Demo
-            </p>
-            <p
-              className={`${
-                closeModal ? "lg:block hidden" : ""
-              } text-sm text-gray-700 mt-2 lg:mt-0`}
-            >
-              This is a demo site showcasing how to build a multi-tenant
-              application with{" "}
-              <a
-                href="https://platformize.co"
-                target="_blank"
-                className="font-semibold text-black underline"
+      <div className="bg-white">
+        <div className="relative overflow-hidden">
+          <Popover as="header" className="relative">
+            <div className="py-6 bg-gray-900">
+              <nav
+                className="relative flex items-center justify-between px-4 mx-auto max-w-7xl sm:px-6"
+                aria-label="Global"
               >
-                custom domain
-              </a>{" "}
-              support.
-            </p>
-          </div>
-          <div
-            className={`${
-              closeModal ? "lg:flex hidden" : ""
-            } flex space-y-3 sm:space-y-0 sm:space-x-3 sm:flex-row flex-col lg:w-auto w-full text-center`}
-          >
-            <a
-              href="https://app.therunclub.xyz"
-              target="_blank"
-              className="flex-auto px-5 py-1 text-lg text-black whitespace-no-wrap transition-all duration-150 ease-in-out border border-gray-200 rounded-md font-cal sm:py-3 hover:border-black"
+                <div className="flex items-center flex-1">
+                  <div className="flex items-center justify-between w-full md:w-auto">
+                    <Link href="/">
+                      <a>
+                        <span className="sr-only">The Run Club</span>
+                        <img
+                          className="w-auto h-8 sm:h-10"
+                          src="https://tailwindui.com/img/logos/workflow-mark-teal-200-cyan-400.svg"
+                          alt=""
+                        />
+                      </a>
+                    </Link>
+                    <div className="flex items-center -mr-2 md:hidden">
+                      <Popover.Button className="inline-flex items-center justify-center p-2 text-gray-400 bg-gray-900 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus-ring-inset focus:ring-white">
+                        <span className="sr-only">Open main menu</span>
+                        <MenuIcon className="w-6 h-6" aria-hidden="true" />
+                      </Popover.Button>
+                    </div>
+                  </div>
+                  <div className="hidden space-x-8 md:flex md:ml-10">
+                    {navigation.map((item) => (
+                      <Link href={item.href} key={item.name}>
+                        <a className="text-base font-medium text-white hover:text-gray-300">
+                          {item.name}
+                        </a>
+                      </Link>  
+                    ))}
+                  </div>
+                </div>
+                <div className="hidden md:flex md:items-center md:space-x-6">
+                  <a href="#" className="text-base font-medium text-white hover:text-gray-300">
+                    Log in
+                  </a>
+                  <a
+                    href="/discord"
+                    className="inline-flex items-center px-4 py-2 text-base font-medium text-white bg-gray-600 border border-transparent rounded-md hover:bg-gray-700"
+                  >
+                    Sign Up
+                  </a>
+                </div>
+              </nav>
+            </div>
+
+            <Transition
+              as={Fragment}
+              enter="duration-150 ease-out"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="duration-100 ease-in"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
             >
-              Create your publication
-            </a>
-            <a
-              href="https://vercel.com/guides/nextjs-multi-tenant-application"
-              target="_blank"
-              className="flex-auto px-5 py-1 text-lg text-white whitespace-no-wrap transition-all duration-150 ease-in-out bg-black border border-black rounded-md font-cal sm:py-3 hover:text-black hover:bg-white"
-            >
-              Clone and deploy
-            </a>
-          </div>
-        </div>
-      )}
+              <Popover.Panel focus className="absolute inset-x-0 top-0 p-2 transition origin-top transform md:hidden">
+                <div className="overflow-hidden bg-white rounded-lg shadow-md ring-1 ring-black ring-opacity-5">
+                  <div className="flex items-center justify-between px-5 pt-4">
+                    <div>
+                      <img
+                        className="w-auto h-8"
+                        src="https://tailwindui.com/img/logos/workflow-mark-teal-500-cyan-600.svg"
+                        alt=""
+                      />
+                    </div>
+                    <div className="-mr-2">
+                      <Popover.Button className="inline-flex items-center justify-center p-2 text-gray-400 bg-white rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-600">
+                        <span className="sr-only">Close menu</span>
+                        <XIcon className="w-6 h-6" aria-hidden="true" />
+                      </Popover.Button>
+                    </div>
+                  </div>
+                  <div className="pt-5 pb-6">
+                    <div className="px-2 space-y-1">
+                      {navigation.map((item) => (
+                        <Link key={item.name} href={item.href}>
+                          <a className="block px-3 py-2 text-base font-medium text-gray-900 rounded-md hover:bg-gray-50">
+                            {item.name}
+                          </a>
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="px-5 mt-6">
+                      <a
+                        href="#"
+                        className="block w-full px-4 py-3 font-medium text-center text-white rounded-md shadow bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
+                      >
+                        Sign up
+                      </a>
+                    </div>
+                    <div className="px-5 mt-6">
+                      <p className="text-base font-medium text-center text-gray-500">
+                        Existing customer?{' '}
+                        <a href="#" className="text-gray-900 hover:underline">
+                          Login
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Popover.Panel>
+            </Transition>
+          </Popover>
+
+      <div>{children}</div>
+      </div>
+      </div>
     </div>
   );
 }

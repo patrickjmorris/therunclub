@@ -5,6 +5,7 @@ import { formatDistance } from "date-fns";
 import { getChannelInfo, getAllPlaylistItems, CHANNELS } from "lib/youtube";
 import Image from "next/image";
 import Link from 'next/link';
+import Layout from '@/components/content/Layout';
 
 export default function Channel({ title, videos }) {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(null);
@@ -26,7 +27,15 @@ export default function Channel({ title, videos }) {
     }
     window.scrollTo({ left: 0, top: 0, behavior: "smooth" });
   }
+  const meta = {
+    title: "The Run Club",
+    description:
+  "Building and supporting the running community",
+    logo: "/logo.png",
+  }
+
   return (
+    <Layout meta={meta}>
     <div>
       <div className="max-w-6xl p-4 mx-auto lg:p-8">
         <h1 className="my-4 text-2xl font-bold sm:text-3xl lg:text-4xl">
@@ -162,7 +171,9 @@ export default function Channel({ title, videos }) {
   )}
 </div>
       </div>
-    </div>)
+    </div>
+    </Layout>
+  )
 };
 
 export async function getStaticPaths() {

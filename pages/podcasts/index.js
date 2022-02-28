@@ -2,15 +2,19 @@ import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { FEEDS } from "../../lib/podcast";
+import Layout from "@/components/content/Layout";
 
 export default function Home() {
+  const meta = {
+    title: "The Run Club",
+    description:
+  "Building and supporting the running community",
+    logo: "/logo.png",
+  }
+
   return (
-    <div className="flex h-screen bg-white">
-      <Head>
-        <title>The Run Club</title>
-        <link rel="icon" href="/favicon.png" />
-      </Head>
-        {/* <AudioPlayer /> */}
+    <Layout meta={meta}>
+    <div className="max-w-6xl p-4 mx-auto lg:p-8 bg-slate-50">
         <div className="max-w-xl px-6 py-12 mx-auto">
           <h1 className="mb-12 text-5xl font-bold">Running Podcasts</h1>
           <div className="grid grid-cols-2 gap-4">
@@ -24,5 +28,6 @@ export default function Home() {
           </div>
         </div>
       </div>
+      </Layout>
   );
 }

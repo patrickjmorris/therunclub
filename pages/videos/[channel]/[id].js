@@ -1,6 +1,7 @@
 import linkifyHtml from 'linkify-html';
 import { formatDistance } from "date-fns";
 import { getChannelInfo, getPlaylistItems, getVideoInfo, CHANNELS } from "lib/youtube";
+import Layout from '@/components/content/Layout';
 
 export default function Video({ video, id }) {
   const options = {
@@ -8,7 +9,15 @@ export default function Video({ video, id }) {
     target: 'blank'
   }
 
+  const meta = {
+    title: "The Run Club",
+    description:
+  "Building and supporting the running community",
+    logo: "/logo.png",
+  }
+
   return (
+    <Layout meta={meta}>
     <div>
       <div className="max-w-6xl p-4 mx-auto lg:p-8">
         <h1 className="my-4 text-2xl font-bold sm:text-3xl lg:text-4xl">
@@ -40,6 +49,7 @@ export default function Video({ video, id }) {
     </>       
 </div>  
 </div>
+</Layout>
     )
 };
 

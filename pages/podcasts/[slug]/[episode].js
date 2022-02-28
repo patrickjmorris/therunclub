@@ -5,13 +5,22 @@ import selectProps from "@/lib/selectProps";
 import linkifyHtml from 'linkify-html';
 import {slugify} from "@/lib/util"
 import Link from "next/link";
+import Layout from "@/components/content/Layout";
 
 export default function Feed({  singleEpisode, itunes, title, description }) {
   const options = {
     rel: 'noopener',
     target: 'blank'
   }
+  const meta = {
+    title: "The Run Club",
+    description:
+  "Building and supporting the running community",
+    logo: "/logo.png",
+  }
+
   return (
+    <Layout meta={meta}>
     <div className="max-w-xl px-6 py-12 mx-auto">
     <div className="p-4">
         <h1 className="mb-12 text-5xl font-bold">{title}</h1>
@@ -51,7 +60,7 @@ export default function Feed({  singleEpisode, itunes, title, description }) {
       </div>
       
     </div>
-    
+    </Layout>
   );
 }
 

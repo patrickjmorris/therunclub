@@ -2,9 +2,18 @@ import { getChannelInfo, getAllPlaylistItems,getPlaylistItems, CHANNELS } from "
 import Link from "next/link";
 import Image from "next/image";
 import { format } from "date-fns";
-
+import Layout
+ from "@/components/content/Layout";
 export default function Home({ channelInfos }) {
-    return (
+  const meta = {
+    title: "The Run Club",
+    description:
+  "Building and supporting the running community",
+    logo: "/logo.png",
+  }
+
+  return (
+    <Layout meta={meta}>
       <div className="max-w-6xl p-4 mx-auto lg:p-8 bg-slate-50">
         <h1>Best Running YouTube Channels</h1>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -33,6 +42,7 @@ export default function Home({ channelInfos }) {
           })}
         </div>
       </div>
+      </Layout>
     );
   }
 

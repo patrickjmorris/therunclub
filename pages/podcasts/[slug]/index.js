@@ -4,7 +4,7 @@ import BlurImage from "@/components/BlurImage";
 import linkifyHtml from 'linkify-html';
 import Link from "next/link";
 import {slugify} from "@/lib/util";
-
+import Layout from "@/components/content/Layout";
 
 export default function Feed({ items, itunes, feed, description, lastBuildDate }) {
   const options = {
@@ -12,7 +12,15 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
     target: 'blank'
   }
 
+  const meta = {
+    title: "The Run Club",
+    description:
+  "Building and supporting the running community",
+    logo: "/logo.png",
+  }
+
   return (
+    <Layout meta={meta}>
     <div className="max-w-xl px-6 py-12 mx-auto">
     <Link href='/podcasts'><a>See more Podcasts</a></Link>
     <div className="p-4">
@@ -71,6 +79,7 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
         ))}
       </div>
     </div>
+    </Layout>
   );
 }
 

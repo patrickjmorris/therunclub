@@ -9,6 +9,11 @@ import Link from 'next/link';
 export default function Channel({ title, videos }) {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(null);
 
+  const options = {
+    rel: 'noopener',
+    target: 'blank'
+  }
+
   function selectVideoByIndex(index) {
     if (index > videos.length - 1) {
       setCurrentVideoIndex(0);
@@ -111,7 +116,7 @@ export default function Channel({ title, videos }) {
                 className="prose"
                 dangerouslySetInnerHTML={{
                   __html: linkifyHtml(
-                    videos[currentVideoIndex].snippet.description?.replace(/\n/g, " <br />")
+                    videos[currentVideoIndex].snippet.description?.replace(/\n/g, " <br />"), options
                   ),
                 }}
               ></p>
@@ -189,6 +194,7 @@ export async function getStaticProps({ params }) {
         title,
         videos,
         },
+        revalidate: 60 * 60
     };
 }
 

@@ -8,7 +8,7 @@ export default function Home() {
     <div className="flex h-screen bg-white">
       <Head>
         <title>The Run Club</title>
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicon.png" />
       </Head>
         {/* <AudioPlayer /> */}
         <div className="max-w-xl px-6 py-12 mx-auto">

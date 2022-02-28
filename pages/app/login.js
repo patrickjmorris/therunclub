@@ -4,7 +4,7 @@ import { useState } from "react";
 import LoadingDots from "@/components/app/loading-dots";
 
 const pageTitle = "Login";
-const logo = "/favicon.ico";
+const logo = "/favicon.png";
 const description =
   "Platforms Starter Kit is a comprehensive template for building multi-tenant applications with custom domains.";
 

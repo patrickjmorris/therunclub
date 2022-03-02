@@ -205,7 +205,7 @@ export async function getStaticProps({ params }) {
         title,
         videos,
         },
-        revalidate: 60 * 60
+        revalidate: 60 * 60 * 10
     };
 }
 

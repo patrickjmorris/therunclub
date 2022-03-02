@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FEEDS } from "../../lib/podcast";
 import Layout from "@/components/content/Layout";
 
-export default function Home() {
+export default function PodcastsIndex() {
   const meta = {
     title: "The Run Club",
     description:

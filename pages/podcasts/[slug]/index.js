@@ -22,7 +22,11 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
   return (
     <Layout meta={meta}>
     <div className="max-w-xl px-6 py-12 mx-auto">
-    <Link href='/podcasts'><a>See more Podcasts</a></Link>
+    <Link href={`/podcasts`}>
+              <a>
+                  See more from Podcasts
+              </a>
+            </Link>
     <div className="p-4">
         <h1 className="mb-12 text-5xl font-bold">{feed.title}</h1>
         <BlurImage 

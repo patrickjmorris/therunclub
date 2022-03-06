@@ -38,7 +38,11 @@ export default function Feed({  singleEpisode, itunes, title, description }) {
                   __html: linkifyHtml(description, options),
                 }}
               ></p>
-            <Link href={`/podcasts/${slugify(title)}`}><a>See more from {title}</a></Link>
+            <Link href={`/podcasts/${slugify(title)}`}>
+              <a>
+              See more from {title}
+              </a>
+            </Link>
      </div>     
       <div className="space-y-4">
             <div className="font-bold">{singleEpisode.title}</div>

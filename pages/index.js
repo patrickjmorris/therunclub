@@ -270,7 +270,7 @@ export async function getStaticProps() {
       }
       return { pod };
     })
-    const sortedPodcastFeed = orderBy(lastPodcastEpisodes, "pod.pubDate", "desc").slice(0,9)
+    const sortedPodcastFeed = orderBy(lastPodcastEpisodes, "pod.pubDate", "desc").slice(0,6)
     
     return {
       props: {

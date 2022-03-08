@@ -1,5 +1,4 @@
 import "@/styles/globals.css";
-import { SessionProvider } from "next-auth/react";
 import PlausibleProvider from "next-plausible";
 
 export default function App({
@@ -8,9 +7,7 @@ export default function App({
 }) {
   return (
     <PlausibleProvider domain="therunclub.xyz">
-      <SessionProvider session={session}>
         <Component {...pageProps} />
-      </SessionProvider>
     </PlausibleProvider>
   );
 }

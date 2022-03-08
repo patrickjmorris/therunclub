@@ -1,4 +1,4 @@
-import { getChannelInfo, getAllPlaylistItems,getPlaylistItems, CHANNELS } from "lib/youtube";
+import { getChannelInfo, CHANNELS } from "lib/youtube";
 import Link from "next/link";
 import Image from "next/image";
 import { format } from "date-fns";

@@ -28,7 +28,8 @@ export default function Layout({ siteId, children }) {
       <div>
         <Head>
           <title>{title}</title>
-          <link rel="icon" href={logo} />
+          {/* <link rel="icon" href={logo} /> */}
+          <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏃</text></svg>" />
           <link rel="shortcut icon" type="image/x-icon" href={logo} />
           <link rel="apple-touch-icon" sizes="180x180" href={logo} />
           <meta name="theme-color" content="#7b46f6" />

@@ -62,7 +62,6 @@ export default function HomePage({sortedHomeData, sortedPodcastFeed}) {
                   </div>
                   <div className="mt-12 -mb-16 sm:-mb-48 lg:m-0 lg:relative">
                     <div className="max-w-md px-4 mx-auto sm:max-w-2xl sm:px-6 lg:max-w-none lg:px-0">
-                      {/* Illustration taken from Lucid Illustrations: https://lucid.pixsellz.io/ */}
                       <img
                         className="w-full rounded-lg lg:absolute lg:inset-y-0 lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
                         src="https://cdn.dribbble.com/users/29836/screenshots/4532142/media/4bb496e2fe6d15a2c391fd6e7f32859f.jpg"

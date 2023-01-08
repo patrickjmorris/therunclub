@@ -51,10 +51,11 @@ export default function PodcastsIndex({sortedPodcastFeed}) {
                             </a>
                           </Link>
                         </div>
+                        <p>{podcast.pod.podcastAuthor}</p>
                         <div className="flex items-end space-x-1 text-sm text-gray-500">
                             <span>Last Published</span>
                             <time dateTime={podcast.pod.pubDate}>{formatDistance(new Date(podcast.pod.pubDateString), new Date())}</time>
-                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -67,14 +68,14 @@ export default function PodcastsIndex({sortedPodcastFeed}) {
 
 export async function getStaticProps() {
     const podcastHomeFeed = await getHomeFeedEpisodes()
-    // console.log(JSON.stringify(podcastHomeFeed, 0,2))
     const lastPodcastEpisodes = podcastHomeFeed.map(podcast => {
       const pod = {
+        podcastAuthor: podcast.fullThing.itunes.author || null,
         podcastImage: podcast.fullThing.itunes.image,
         podcastTitle: podcast.fullThing.podcastTitle,
         podcastSummary: podcast.fullThing.itunes.summary || null,
         pubDate: JSON.stringify(new Date(podcast.fullThing.lastEpisode.pubDate)),
-        pubDateString: podcast.fullThing.lastEpisode.pubDate
+        pubDateString: podcast.fullThing.lastEpisode.pubDate,
       }
       return { pod };
     })

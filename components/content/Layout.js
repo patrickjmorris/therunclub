@@ -33,7 +33,6 @@ export default function Layout({ meta, children }) {
 
   const navigation = [
     { name: 'Podcasts', href: '/podcasts' },
-    { name: 'Videos', href: '/videos' },
     { name: 'About', href: '/about' },
   ]
   
@@ -104,17 +103,7 @@ export default function Layout({ meta, children }) {
                     ))}
                   </div>
                 </div>
-                <div className="hidden md:flex md:items-center md:space-x-6">
-                  <a href="#" className="text-base font-medium text-white hover:text-gray-300">
-                    Log in
-                  </a>
-                  <a
-                    href="/discord"
-                    className="inline-flex items-center px-4 py-2 text-base font-medium text-white bg-gray-600 border border-transparent rounded-md hover:bg-gray-700"
-                  >
-                    Sign Up
-                  </a>
-                </div>
+                
               </nav>
             </div>
 

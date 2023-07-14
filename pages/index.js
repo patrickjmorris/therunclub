@@ -49,7 +49,7 @@ export default function HomePage({ sortedPodcastFeed}) {
                         </div>
                         <div className="flex items-center mt-6">
                           <div className="flex-shrink-0">
-                            <Link href={`/podcasts/slugify(${podcast.pod.podcastTitle})`}>
+                            <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}>
                               <a>
                                 <img className="w-10 h-10 rounded-full" src={podcast.pod.podcastImage} alt={podcast.pod.podcastTitle} />
                               </a>

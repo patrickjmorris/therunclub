@@ -23,7 +23,9 @@ module.exports = {
       "www.omnycontent.com",
       "images.transistor.fm",
       "images.squarespace-cdn.com",
-      "cloud259.com"
+      "cloud259.com",
+      "deow9bq0xqvbj.cloudfront.net"
+      
     ],
   },
 };

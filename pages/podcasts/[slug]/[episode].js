@@ -39,9 +39,8 @@ export default function Feed({  singleEpisode, itunes, title, description }) {
                 }}
               ></p>
             <Link href={`/podcasts/${slugify(title)}`}>
-              <a>
-              See more from {title}
-              </a>
+              See more from{title}
+
             </Link>
      </div>     
       <div className="space-y-4">

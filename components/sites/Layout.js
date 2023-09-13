@@ -63,20 +63,20 @@ export default function Layout({ meta, children, subdomain }) {
         }  top-0 left-0 right-0 h-16 bg-white z-30 transition-all ease duration-150 flex`}
       >
         <div className="flex items-center justify-center h-full max-w-screen-xl px-10 mx-auto space-x-5 sm:px-20">
-          <Link href="/">
-            <a className="flex items-center justify-center">
-              <div className="inline-block w-8 h-8 overflow-hidden align-middle rounded-full">
-                <Image
-                  src={meta?.logo}
-                  width={40}
-                  height={40}
-                  alt={meta?.title}
-                />
-              </div>
-              <span className="inline-block ml-3 font-medium truncate">
-                {meta?.title}
-              </span>
-            </a>
+          <Link href="/" className="flex items-center justify-center">
+
+            <div className="inline-block w-8 h-8 overflow-hidden align-middle rounded-full">
+              <Image
+                src={meta?.logo}
+                width={40}
+                height={40}
+                alt={meta?.title}
+              />
+            </div>
+            <span className="inline-block ml-3 font-medium truncate">
+              {meta?.title}
+            </span>
+
           </Link>
         </div>
       </div>

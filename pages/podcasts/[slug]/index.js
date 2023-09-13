@@ -23,9 +23,9 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
     <Layout meta={meta}>
     <div className="max-w-xl px-6 py-12 mx-auto">
     <Link href={`/podcasts`}>
-              <a>
+              
                   See more from Podcasts
-              </a>
+              
             </Link>
     <div className="p-4">
         <h1 className="mb-12 text-5xl font-bold">{feed.title}</h1>
@@ -52,7 +52,7 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
             className="block p-4 border border-gray-200 rounded-lg hover:border-gray-500"
             href={`/podcasts/${feed.slug}/${slugify(item.title)}`}
           >
-            <a>
+
             <div className="font-bold">{item.title}</div>
             <BlurImage  
               src={item.image ?? itunes.image}  
@@ -62,7 +62,7 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
               layout="responsive"
               objectFit="cover"
             />
-            </a>
+
           </Link>
           {
               item.description ?  <p

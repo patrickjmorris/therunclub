@@ -34,33 +34,37 @@ export default function HomePage({ sortedPodcastFeed}) {
                     <div key={podcast.pod.podcastTitle} className="flex flex-col overflow-hidden rounded-lg shadow-lg">
                       <div className="flex-shrink-0">
                       <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}/${slugify(podcast.pod.lastEpisodeTitle)}`}>
-                        <a>
+
                         <img className="object-cover w-full h-full" src={podcast.pod.lastEpisodeImage ?? podcast.pod.podcastImage} alt={podcast.pod.lastEpisodeTitle} />
-                        </a>
-                        </Link>
+
+                      </Link>
                       </div>
                       <div className="flex flex-col justify-between flex-1 p-6 bg-white">
                         <div className="flex-1">
-                          <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}/${slugify(podcast.pod.lastEpisodeTitle)}`}>
-                            <a className="block mt-2">
-                              <p className="text-xl font-semibold text-gray-900">{podcast.pod.lastEpisodeTitle}</p>
-                            </a>
+                          <Link
+                            href={`/podcasts/${slugify(podcast.pod.podcastTitle)}/${slugify(podcast.pod.lastEpisodeTitle)}`}
+                            className="block mt-2">
+
+                            <p className="text-xl font-semibold text-gray-900">{podcast.pod.lastEpisodeTitle}</p>
+
                           </Link>
                         </div>
                         <div className="flex items-center mt-6">
                           <div className="flex-shrink-0">
                             <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}>
-                              <a>
-                                <img className="w-10 h-10 rounded-full" src={podcast.pod.podcastImage} alt={podcast.pod.podcastTitle} />
-                              </a>
+
+                              <img className="w-10 h-10 rounded-full" src={podcast.pod.podcastImage} alt={podcast.pod.podcastTitle} />
+
                             </Link>
                           </div>
                           <div className="ml-3">
                             <p className="text-sm font-medium text-gray-900">
-                              <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}>
-                                <a className="hover:underline">
-                                  {podcast.pod.podcastTitle}
-                                </a>
+                              <Link
+                                href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}
+                                className="hover:underline">
+
+                                {podcast.pod.podcastTitle}
+
                               </Link>
                             </p>
                             <div className="flex space-x-1 text-sm text-gray-500">
@@ -82,7 +86,7 @@ export default function HomePage({ sortedPodcastFeed}) {
           </main>
           <Footer />
     </Layout>
-  )
+  );
 }
 
 

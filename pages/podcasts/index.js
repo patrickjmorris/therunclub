@@ -38,17 +38,19 @@ export default function PodcastsIndex({sortedPodcastFeed}) {
                     <div key={podcast.pod.podcastTitle} className="flex flex-col rounded-lg shadow-lg">
                       <div className="flex-shrink-0">
                       <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}>
-                        <a>
+
                         <img className="object-cover w-full h-full" src={podcast.pod.podcastImage} alt={podcast.pod.podcastTitle} />
-                        </a>
-                        </Link>
+
+                      </Link>
                       </div>
                       <div className="flex flex-col justify-between flex-1 p-6 bg-white">
                         <div className="flex-1">
-                          <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}>
-                            <a className="block mt-2">
-                              <p className="text-xl font-semibold text-gray-900">{podcast.pod.podcastTitle}</p>
-                            </a>
+                          <Link
+                            href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}
+                            className="block mt-2">
+
+                            <p className="text-xl font-semibold text-gray-900">{podcast.pod.podcastTitle}</p>
+
                           </Link>
                         </div>
                         <p>{podcast.pod.podcastAuthor}</p>

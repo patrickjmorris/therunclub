@@ -4,10 +4,7 @@ import Image from "next/image";
 import { useState, useEffect, useCallback, Fragment } from "react";
 import Cookies from "js-cookie";
 import { Popover, Transition } from '@headlessui/react'
-import {
-  MenuIcon,
-  XIcon,
-} from '@heroicons/react/outline'
+import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 export default function Layout({ meta, children }) {
   const [scrolled, setScrolled] = useState(false);
@@ -89,7 +86,7 @@ export default function Layout({ meta, children }) {
                     <div className="flex items-center -mr-2 md:hidden">
                       <Popover.Button className="inline-flex items-center justify-center p-2 text-gray-400 bg-gray-900 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus-ring-inset focus:ring-white">
                         <span className="sr-only">Open main menu</span>
-                        <MenuIcon className="w-6 h-6" aria-hidden="true" />
+                        <Bars3Icon className="w-6 h-6" aria-hidden="true" />
                       </Popover.Button>
                     </div>
                   </div>
@@ -129,7 +126,7 @@ export default function Layout({ meta, children }) {
                     <div className="-mr-2">
                       <Popover.Button className="inline-flex items-center justify-center p-2 text-gray-400 bg-white rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-600">
                         <span className="sr-only">Close menu</span>
-                        <XIcon className="w-6 h-6" aria-hidden="true" />
+                        <XMarkIcon className="w-6 h-6" aria-hidden="true" />
                       </Popover.Button>
                     </div>
                   </div>

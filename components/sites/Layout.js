@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
-import Image from "next/legacy/image";
+import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import Cookies from "js-cookie";
 
@@ -71,7 +71,10 @@ export default function Layout({ meta, children, subdomain }) {
                 width={40}
                 height={40}
                 alt={meta?.title}
-              />
+                style={{
+                  maxWidth: "100%",
+                  height: "auto"
+                }} />
             </div>
             <span className="inline-block ml-3 font-medium truncate">
               {meta?.title}

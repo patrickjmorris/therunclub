@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
-import Image from "next/legacy/image";
+import Image from "next/image";
 import { useState, useEffect, useCallback, Fragment } from "react";
 import Cookies from "js-cookie";
 import { Popover, Transition } from '@headlessui/react'

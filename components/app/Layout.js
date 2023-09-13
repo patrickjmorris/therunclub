@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
-import Image from "next/legacy/image";
+import Image from "next/image";
 import { useRouter } from "next/router";
 import React from "react";
 import { signOut } from "next-auth/react";
@@ -63,7 +63,10 @@ export default function Layout({ siteId, children }) {
                   width={40}
                   height={40}
                   alt={session.user.name}
-                />
+                  style={{
+                    maxWidth: "100%",
+                    height: "auto"
+                  }} />
               </div>
               <span className="inline-block ml-3 font-medium truncate sm:block">
                 {session.user.name}

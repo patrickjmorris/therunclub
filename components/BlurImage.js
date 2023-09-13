@@ -1,4 +1,4 @@
-import Image from "next/legacy/image";
+import Image from "next/image";
 import { useState } from "react";
 import cn from "clsx";
 
@@ -17,6 +17,9 @@ export default function BlurImage(props) {
           : "grayscale-0 blur-0 scale-100"
       )}
       onLoadingComplete={() => setLoading(false)}
-    />
+      style={{
+        maxWidth: "100%",
+        height: "auto"
+      }} />
   );
 }

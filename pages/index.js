@@ -93,7 +93,7 @@ export default function HomePage({ sortedPodcastFeed}) {
 
 export async function getStaticProps() {
     const podcastHomeFeed = await getHomeFeedEpisodes()
-    console.log(podcastHomeFeed)
+
     const lastPodcastEpisodes = podcastHomeFeed.map(podcast => {
       const pod = {
         podcastImage: podcast.fullThing.itunes.image,
@@ -106,7 +106,7 @@ export async function getStaticProps() {
       return { pod };
     })
     const sortedPodcastFeed = orderBy(lastPodcastEpisodes, "pod.pubDate", "desc").slice(0,6)
-    
+    // console.log("From home", sortedPodcastFeed)
     return {
       props: {
         sortedPodcastFeed

@@ -51,7 +51,7 @@ export default function Feed({ items, itunes, feed, description, lastBuildDate }
           <Link
             className="block p-4 border border-gray-200 rounded-lg hover:border-gray-500"
             href={`/podcasts/${feed.slug}/${slugify(item.title)}`}
-          >
+            >
 
             <div className="font-bold">{item.title}</div>
             <BlurImage  

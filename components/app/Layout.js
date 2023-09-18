@@ -55,7 +55,7 @@ export default function Layout({ siteId, children }) {
       <div className="absolute left-0 right-0 h-16 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between h-full max-w-screen-xl px-10 mx-auto sm:px-20">
           <div className="flex space-x-4">
-            <Link href="/" className="flex items-center justify-center">
+            <Link href="/" className="flex items-center justify-center" legacyBehavior>
 
               <div className="inline-block w-8 h-8 overflow-hidden align-middle rounded-full">
                 <Image
@@ -108,7 +108,7 @@ export default function Layout({ siteId, children }) {
       {sitePage && (
         <div className="absolute left-0 right-0 bg-white border-b border-gray-200 top-16 font-cal">
           <div className="flex items-center justify-between max-w-screen-xl px-10 mx-auto space-x-16 sm:px-20">
-            <Link href={`/`}>
+            <Link href={`/`} legacyBehavior>
               ←<p className="hidden ml-3 md:inline-block">All Sites</p>
 
             </Link>
@@ -149,7 +149,7 @@ export default function Layout({ siteId, children }) {
         <div className="absolute left-0 right-0 bg-white border-b border-gray-200 top-16 font-cal">
           <div className="flex items-center justify-between max-w-screen-xl px-10 mx-auto space-x-16 sm:px-20">
             {siteId ? (
-              (<Link href={`/site/${siteId}`}>
+              (<Link href={`/site/${siteId}`} legacyBehavior>
                 ←<p className="hidden ml-3 md:inline-block">All Posts</p>
 
               </Link>)

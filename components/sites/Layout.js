@@ -63,7 +63,7 @@ export default function Layout({ meta, children, subdomain }) {
         }  top-0 left-0 right-0 h-16 bg-white z-30 transition-all ease duration-150 flex`}
       >
         <div className="flex items-center justify-center h-full max-w-screen-xl px-10 mx-auto space-x-5 sm:px-20">
-          <Link href="/" className="flex items-center justify-center">
+          <Link href="/" className="flex items-center justify-center" legacyBehavior>
 
             <div className="inline-block w-8 h-8 overflow-hidden align-middle rounded-full">
               <Image

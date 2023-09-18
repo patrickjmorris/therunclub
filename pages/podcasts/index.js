@@ -37,7 +37,7 @@ export default function PodcastsIndex({sortedPodcastFeed}) {
                   {sortedPodcastFeed.map((podcast) => (
                     <div key={podcast.pod.podcastTitle} className="flex flex-col rounded-lg shadow-lg">
                       <div className="flex-shrink-0">
-                      <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}>
+                      <Link href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`} legacyBehavior>
 
                         <img className="object-cover w-full h-full" src={podcast.pod.podcastImage} alt={podcast.pod.podcastTitle} />
 
@@ -47,7 +47,8 @@ export default function PodcastsIndex({sortedPodcastFeed}) {
                         <div className="flex-1">
                           <Link
                             href={`/podcasts/${slugify(podcast.pod.podcastTitle)}`}
-                            className="block mt-2">
+                            className="block mt-2"
+                            legacyBehavior>
 
                             <p className="text-xl font-semibold text-gray-900">{podcast.pod.podcastTitle}</p>
 
@@ -70,6 +71,7 @@ export default function PodcastsIndex({sortedPodcastFeed}) {
 
 export async function getStaticProps() {
     const podcastHomeFeed = await getHomeFeedEpisodes()
+    // console.log(podcastHomeFeed)
     const lastPodcastEpisodes = podcastHomeFeed.map(podcast => {
       const pod = {
         podcastAuthor: podcast.fullThing.itunes.author || null,

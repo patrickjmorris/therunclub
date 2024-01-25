@@ -1,10 +1,11 @@
+import Link from "next/link";
 import BlurImage from "../BlurImage";
 
 export default function Card({ data }) {
   return (
-    <a href={`https://${data.url}`} target="_blank">
-      <div className="hidden lg:block rounded-2xl border-2 border-gray-100 shadow-md bg-white hover:shadow-xl hover:-translate-y-1 transition-all ease duration-200">
-        <div className="rounded-t-2xl overflow-hidden">
+    <Link href={`https://${data.url}`} target="_blank">
+      <div className="hidden transition-all duration-200 bg-white border-2 border-gray-100 shadow-md lg:block rounded-2xl hover:shadow-xl hover:-translate-y-1 ease">
+        <div className="overflow-hidden rounded-t-2xl">
           <BlurImage
             src={`/examples/${data.image}`}
             alt={data.name}
@@ -16,17 +17,17 @@ export default function Card({ data }) {
             blurDataURL={data.imageBlurhash}
           />
         </div>
-        <div className="py-6 px-5 h-36">
-          <h3 className="font-cal text-2xl font-bold tracking-wide truncate">
+        <div className="px-5 py-6 h-36">
+          <h3 className="text-2xl font-bold tracking-wide truncate font-cal">
             {data.name}
           </h3>
-          <p className="mt-3 text-gray-800 italic text-base leading-snug">
+          <p className="mt-3 text-base italic leading-snug text-gray-800">
             {data.description}
           </p>
         </div>
       </div>
-      <div className="lg:hidden overflow-hidden rounded-xl flex items-center md:h-48 h-36 border-2 border-gray-100 focus:border-black active:border-black bg-white transition-all ease duration-200">
-        <div className="w-2/5 relative h-full">
+      <div className="flex items-center overflow-hidden transition-all duration-200 bg-white border-2 border-gray-100 lg:hidden rounded-xl md:h-48 h-36 focus:border-black active:border-black ease">
+        <div className="relative w-2/5 h-full">
           <BlurImage
             src={`/examples/${data.image}`}
             alt={data.name}
@@ -36,15 +37,15 @@ export default function Card({ data }) {
             blurDataURL={data.imageBlurhash}
           />
         </div>
-        <div className="py-6 px-5 w-3/5">
-          <h3 className="font-cal my-0 text-xl font-bold tracking-wide truncate">
+        <div className="w-3/5 px-5 py-6">
+          <h3 className="my-0 text-xl font-bold tracking-wide truncate font-cal">
             {data.name}
           </h3>
-          <p className="mt-3 text-gray-800 italic text-sm leading-snug font-normal">
+          <p className="mt-3 text-sm italic font-normal leading-snug text-gray-800">
             {data.description}
           </p>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }

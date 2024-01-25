@@ -105,7 +105,7 @@ export async function getStaticProps({ params }) {
   const detailedFeed = await getFeed(feed.url);
   const itemsForIndex = detailedFeed.items.map(selectProps("guid", "title", "isoDate", "itunes", "enclosure"));
   const singleEpisode = itemsForIndex.find((item) => slugify(item.title) === params.episode)
-  // console.log(singleEpisode)
+  console.log(singleEpisode)
   return {
     props: {
       feed,

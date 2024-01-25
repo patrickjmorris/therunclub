@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Footer() {
     const footerNavigation = {
         solutions: [
@@ -81,10 +83,10 @@ export default function Footer() {
                   </p>
                   <div className="flex space-x-6">
                     {footerNavigation.social.map((item) => (
-                      <a key={item.name} href={item.href} className="text-gray-400 hover:text-gray-500">
+                      <Link key={item.name} href={item.href} className="text-gray-400 hover:text-gray-500">
                         <span className="sr-only">{item.name}</span>
                         <item.icon className="w-6 h-6" aria-hidden="true" />
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -95,9 +97,9 @@ export default function Footer() {
                       <ul role="list" className="mt-4 space-y-4">
                         {footerNavigation.solutions.map((item) => (
                           <li key={item.name}>
-                            <a href={item.href} className="text-base text-gray-500 hover:text-gray-900">
+                            <Link href={item.href} className="text-base text-gray-500 hover:text-gray-900">
                               {item.name}
-                            </a>
+                            </Link>
                           </li>
                         ))}
                       </ul>
@@ -107,9 +109,9 @@ export default function Footer() {
                       <ul role="list" className="mt-4 space-y-4">
                         {footerNavigation.support.map((item) => (
                           <li key={item.name}>
-                            <a href={item.href} className="text-base text-gray-500 hover:text-gray-900">
+                            <Link href={item.href} className="text-base text-gray-500 hover:text-gray-900">
                               {item.name}
-                            </a>
+                            </Link>
                           </li>
                         ))}
                       </ul>

@@ -2,6 +2,7 @@ import useSWR, { mutate } from "swr";
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 import { useState } from "react";
 import LoadingDots from "@/components/app/loading-dots";
+import Link from "next/link";
 
 const DomainCard = ({ data, setData }) => {
   const { data: valid, isValidating } = useSWR(
@@ -15,7 +16,7 @@ const DomainCard = ({ data, setData }) => {
   return (
     <div className="w-full max-w-2xl py-10 mt-10 border border-black rounded-lg">
       <div className="flex flex-col justify-between px-10 space-y-4 sm:flex-row sm:space-x-4">
-        <a
+        <Link
           href={`http://${data.customDomain}`}
           target="_blank"
           className="flex items-center justify-center text-xl font-semibold sm:justify-start"
@@ -38,7 +39,7 @@ const DomainCard = ({ data, setData }) => {
               <path d="M10 14L21 3" />
             </svg>
           </span>
-        </a>
+        </Link>
         <div className="flex space-x-3">
           <button
             onClick={() => {

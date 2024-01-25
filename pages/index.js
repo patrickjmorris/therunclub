@@ -4,7 +4,7 @@ import { orderBy } from "lodash";
 import {slugify} from "@/lib/util";
 import Layout from "@/components/content/Layout";
 import Footer from '@/components/content/Footer';
-import {  formatDistance } from 'date-fns';
+import { formatDistance } from 'date-fns';
 
 export default function HomePage({ sortedPodcastFeed}) {
   const meta = {

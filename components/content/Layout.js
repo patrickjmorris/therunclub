@@ -144,9 +144,9 @@ export default function Layout({ meta, children }) {
                     <div className="px-5 mt-6">
                       <p className="text-base font-medium text-center text-gray-500">
                         Existing customer?{' '}
-                        <a href="#" className="text-gray-900 hover:underline">
+                        <Link href="#" className="text-gray-900 hover:underline">
                           Login
-                        </a>
+                        </Link>
                       </p>
                     </div>
                   </div>

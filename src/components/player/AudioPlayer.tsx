@@ -10,6 +10,8 @@ import { PlaybackRateButton } from '@/components/player/PlaybackRateButton'
 import { PlayButton } from '@/components/player/PlayButton'
 import { RewindButton } from '@/components/player/RewindButton'
 import { Slider } from '@/components/player/Slider'
+import { slugify } from '@/lib/utils'
+import { FEEDS } from '@/lib/episodes'
 
 function parseTime(seconds: number) {
   let hours = Math.floor(seconds / 3600)
@@ -49,7 +51,7 @@ export function AudioPlayer() {
       </div>
       <div className="mb-[env(safe-area-inset-bottom)] flex flex-1 flex-col gap-3 overflow-hidden p-1">
         <Link
-          href={`/${player.episode.id}`}
+          href={`/podcasts/${slugify(player.episode.title)}`}
           className="truncate text-center text-sm font-bold leading-6 md:text-left"
           title={player.episode.title}
         >

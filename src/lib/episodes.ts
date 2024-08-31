@@ -259,6 +259,7 @@ export interface Episode {
   pubDate: string;
   description: string;
   link: string;
+  guid: string
   enclosure: {
       url: string;
   };
@@ -294,6 +295,7 @@ export async function parsePodcastFeed(rssFeedUrl: string): Promise<ParsedPodcas
       pubDate: item.pubDate || '',
       description: item.content || '',
       link: item.link || '',
+      guid: item.guid || '',
       enclosure: {
           url: item.enclosure?.url || '',
       },

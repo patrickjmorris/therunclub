@@ -349,16 +349,16 @@ export async function getFullFeed(rssFeedUrl: string): Promise<any> {
   return fullFeed;
 }
 
-export default async function getPodcastandLastEpisodes(): Promise<any> {
+export default async function getPodcastandLastEpisodes(): Promise<any[]> {
   // Use the getPodcastMetadata function to get metadata for each podcast
   // Use the FEEDS array to get the metadata for each podcast
   // Use getLastEpisode function to get the last episode for each podcast
   // Use the parsePodcastFeed function to parse the RSS feed for each podcast
   
-   await Promise.all(FEEDS.map(async (feed) => {
+  return await Promise.all(FEEDS.map(async (feed) => {
     let slug = feed.slug
     let metadata = await getPodcastMetadata(feed.url)
-    let episodes = await getLastEpisode(feed.url)
+    let episode = await getLastEpisode(feed.url)
     return {
       slug: slug,
       title: metadata.title,
@@ -366,9 +366,9 @@ export default async function getPodcastandLastEpisodes(): Promise<any> {
       image: metadata.image,
       // return the episodes for the podcast and transform the pubDate into a Date object
       episodes: {
-        title: episodes.title,
-        pubDate: new Date(episodes.pubDate),
+        title: episode.title,
+        pubDate: new Date(episode.pubDate),
       }, 
     }
-
-  }))}
+  }))
+}

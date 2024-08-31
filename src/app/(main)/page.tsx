@@ -1,9 +1,27 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import getPodcastandLastEpisodes from "@/lib/episodes"
+import { slugify } from "@/lib/utils"
 import { Headphones, Video, PersonStanding, Dumbbell, Users } from "lucide-react"
 import Link from "next/link"
 
-export default function HomePage() {
+type Podcast = {
+  title: string;
+  slug: string;
+  description: string;
+  image: string;
+  episodes: {
+    title: string;
+    pubDate: Date;
+  };
+};
+
+export default async function HomePage() {
+  const allPodcasts = await getPodcastandLastEpisodes();
+  allPodcasts.sort((a, b) => new Date(b.episodes.pubDate).getTime() - new Date(a.episodes.pubDate).getTime());
+  const podcasts = allPodcasts.slice(0, 3)
+  
+  console.log('Podcasts:', podcasts)
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -28,26 +46,27 @@ export default function HomePage() {
         <div className="container px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">Featured Podcasts</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: "The Running Show", episode: "Episode 42: Marathon Training Tips" },
-              { title: "Fitness Talk", episode: "Episode 15: Nutrition for Athletes" },
-              { title: "Club Connect", episode: "Episode 7: Building a Community" },
-            ].map((podcast, index) => (
+            {podcasts.map((podcast: Podcast, index: number) => (
               <Card key={index}>
                 <CardHeader>
                   <CardTitle>{podcast.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">{podcast.episode}</p>
+                  <img src={podcast.image} alt={podcast.title} className="w-48 h-48 object-cover mb-4 rounded-md mx-auto" />
+                  <p className="text-muted-foreground">{podcast.episodes.title}</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {podcast.episodes.pubDate.toLocaleDateString()}
+                  </p>
                   <Button className="mt-4" variant="outline">
                     <Headphones className="mr-2 h-4 w-4" />
-                    Listen Now
+                    <Link href={`/podcasts/${podcast.slug}/${slugify(podcast.episodes.title)}`}>Listen Now</Link>
                   </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
-        </div>
+          </div>
+        
       </section>
 
       {/* Coming Soon Section */}

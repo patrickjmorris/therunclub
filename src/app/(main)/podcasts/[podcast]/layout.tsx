@@ -46,14 +46,13 @@ export default async function PodcastLayout({
                 className="relative block w-48 mx-auto overflow-hidden rounded-lg shadow-xl bg-slate-200 shadow-slate-200 sm:w-64 sm:rounded-xl lg:w-auto lg:rounded-2xl"
                 aria-label="Homepage"
               >
-                <Image
+                <img
                   className="w-full"
                   src={data.image}
                   alt=""
                   width={400}
                   height={4000}
                   sizes="(min-width: 1024px) 20rem, (min-width: 640px) 16rem, 12rem"
-                  priority
                 />
                 <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-black/10 sm:rounded-xl lg:rounded-2xl" />
               </Link>

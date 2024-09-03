@@ -8,8 +8,6 @@ import { PauseIcon } from '@/components/PauseIcon'
 import { PlayIcon } from '@/components/PlayIcon'
 import { FEEDS, getEpisodeTitles, getEpisode } from '@/lib/episodes'
 import { slugify } from '@/lib/utils'
-import Image from 'next/image'
-
 // Generate segments for [podcast] using the `params` passed from
 // the parent segment's `generateStaticParams` function
 export async function generateStaticParams({
@@ -62,14 +60,14 @@ export default async function Episode({
         <header className="flex flex-col">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-1/2">
-            <Image
+            <img
               className="w-full sm:rounded-xl lg:rounded-2xl"
               src={episode.itunes.image}
               alt={episode.title}
               width={500}
               height={500}
               sizes="(min-width: 1024px) 20rem, (min-width: 640px) 16rem, 12rem"
-              priority
+            
             />
           </div>
           <div className="lg:w-1/2">

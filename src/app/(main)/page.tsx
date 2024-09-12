@@ -16,12 +16,14 @@ type Podcast = {
   };
 };
 
+export const revalidate = 60 * 60;
+
 export default async function HomePage() {
   const allPodcasts = await getPodcastandLastEpisodes();
   allPodcasts.sort((a, b) => new Date(b.episodes.pubDate).getTime() - new Date(a.episodes.pubDate).getTime());
   const podcasts = allPodcasts.slice(0, 3)
   
-  console.log('Podcasts:', podcasts)
+  
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}

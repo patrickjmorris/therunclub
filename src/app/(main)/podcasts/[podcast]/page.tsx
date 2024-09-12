@@ -3,6 +3,8 @@ import { FEEDS, getLastTenEpisodes, getPodcastMetadata } from '@/lib/episodes'
 import EpisodeEntry from '@/components/podcasts/EpisodeEntry'
 import { notFound } from 'next/navigation';
 
+export const revalidate = 60 * 60 * 24;
+
 export async function generateStaticParams() {
   
   return FEEDS.map((feed) => ({
@@ -40,5 +42,3 @@ export default async function Podcast({params}: any) {
     </div>
   )
 }
-
-export const revalidate = 10

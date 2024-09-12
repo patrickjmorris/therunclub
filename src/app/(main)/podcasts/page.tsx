@@ -2,6 +2,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import {  getPodcastMetadata, FEEDS, getLastEpisode } from '../../../lib/episodes';
 import Link from 'next/link'
 
+export const revalidate = 60 * 60;
 
 export default async function PodcastList() {
   // Use the getPodcastMetadata function to get metadata for each podcast
@@ -43,7 +44,9 @@ export default async function PodcastList() {
   return (
     <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
     <section className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:grid-cols-3">
-        {data.map((feed) => (
+        {data
+          .sort((a, b) => b.episodes.pubDate.getTime() - a.episodes.pubDate.getTime())
+          .map((feed) => (
           <div key={feed.title} className="flex flex-col w-full gap-2 shadow-lg p-4 rounded-lg overflow-hidden dark:border-gray-800 dark:shadow-gray-800/50">
           <Link href={`/podcasts/${feed.slug}`}>
             <img

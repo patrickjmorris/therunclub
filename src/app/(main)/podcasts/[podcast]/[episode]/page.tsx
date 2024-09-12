@@ -8,6 +8,9 @@ import { PauseIcon } from '@/components/PauseIcon'
 import { PlayIcon } from '@/components/PlayIcon'
 import { FEEDS, getEpisodeTitles, getEpisode } from '@/lib/episodes'
 import { slugify } from '@/lib/utils'
+
+export const dynamicParams = true
+
 // Generate segments for [podcast] using the `params` passed from
 // the parent segment's `generateStaticParams` function
 export async function generateStaticParams({

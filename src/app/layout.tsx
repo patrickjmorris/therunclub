@@ -4,6 +4,7 @@ import { AudioPlayer } from '@/components/player/AudioPlayer'
 import { TinyWaveFormIcon } from '@/components/TinyWaveFormIcon'
 import { Waveform } from '@/components/Waveform'
 import Header from '@/components/ui/Header'
+import { Analytics } from "@vercel/analytics/react"
 
 export const metadata = {
   title: {
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AudioPlayer />
       </div>
       </AudioProvider>
+      <Analytics />
       </body>
     </html>
   )

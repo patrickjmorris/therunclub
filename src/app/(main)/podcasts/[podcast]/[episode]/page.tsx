@@ -6,7 +6,7 @@ import { EpisodePlayButton } from '@/components/EpisodePlayButton'
 import { FormattedDate } from '@/components/FormattedDate'
 import { PauseIcon } from '@/components/PauseIcon'
 import { PlayIcon } from '@/components/PlayIcon'
-import { FEEDS, getEpisodeTitles, getEpisode } from '@/lib/episodes'
+import { FEEDS, getEpisodeTitles, getEpisode, getPodcastMetadata } from '@/lib/episodes'
 import { slugify } from '@/lib/utils'
 
 export const dynamicParams = true
@@ -35,9 +35,7 @@ export default async function Episode({
   params,
 }: {
   params: { podcast: string, episode: string }
-}) 
-
-{
+}) {
   // console.log('Episode Params', params)
   let feed = FEEDS.find((feed) => feed.slug === params.podcast)
   if (!feed) {
@@ -46,10 +44,6 @@ export default async function Episode({
       notFound()
   }
   let episode = await getEpisode(feed.url, params.episode)
-  // let episode = await getEpisode("https://media.rss.com/coffeeclub/feed.xml", "first-place-losers")
-  // let fullthing = await getFullFeed(feed.url)
-  // console.log('Episode', episode)
-  // console.log('Full Feed', fullthing.items[0])
   if (!episode) {
     // Handle the case where episode is undefined
     // Not sure if this is the best way to handle this
@@ -57,6 +51,12 @@ export default async function Episode({
   }
   let date = new Date(episode.pubDate)
   
+  // Get the podcast metadata to use as fallback for the image
+  let podcastMetadata = await getPodcastMetadata(feed.url)
+  
+  // Use the episode's iTunes image if available, otherwise use the podcast image
+  const imageUrl = episode.itunes.image || podcastMetadata.image
+
   return (
     <article className="py-16 lg:py-36">
       <Container>
@@ -65,7 +65,7 @@ export default async function Episode({
           <div className="lg:w-1/2">
             <img
               className="w-full sm:rounded-xl lg:rounded-2xl"
-              src={episode.itunes.image}
+              src={imageUrl}
               alt={episode.title}
               width={500}
               height={500}

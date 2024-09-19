@@ -3,7 +3,7 @@ import { AudioProvider } from '@/components/AudioProvider'
 import { AudioPlayer } from '@/components/player/AudioPlayer'
 import { TinyWaveFormIcon } from '@/components/TinyWaveFormIcon'
 import { Waveform } from '@/components/Waveform'
-import Header from '@/components/ui/Header'
+import Header from '@/components/ui/header'
 import { Analytics } from "@vercel/analytics/react"
 
 export const metadata = {

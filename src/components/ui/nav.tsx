@@ -13,7 +13,7 @@ const navItems = [
   { name: 'Training', href: '/coming-soon' },
 ]
 
-export default function Header() {
+export default function Navigation() {
   const [isSticky, setIsSticky] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 

@@ -3,17 +3,17 @@ import { AudioProvider } from '@/components/AudioProvider'
 import { AudioPlayer } from '@/components/player/AudioPlayer'
 import { TinyWaveFormIcon } from '@/components/TinyWaveFormIcon'
 import { Waveform } from '@/components/Waveform'
-import Header from '@/components/ui/header'
+import Navigation from '@/components/ui/nav'
 import { Analytics } from "@vercel/analytics/react"
 
 export const metadata = {
   title: {
-    template: '%s - Their Side',
+    template: '%s - The Run Club',
     default:
-      'Their Side - Conversations with the most tragically misunderstood people of our time',
+      'The Run Club - Where Runners Run',
   },
   description:
-    'Conversations with the most tragically misunderstood people of our time.',
+    'The Run Club gathers runners from all over the world to share their stories, experiences, and tips for running.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="flex min-h-full">
       <AudioProvider>
-        <Header />
+        <Navigation />
         <div className="w-full md:pt-16">{children}</div>
         <div className="fixed inset-x-0 bottom-0 z-10 lg:left-112 xl:left-120">
         <AudioPlayer />

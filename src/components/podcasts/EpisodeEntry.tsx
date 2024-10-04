@@ -1,96 +1,108 @@
-import { Episode, FEEDS } from "@/lib/episodes"
-import { Container } from "../Container"
-import { slugify } from "@/lib/utils"
-import Link from "next/link"
-import { FormattedDate } from "../FormattedDate"
-import { EpisodePlayButton } from "../EpisodePlayButton"
+import Image from "next/image";
+import { Episode, FEEDS, getPodcastMetadata } from "@/lib/episodes";
+import { Container } from "../Container";
+import { slugify } from "@/lib/utils";
+import Link from "next/link";
+import { FormattedDate } from "../FormattedDate";
+import { EpisodePlayButton } from "../EpisodePlayButton";
+import { Play, Pause } from "lucide-react";
+import { Button } from "../ui/button";
+import { formatDuration } from "@/lib/formatDuration";
 
+export default async function EpisodeEntry({
+	episode,
+	params,
+}: { episode: Episode; params: { podcast: string } }) {
+	const date = new Date(episode.pubDate);
+	const duration = formatDuration(episode.itunes.duration);
 
-function PauseIcon(props: React.ComponentPropsWithoutRef<'svg'>) {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 10 10" {...props}>
-        <path
-          fillRule="evenodd"
-          clipRule="evenodd"
-          d="M1.496 0a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5H2.68a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H1.496Zm5.82 0a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5H8.5a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H7.316Z"
-        />
-      </svg>
-    )
-  }
-  
-  function PlayIcon(props: React.ComponentPropsWithoutRef<'svg'>) {
-    return (
-      <svg aria-hidden="true" viewBox="0 0 10 10" {...props}>
-        <path d="M8.25 4.567a.5.5 0 0 1 0 .866l-7.5 4.33A.5.5 0 0 1 0 9.33V.67A.5.5 0 0 1 .75.237l7.5 4.33Z" />
-      </svg>
-    )
-  }
+	const feed = FEEDS.find((feed) => feed.slug === params.podcast);
+	if (!feed) {
+		// Handle the case where feed is undefined
+		return null; // Or any other appropriate action
+	}
 
-export default function EpisodeEntry({ episode, params }: { episode: Episode, params: any }) {
-    let date = new Date(episode.pubDate)
+	const data = await getPodcastMetadata(feed.url);
 
-    let feed = FEEDS.find((feed) => feed.slug === params.podcast)
-    if (!feed) {
-      // Handle the case where feed is undefined
-      return null; // Or any other appropriate action
-    }
-  
-    return (
-      <article
-        aria-labelledby={`episode-${episode.title}-title`}
-        className="py-10 sm:py-12"
-      >
-        <Container>
-          <div className="flex flex-col items-start">
-            <h2
-              id={`episode-${episode.title}-title`}
-              className="mt-2 text-lg font-bold text-slate-900"
-            >
-              <Link href={`/podcasts/${feed.slug}/${slugify(episode.title)}`}>{episode.title}</Link>
-            </h2>
-            <FormattedDate
-              date={date}
-              className="order-first font-mono text-sm leading-7 text-slate-500"
-            />
-            <div className="mt-1 text-base leading-7 text-slate-700 line-clamp-4 prose prose-slate"
-            dangerouslySetInnerHTML={{
-                    __html: episode.description
-                  }}>
-              
-            </div>
-            <div className="flex items-center gap-4 mt-4">
-              <EpisodePlayButton
-                episode={episode}
-                className="flex items-center text-sm font-bold leading-6 text-pink-500 gap-x-3 hover:text-pink-700 active:text-pink-900"
-                playing={
-                  <>
-                    <PauseIcon className="h-2.5 w-2.5 fill-current" />
-                    <span aria-hidden="true">Listen</span>
-                  </>
-                }
-                paused={
-                  <>
-                    <PlayIcon className="h-2.5 w-2.5 fill-current" />
-                    <span aria-hidden="true">Listen</span>
-                  </>
-                }
-              />
-              <span
-                aria-hidden="true"
-                className="text-sm font-bold text-slate-400"
-              >
-                /
-              </span>
-              <Link
-                href={`/podcasts/${feed.slug}/${slugify(episode.title)}`}
-                className="flex items-center text-sm font-bold leading-6 text-pink-500 hover:text-pink-700 active:text-pink-900"
-                aria-label={`Show notes for episode ${episode.title}`}
-              >
-                Show notes
-              </Link>
-            </div>
-          </div>
-        </Container>
-      </article>
-    )
-  }
+	return (
+		<article
+			aria-labelledby={`episode-${episode.title}-title`}
+			className="py-10 sm:py-12"
+		>
+			<Container>
+				<div className="grid grid-cols-[auto_1fr] lg:grid-cols-[180px_1fr] gap-4 lg:gap-6">
+					<div className="row-span-1 lg:row-span-3">
+						<Image
+							src={episode.itunes.image || data.image}
+							alt={episode.title}
+							width={180}
+							height={180}
+							className="rounded object-cover w-32 h-32 lg:w-[180px] lg:h-[180px]"
+						/>
+					</div>
+					<div className="flex flex-col">
+						<h2
+							id={`episode-${episode.title}-title`}
+							className="text-lg font-bold text-slate-900 line-clamp-4 text-ellipsis"
+						>
+							<Link href={`/podcasts/${feed.slug}/${slugify(episode.title)}`}>
+								{episode.title}
+							</Link>
+						</h2>
+						<FormattedDate
+							date={date}
+							className="font-mono text-sm leading-7 text-slate-500"
+						/>
+					</div>
+					<div
+						className="text-base leading-7 text-slate-700 line-clamp-4 prose prose-slate col-span-2 lg:col-span-1 lg:col-start-2"
+						// biome-ignore lint/security/noDangerouslySetInnerHtml: We want to use the HTML content to apply styling
+						dangerouslySetInnerHTML={{
+							__html: episode.description,
+						}}
+					/>
+					<div className="flex items-center gap-4 mt-4 col-span-2 lg:col-span-1 lg:col-start-2">
+						<EpisodePlayButton
+							episode={episode}
+							className="flex items-center text-sm font-bold leading-6 text-slate-500 gap-x-3 hover:text-slate-700 active:text-slate-900"
+							playing={
+								<>
+									<Pause className="h-4 w-4 fill-current" />
+									<span aria-hidden="true">Listen</span>
+								</>
+							}
+							paused={
+								<>
+									<Play className="h-4 w-4 fill-current" />
+									<span aria-hidden="true">Listen</span>
+								</>
+							}
+						/>
+						<span
+							aria-hidden="true"
+							className="text-sm font-bold text-slate-400"
+						>
+							/
+						</span>
+						<Button variant="link">
+							<Link
+								href={`/podcasts/${feed.slug}/${slugify(episode.title)}`}
+								className="flex items-center text-sm font-bold leading-6 text-slate-500 hover:text-slate-700 active:text-slate-900"
+								aria-label={`Show notes for episode ${episode.title}`}
+							>
+								Show notes
+							</Link>
+						</Button>
+						<span
+							aria-hidden="true"
+							className="text-sm font-bold text-slate-400"
+						>
+							/
+						</span>
+						<span className="text-sm font-bold text-slate-500">{duration}</span>
+					</div>
+				</div>
+			</Container>
+		</article>
+	);
+}

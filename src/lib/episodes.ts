@@ -250,7 +250,15 @@ export interface PodcastMetadata {
   description: string;
   image: string;
   author: string;
-  explicit: 'yes' | 'no'; // Assuming explicit can only be yes or no
+  link: string;
+  language: string;
+  lastBuildDate: Date | null;
+  itunesOwnerName: string;
+  itunesOwnerEmail: string;
+  itunesImage: string;
+  itunesAuthor: string;
+  itunesSummary: string;
+  itunesExplicit: 'yes' | 'no';
   // Add other metadata properties here as needed
 }
 
@@ -286,7 +294,15 @@ export async function parsePodcastFeed(rssFeedUrl: string): Promise<ParsedPodcas
       description: feed.description || '',
       image: feed.image?.url || feed.itunes?.image || '',
       author: feed.itunes?.author || '',
-      explicit: feed.itunes?.explicit === 'yes' ? 'yes' : 'no',
+      link: feed.link || '',
+      language: feed.language || '',
+      lastBuildDate: feed.lastBuildDate ? new Date(feed.lastBuildDate) : null,
+      itunesOwnerName: feed.itunes?.owner?.name || '',
+      itunesOwnerEmail: feed.itunes?.owner?.email || '',
+      itunesImage: feed.itunes?.image || '',
+      itunesAuthor: feed.itunes?.author || '',
+      itunesSummary: feed.itunes?.summary || '',
+      itunesExplicit: feed.itunes?.explicit === 'yes' ? 'yes' : 'no',
       // Add other metadata properties here as needed
   };
 

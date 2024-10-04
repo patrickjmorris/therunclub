@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16.4-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: therunclubdb
+      POSTGRES_USER: therunclubuser
+      POSTGRES_PASSWORD: therunclubpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

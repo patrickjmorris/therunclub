@@ -47,6 +47,57 @@ export function AudioPlayer() {
 		setCurrentTime(null);
 	}, []);
 
+	useEffect(() => {
+		if (!player.episode) return;
+
+		if ("mediaSession" in navigator && player.episode) {
+			navigator.mediaSession.metadata = new MediaMetadata({
+				title: player.episode.title,
+				artist: player.episode.author,
+				artwork: [
+					{
+						src: player.episode.itunes.image,
+						sizes: "512x512",
+						type: "image/jpeg",
+					},
+				],
+			});
+
+			const updatePositionState = () => {
+				if (navigator.mediaSession && player.duration) {
+					navigator.mediaSession.setPositionState({
+						duration: player.duration,
+						playbackRate: 1, // Adjust if you implement playback rate changes
+						position: player.currentTime,
+					});
+				}
+			};
+
+			navigator.mediaSession.setActionHandler("play", () => player.play());
+			navigator.mediaSession.setActionHandler("pause", () => player.pause());
+			navigator.mediaSession.setActionHandler("seekbackward", () =>
+				player.seekBy(-10),
+			);
+			navigator.mediaSession.setActionHandler("seekforward", () =>
+				player.seekBy(10),
+			);
+			navigator.mediaSession.setActionHandler("seekto", (details) => {
+				if (details.seekTime !== undefined && !Number.isNaN(details.seekTime)) {
+					player.seek(details.seekTime);
+					updatePositionState();
+				}
+			});
+		}
+	}, [
+		player.episode,
+		player.play,
+		player.pause,
+		player.seek,
+		player.seekBy,
+		player.duration,
+		player.currentTime,
+	]);
+
 	if (!player.episode) {
 		return null;
 	}

@@ -1,6 +1,6 @@
-import '@/styles/tailwind.css'
-import { AudioProvider } from '@/components/AudioProvider'
-import { AudioPlayer } from '@/components/player/AudioPlayer'
+import "@/styles/tailwind.css";
+import { AudioProvider } from "@/components/AudioProvider";
+import { AudioPlayer } from "@/components/player/AudioPlayer";
 
 // export default function RootLayout({ children }: { children: React.ReactNode }) {
 //   return (
@@ -29,108 +29,102 @@ import { AudioPlayer } from '@/components/player/AudioPlayer'
 //     </html>
 //   )
 // }
-import { Metadata, Viewport } from "next"
+import { Metadata, Viewport } from "next";
 
-import { siteConfig } from "@/config/site"
-import { fontSans } from "@/lib/fonts"
-import { cn } from "@/lib/utils"
-import { Analytics } from "@/components/analytics"
-import { ThemeProvider } from "@/components/providers"
-import { TailwindIndicator } from "@/components/tailwind-indicator"
+import { siteConfig } from "@/config/site";
+import { fontSans } from "@/lib/fonts";
+import { cn } from "@/lib/utils";
+import { Analytics } from "@/components/analytics";
+import { ThemeProvider } from "@/components/providers";
+import { TailwindIndicator } from "@/components/tailwind-indicator";
 
 export const metadata: Metadata = {
-  title: {
-    default: siteConfig.name,
-    template: `%s - ${siteConfig.name}`,
-  },
-  metadataBase: new URL(siteConfig.url),
-  description: siteConfig.description,
-  keywords: [
-    "Running",
-    "Track",
-    "Athletics",
-    "Marathon",
-    "Fitness",
-  ],
-  authors: [
-    {
-      name: "The Run Club",
-      url: "https://therunclub.xyz",
-    },
-  ],
-  creator: "The Run Club",
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: siteConfig.url,
-    title: siteConfig.name,
-    description: siteConfig.description,
-    siteName: siteConfig.name,
-    images: [
-      {
-        url: siteConfig.ogImage,
-        width: 1200,
-        height: 630,
-        alt: siteConfig.name,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: siteConfig.name,
-    description: siteConfig.description,
-    images: [siteConfig.ogImage],
-    creator: "@therunclub",
-  },
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
-  }
-}
+	title: {
+		default: siteConfig.name,
+		template: `%s - ${siteConfig.name}`,
+	},
+	metadataBase: new URL(siteConfig.url),
+	description: siteConfig.description,
+	keywords: ["Running", "Track", "Athletics", "Marathon", "Fitness"],
+	authors: [
+		{
+			name: "The Run Club",
+			url: "https://therunclub.xyz",
+		},
+	],
+	creator: "The Run Club",
+	openGraph: {
+		type: "website",
+		locale: "en_US",
+		url: siteConfig.url,
+		title: siteConfig.name,
+		description: siteConfig.description,
+		siteName: siteConfig.name,
+		images: [
+			{
+				url: siteConfig.ogImage,
+				width: 1200,
+				height: 630,
+				alt: siteConfig.name,
+			},
+		],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: siteConfig.name,
+		description: siteConfig.description,
+		images: [siteConfig.ogImage],
+		creator: "@therunclub",
+	},
+	icons: {
+		icon: "/favicon.ico",
+		shortcut: "/favicon-16x16.png",
+		apple: "/apple-touch-icon.png",
+	},
+};
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "black" },
-  ],
-}
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "white" },
+		{ media: "(prefers-color-scheme: dark)", color: "black" },
+	],
+};
 
 interface RootLayoutProps {
-  children: React.ReactNode
+	children: React.ReactNode;
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
-  return (
-    <>
-      <html lang="en" suppressHydrationWarning>
-        <head />
-        <body
-          className={cn(
-            "min-h-screen bg-background font-sans antialiased",
-            fontSans.variable
-          )}
-        >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AudioProvider>
-            <div vaul-drawer-wrapper="">
-              <div className="relative flex min-h-screen flex-col bg-background">
-                {children}
-              </div>
-              <AudioPlayer />
-            </div>
-            <TailwindIndicator />
-            
-            <Analytics />
-            </AudioProvider>
-          </ThemeProvider>
-        </body>
-      </html>
-    </>
-  )
+	return (
+		<>
+			<html lang="en" suppressHydrationWarning>
+				<head />
+				<body
+					className={cn(
+						"min-h-screen bg-background font-sans antialiased",
+						fontSans.variable,
+					)}
+				>
+					<ThemeProvider
+						attribute="class"
+						defaultTheme="system"
+						enableSystem
+						disableTransitionOnChange
+					>
+						<AudioProvider>
+							<div vaul-drawer-wrapper="">
+								<div className="relative flex min-h-screen flex-col bg-background">
+									{children}
+								</div>
+								<AudioPlayer />
+							</div>
+							<TailwindIndicator />
+
+							<Analytics />
+						</AudioProvider>
+					</ThemeProvider>
+				</body>
+			</html>
+		</>
+	);
 }

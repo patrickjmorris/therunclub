@@ -84,12 +84,13 @@ function Thumb(props: {
 export function Slider(
 	props: SliderStateOptions<Array<number>> & { onChangeStart?: () => void },
 ) {
-	const trackRef = useRef<HTMLDivElement | null>(null);
+	// biome-ignore lint/style/noNonNullAssertion: This will only show up when a song is playing
+	const trackRef = useRef<HTMLDivElement>(null!);
 	const state = useSliderState(props);
 	const { groupProps, trackProps, labelProps, outputProps } = useSlider(
 		props,
 		state,
-		trackRef as React.RefObject<HTMLDivElement>,
+		trackRef,
 	);
 	const { focusProps, isFocusVisible } = useFocusRing();
 

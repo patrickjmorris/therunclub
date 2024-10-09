@@ -1,8 +1,6 @@
 import Link from "next/link";
 
 import { AboutSection } from "@/components/AboutSection";
-import { AudioProvider } from "@/components/AudioProvider";
-import { AudioPlayer } from "@/components/player/AudioPlayer";
 import { getPodcastMetadata, FEEDS } from "@/lib/episodes";
 import { slugify } from "@/lib/utils";
 import { Card } from "@/components/ui/card";

@@ -39,9 +39,13 @@ function Thumb(props: {
 	onChangeStart?: () => void;
 }) {
 	const { state, trackRef, focusProps, isFocusVisible, index } = props;
-	const inputRef = useRef<React.ElementRef<"input">>(null);
+	const inputRef = useRef<HTMLInputElement | null>(null);
 	const { thumbProps, inputProps } = useSliderThumb(
-		{ index, trackRef, inputRef },
+		{
+			index,
+			trackRef,
+			inputRef: inputRef as React.RefObject<HTMLInputElement>,
+		},
 		state,
 	);
 
@@ -80,7 +84,8 @@ function Thumb(props: {
 export function Slider(
 	props: SliderStateOptions<Array<number>> & { onChangeStart?: () => void },
 ) {
-	const trackRef = useRef<React.ElementRef<"div">>(null);
+	// biome-ignore lint/style/noNonNullAssertion: This will only show up when a song is playing
+	const trackRef = useRef<HTMLDivElement>(null!);
 	const state = useSliderState(props);
 	const { groupProps, trackProps, labelProps, outputProps } = useSlider(
 		props,

@@ -39,9 +39,13 @@ function Thumb(props: {
 	onChangeStart?: () => void;
 }) {
 	const { state, trackRef, focusProps, isFocusVisible, index } = props;
-	const inputRef = useRef<React.ElementRef<"input">>(null);
+	const inputRef = useRef<HTMLInputElement | null>(null);
 	const { thumbProps, inputProps } = useSliderThumb(
-		{ index, trackRef, inputRef },
+		{
+			index,
+			trackRef,
+			inputRef: inputRef as React.RefObject<HTMLInputElement>,
+		},
 		state,
 	);
 

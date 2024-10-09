@@ -84,12 +84,12 @@ function Thumb(props: {
 export function Slider(
 	props: SliderStateOptions<Array<number>> & { onChangeStart?: () => void },
 ) {
-	const trackRef = useRef<React.ElementRef<"div">>(null);
+	const trackRef = useRef<HTMLDivElement | null>(null);
 	const state = useSliderState(props);
 	const { groupProps, trackProps, labelProps, outputProps } = useSlider(
 		props,
 		state,
-		trackRef,
+		trackRef as React.RefObject<HTMLDivElement>,
 	);
 	const { focusProps, isFocusVisible } = useFocusRing();
 

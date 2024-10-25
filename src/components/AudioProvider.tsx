@@ -14,14 +14,14 @@ interface PlayerState {
 }
 
 interface PublicPlayerActions {
-	play: (episode?: Episode) => void;
+	play: (episode?: EpisodeWithPodcast) => void;
 	pause: () => void;
-	toggle: (episode?: Episode) => void;
+	toggle: (episode?: EpisodeWithPodcast) => void;
 	seekBy: (amount: number) => void;
 	seek: (time: number) => void;
 	playbackRate: (rate: number) => void;
 	toggleMute: () => void;
-	isPlaying: (episode?: Episode) => boolean;
+	isPlaying: (episode?: EpisodeWithPodcast) => boolean;
 }
 
 export type PlayerAPI = PlayerState & PublicPlayerActions;
@@ -36,7 +36,7 @@ enum ActionKind {
 }
 
 type Action =
-	| { type: ActionKind.SET_META; payload: Episode }
+	| { type: ActionKind.SET_META; payload: EpisodeWithPodcast }
 	| { type: ActionKind.PLAY }
 	| { type: ActionKind.PAUSE }
 	| { type: ActionKind.TOGGLE_MUTE }

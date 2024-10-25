@@ -25,7 +25,7 @@ export default async function PodcastLayout({
 	};
 }) {
 	const data = await getPodcastById(params.podcast);
-	console.log("layout", data);
+	// console.log("layout", data);
 	if (!data) {
 		notFound();
 	}

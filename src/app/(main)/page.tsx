@@ -37,8 +37,8 @@ export default async function HomePage() {
 	// const podcasts = allPodcasts.slice(0, 3);
 
 	const podcasts = await getNewEpisodes();
-	console.log("getNewEpisodes", podcasts.slice(0, 3));
-	console.log("process.env.NODE_ENV", process.env.NODE_ENV);
+	// console.log("getNewEpisodes", podcasts.slice(0, 3));
+	// console.log("process.env.NODE_ENV", process.env.NODE_ENV);
 
 	return (
 		<div className="flex flex-col min-h-screen">

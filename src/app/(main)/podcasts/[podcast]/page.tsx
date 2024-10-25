@@ -23,13 +23,13 @@ export default async function PodcastPage({
 	params,
 }: { params: { podcast: string } }) {
 	const podcast = await getPodcastById(params.podcast);
-	console.log(podcast);
+	// console.log(podcast);
 	if (!podcast) {
 		notFound();
 	}
 
 	const episodes = await getLastTenEpisodes(podcast.id);
-	console.log(episodes);
+	// console.log(episodes);
 	return (
 		<div className="pt-16 pb-12 sm:pb-4 lg:pt-12 bg-stone-50">
 			<Container>

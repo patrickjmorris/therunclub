@@ -17,7 +17,7 @@ const connectionString = isDevelopment
 	? process.env.LOCAL_DB_URL ?? ""
 	: process.env.DATABASE_URL ?? "";
 
-console.log("process.env.NODE_ENV", process.env.NODE_ENV);
+// console.log("process.env.NODE_ENV", process.env.NODE_ENV);
 // Disable prefetch as it is not supported for "Transaction" pool mode
 export const client = postgres(connectionString, { prepare: false });
 export const db = drizzle(client);

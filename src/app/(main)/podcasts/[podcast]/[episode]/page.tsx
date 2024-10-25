@@ -34,7 +34,7 @@ export default async function Episode({
 }: {
 	params: { podcast: string; episode: string };
 }) {
-	console.log("Fetching episode with params:", params);
+	// console.log("Fetching episode with params:", params);
 
 	try {
 		const episode = await getEpisode(params.episode);
@@ -43,7 +43,7 @@ export default async function Episode({
 			notFound();
 		}
 
-		console.log("Episode data:", episode);
+		// console.log("Episode data:", episode);
 
 		const date = new Date(episode.pubDate);
 		const imageUrl = episode.image || episode.podcastImage;

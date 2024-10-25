@@ -2,14 +2,15 @@
 
 import { createContext, useContext, useMemo, useReducer, useRef } from "react";
 
-import { type Episode } from "@/lib/episodes";
+import { type Episode } from "@/db/schema";
+import { EpisodeWithPodcast } from "@/types/episodeWithPodcast";
 
 interface PlayerState {
 	playing: boolean;
 	muted: boolean;
 	duration: number;
 	currentTime: number;
-	episode: Episode | null;
+	episode: EpisodeWithPodcast | null;
 }
 
 interface PublicPlayerActions {
@@ -79,10 +80,10 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
 					if (
 						playerRef.current &&
-						playerRef.current.currentSrc !== episode.enclosure.url
+						playerRef.current.currentSrc !== episode.enclosureUrl
 					) {
 						const playbackRate = playerRef.current.playbackRate;
-						playerRef.current.src = episode.enclosure.url;
+						playerRef.current.src = episode.enclosureUrl ?? "";
 						playerRef.current.load();
 						playerRef.current.pause();
 						playerRef.current.playbackRate = playbackRate;
@@ -119,7 +120,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 			isPlaying(episode) {
 				return episode
 					? state.playing &&
-							playerRef.current?.currentSrc === episode.enclosure.url
+							playerRef.current?.currentSrc === episode.enclosureUrl
 					: state.playing;
 			},
 		};
@@ -157,7 +158,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 	);
 }
 
-export function useAudioPlayer(episode?: Episode) {
+export function useAudioPlayer(episode?: EpisodeWithPodcast) {
 	const player = useContext(AudioPlayerContext);
 
 	return useMemo<PlayerAPI>(

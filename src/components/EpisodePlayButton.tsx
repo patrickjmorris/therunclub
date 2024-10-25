@@ -1,8 +1,8 @@
 "use client";
 
 import { useAudioPlayer } from "@/components/AudioProvider";
-import { type Episode } from "@/lib/episodes";
 import { Button } from "./ui/button";
+import { EpisodeWithPodcast } from "@/types/episodeWithPodcast";
 
 export function EpisodePlayButton({
 	episode,
@@ -10,7 +10,7 @@ export function EpisodePlayButton({
 	paused,
 	...props
 }: React.ComponentPropsWithoutRef<"button"> & {
-	episode: Episode;
+	episode: EpisodeWithPodcast;
 	playing: React.ReactNode;
 	paused: React.ReactNode;
 }) {

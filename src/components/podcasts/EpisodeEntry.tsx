@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { Episode, FEEDS, getPodcastMetadata } from "@/lib/episodes";
 import { Container } from "../Container";
 import { slugify } from "@/lib/utils";
 import Link from "next/link";
@@ -8,32 +7,33 @@ import { EpisodePlayButton } from "../EpisodePlayButton";
 import { Play, Pause } from "lucide-react";
 import { Button } from "../ui/button";
 import { formatDuration } from "@/lib/formatDuration";
+import { getPodcastMetadata, getEpisode } from "@/db/queries";
+import { EpisodeWithPodcast } from "@/types/episodeWithPodcast";
 
 export default async function EpisodeEntry({
-	episode,
-	params,
-}: { episode: Episode; params: { podcast: string } }) {
-	const date = new Date(episode.pubDate);
-	const duration = formatDuration(episode.itunes.duration);
+	episodeId,
+}: {
+	episodeId: string;
+}) {
+	const episode = await getEpisode(episodeId);
 
-	const feed = FEEDS.find((feed) => feed.slug === params.podcast);
-	if (!feed) {
-		// Handle the case where feed is undefined
-		return null; // Or any other appropriate action
+	if (!episode) {
+		return null;
 	}
 
-	const data = await getPodcastMetadata(feed.url);
+	const date = new Date(episode.pubDate);
+	const duration = episode.duration ? formatDuration(episode.duration) : null;
 
 	return (
 		<article
-			aria-labelledby={`episode-${episode.title}-title`}
+			aria-labelledby={`episode-${episode.id}-title`}
 			className="py-10 sm:py-12"
 		>
 			<Container>
 				<div className="grid grid-cols-[auto_1fr] lg:grid-cols-[180px_1fr] gap-4 lg:gap-6">
 					<div className="row-span-1 lg:row-span-3">
 						<Image
-							src={episode.itunes.image || data.image}
+							src={episode.image || episode.podcastImage || ""}
 							alt={episode.title}
 							width={180}
 							height={180}
@@ -42,10 +42,10 @@ export default async function EpisodeEntry({
 					</div>
 					<div className="flex flex-col">
 						<h2
-							id={`episode-${episode.title}-title`}
+							id={`episode-${episode.id}-title`}
 							className="text-lg font-bold text-slate-900 line-clamp-4 text-ellipsis"
 						>
-							<Link href={`/podcasts/${feed.slug}/${slugify(episode.title)}`}>
+							<Link href={`/podcasts/${episode.podcastId}/${episode.id}`}>
 								{episode.title}
 							</Link>
 						</h2>
@@ -58,7 +58,7 @@ export default async function EpisodeEntry({
 						className="text-base leading-7 text-slate-700 line-clamp-4 prose prose-slate col-span-2 lg:col-span-1 lg:col-start-2"
 						// biome-ignore lint/security/noDangerouslySetInnerHtml: We want to use the HTML content to apply styling
 						dangerouslySetInnerHTML={{
-							__html: episode.description,
+							__html: episode.content ?? "",
 						}}
 					/>
 					<div className="flex items-center gap-4 mt-4 col-span-2 lg:col-span-1 lg:col-start-2">
@@ -86,7 +86,7 @@ export default async function EpisodeEntry({
 						</span>
 						<Button variant="link">
 							<Link
-								href={`/podcasts/${feed.slug}/${slugify(episode.title)}`}
+								href={`/podcasts/${episode.podcastId}/${episode.id}`}
 								className="flex items-center text-sm font-bold leading-6 text-slate-500 hover:text-slate-700 active:text-slate-900"
 								aria-label={`Show notes for episode ${episode.title}`}
 							>

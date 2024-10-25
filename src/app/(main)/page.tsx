@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
+import { getAllPodcastAndLastEpisodes, getNewEpisodes } from "@/db/queries";
 
 type Podcast = {
 	title: string;
@@ -27,13 +28,17 @@ type Podcast = {
 export const revalidate = 60 * 60;
 
 export default async function HomePage() {
-	const allPodcasts = await getPodcastandLastEpisodes();
-	allPodcasts.sort(
-		(a, b) =>
-			new Date(b.episodes.pubDate).getTime() -
-			new Date(a.episodes.pubDate).getTime(),
-	);
-	const podcasts = allPodcasts.slice(0, 3);
+	// const allPodcasts = await getPodcastandLastEpisodes();
+	// allPodcasts.sort(
+	// 	(a, b) =>
+	// 		new Date(b.episodes.pubDate).getTime() -
+	// 		new Date(a.episodes.pubDate).getTime(),
+	// );
+	// const podcasts = allPodcasts.slice(0, 3);
+
+	const podcasts = await getNewEpisodes();
+	console.log("getNewEpisodes", podcasts.slice(0, 3));
+	console.log("process.env.NODE_ENV", process.env.NODE_ENV);
 
 	return (
 		<div className="flex flex-col min-h-screen">
@@ -63,29 +68,29 @@ export default async function HomePage() {
 						Featured Podcasts
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{podcasts.map((podcast: Podcast) => (
-							<Card key={podcast.slug}>
+						{podcasts.map((podcast) => (
+							<Card key={podcast.episodeSlug}>
 								<CardHeader>
-									<CardTitle>{podcast.title}</CardTitle>
+									<CardTitle>{podcast.podcastTitle}</CardTitle>
 								</CardHeader>
 								<CardContent>
 									<img
-										src={podcast.image}
-										alt={podcast.title}
+										src={podcast.podcastImage ?? ""}
+										alt={podcast.podcastTitle}
 										className="w-48 h-48 object-cover mb-4 rounded-md mx-auto"
 									/>
 									<p className="text-muted-foreground">
-										{podcast.episodes.title}
+										{podcast.episodeTitle}
 									</p>
 									<p className="text-sm text-muted-foreground mb-2">
-										{podcast.episodes.pubDate.toLocaleDateString()}
+										{podcast.pubDate
+											? new Date(podcast.pubDate).toLocaleDateString()
+											: ""}
 									</p>
 									<Button className="mt-4" variant="outline">
 										<Headphones className="mr-2 h-4 w-4" />
 										<Link
-											href={`/podcasts/${podcast.slug}/${slugify(
-												podcast.episodes.title,
-											)}`}
+											href={`/podcasts/${podcast.podcastId}/${podcast.episodeId}`}
 										>
 											Listen Now
 										</Link>

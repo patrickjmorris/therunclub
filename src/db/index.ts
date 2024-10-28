@@ -26,31 +26,24 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 		
 		// Prepare episode values for bulk insert
 		const episodeValues = (data.items ?? [])
-			.filter(item => item.guid)
-			.map(item => {
-				// Ensure all required fields are present and properly typed
-				const episode: Omit<Episode, "podcastId"> = {
-					id: item.guid ?? "",
-					title: item.title ?? "",
-					episodeSlug: slugify(item.title ?? ""),
-					pubDate: new Date(item.pubDate ?? Date.now()),
-					content: item.content ?? "",
-					link: item.link ?? "",
-					enclosureUrl: item.enclosure?.url ?? null,
-					duration: item.itunes?.duration ?? "",
-					explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
-					image: item.itunes?.image ?? "",
-					episodeNumber: item.itunes?.episode 
-						? parseInt(item.itunes.episode) 
-						: null,
-					season: item.itunes?.season ?? "",
-				};
-
-				return {
-					...episode,
-					podcastId: podcast.id,
-				};
-			});
+			.filter((item): item is NonNullable<typeof item> => !!item.guid)
+			.map((item): Episode => ({
+				id: item.guid || "",
+				podcastId: podcast.id,
+				title: item.title ?? "",
+				episodeSlug: slugify(item.title ?? ""),
+				pubDate: new Date(item.pubDate ?? Date.now()),
+				content: item.content ?? "",
+				link: item.link ?? "",
+				enclosureUrl: item.enclosure?.url ?? null,
+				duration: item.itunes?.duration ?? "",
+				explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+				image: item.itunes?.image ?? "",
+				episodeNumber: item.itunes?.episode 
+					? parseInt(item.itunes.episode) 
+					: null,
+				season: item.itunes?.season ?? "",
+			}));
 
 		// Bulk operations
 		await Promise.all([
@@ -173,23 +166,23 @@ export async function loadInitialData() {
 
 			// Prepare episode values for bulk insert
 			const episodeValues = (data.items ?? [])
-				.filter(item => item.guid)
-				.map(item => ({
-					id: item.guid ?? "",
+				.filter((item): item is NonNullable<typeof item> => !!item.guid)
+				.map((item): Episode => ({
+					id: item.guid || "",
 					podcastId: insertedPodcast.id,
-					title: item.title ?? "",
-					episodeSlug: slugify(item.title ?? ""),
-					pubDate: new Date(item.pubDate ?? Date.now()),
-					content: item.content ?? "",
-					link: item.link ?? "",
+					title: item.title || "",
+					episodeSlug: slugify(item.title || ""),
+					pubDate: new Date(item.pubDate || Date.now()),
+					content: item.content ?? null,
+					link: item.link ?? null,
 					enclosureUrl: item.enclosure?.url ?? null,
-					duration: item.itunes?.duration ?? "",
+					duration: item.itunes?.duration ?? null,
 					explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
-					image: item.itunes?.image ?? "",
+					image: item.itunes?.image ?? null,
 					episodeNumber: item.itunes?.episode 
-						? parseInt(item.itunes.episode) 
+						? parseInt(item.itunes.episode) || null 
 						: null,
-					season: item.itunes?.season ?? "",
+					season: item.itunes?.season ?? null,
 				}));
 
 			// Bulk upsert episodes

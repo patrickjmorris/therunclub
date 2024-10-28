@@ -99,6 +99,19 @@ export const getLastEpisode = unstable_cache(
 	{ tags: ["episodes"] },
 );
 
+export const getLastTenEpisodesByPodcast = unstable_cache(
+	async () => {
+		return db
+			.select({ id: episodes.id, podcastId: episodes.podcastId })
+			.from(episodes)
+			.where(
+				sql`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc) <= 10`,
+			);
+	},
+	["last-ten-episodes-by-podcast"],
+	{ tags: ["episodes"] },
+);
+
 export async function getPodcastById(podcastId: string) {
 	return db
 		.select()

@@ -6,18 +6,16 @@ import { EpisodePlayButton } from "@/components/EpisodePlayButton";
 import { FormattedDate } from "@/components/FormattedDate";
 import { PauseIcon } from "@/components/PauseIcon";
 import { PlayIcon } from "@/components/PlayIcon";
-import { getEpisode } from "@/db/queries";
+import { getEpisode, getLastTenEpisodesByPodcast } from "@/db/queries";
 
 import { db } from "@/db";
 import { episodes } from "@/db/schema";
-
+import { sql } from "drizzle-orm";
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
 	try {
-		const allEpisodes = await db
-			.select({ id: episodes.id, podcastId: episodes.podcastId })
-			.from(episodes);
+		const allEpisodes = await getLastTenEpisodesByPodcast();
 
 		return allEpisodes.map((episode) => ({
 			podcast: episode.podcastId?.toString() || "",

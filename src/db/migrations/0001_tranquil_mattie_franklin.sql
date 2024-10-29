@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "feed_url_idx" ON "podcasts" USING btree ("feed_url");

@@ -52,11 +52,11 @@ export function AudioPlayer() {
 
 		if ("mediaSession" in navigator && player.episode) {
 			navigator.mediaSession.metadata = new MediaMetadata({
-				title: player.episode.title,
-				artist: player.episode.author,
+				title: player.episode.podcastTitle,
+				artist: player.episode.podcastAuthor ?? "",
 				artwork: [
 					{
-						src: player.episode.itunes.image,
+						src: player.episode.image || player.episode.podcastImage || "",
 						sizes: "512x512",
 						type: "image/jpeg",
 					},

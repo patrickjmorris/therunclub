@@ -9,10 +9,12 @@
 		"db:migrate": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate:prod": "NODE_ENV=production drizzle-kit push",
+		"db:reset": "npx tsx src/db/reset.ts",
 		"dev": "next dev  --turbo",
 		"build": "next build",
 		"start": "next start",
-		"db:seed": "npx tsx src/db/seed.ts"
+		"db:seed": "npx tsx src/db/seed.ts",
+		"db:seed:prod": "NODE_ENV=production npx tsx src/db/seed.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {

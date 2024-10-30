@@ -1,21 +1,19 @@
 import Image from "next/image";
 import { Container } from "../Container";
-import { slugify } from "@/lib/utils";
 import Link from "next/link";
 import { FormattedDate } from "../FormattedDate";
 import { EpisodePlayButton } from "../EpisodePlayButton";
 import { Play, Pause } from "lucide-react";
 import { Button } from "../ui/button";
 import { formatDuration } from "@/lib/formatDuration";
-import { getPodcastMetadata, getEpisode } from "@/db/queries";
-import { EpisodeWithPodcast } from "@/types/episodeWithPodcast";
+import { getEpisode } from "@/db/queries";
 
 export default async function EpisodeEntry({
-	episodeId,
+	episodeSlug,
 }: {
-	episodeId: string;
+	episodeSlug: string;
 }) {
-	const episode = await getEpisode(episodeId);
+	const episode = await getEpisode(episodeSlug);
 
 	if (!episode) {
 		return null;
@@ -26,7 +24,7 @@ export default async function EpisodeEntry({
 
 	return (
 		<article
-			aria-labelledby={`episode-${episode.id}-title`}
+			aria-labelledby={`episode-${episode.episodeSlug}-title`}
 			className="py-10 sm:py-12"
 		>
 			<Container>
@@ -42,10 +40,12 @@ export default async function EpisodeEntry({
 					</div>
 					<div className="flex flex-col">
 						<h2
-							id={`episode-${episode.id}-title`}
+							id={`episode-${episode.episodeSlug}-title`}
 							className="text-lg font-bold text-slate-900 line-clamp-4 text-ellipsis"
 						>
-							<Link href={`/podcasts/${episode.podcastId}/${episode.id}`}>
+							<Link
+								href={`/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`}
+							>
 								{episode.title}
 							</Link>
 						</h2>
@@ -86,7 +86,7 @@ export default async function EpisodeEntry({
 						</span>
 						<Button variant="link">
 							<Link
-								href={`/podcasts/${episode.podcastId}/${episode.id}`}
+								href={`/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`}
 								className="flex items-center text-sm font-bold leading-6 text-slate-500 hover:text-slate-700 active:text-slate-900"
 								aria-label={`Show notes for episode ${episode.title}`}
 							>

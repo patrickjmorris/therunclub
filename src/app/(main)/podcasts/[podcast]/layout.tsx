@@ -4,7 +4,7 @@ import { AboutSection } from "@/components/AboutSection";
 import { getPodcastMetadata, FEEDS } from "@/lib/episodes";
 import { slugify } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { getPodcastById } from "@/db/queries";
+import { getPodcastBySlug } from "@/db/queries";
 import { notFound } from "next/navigation";
 
 function PersonIcon(props: React.ComponentPropsWithoutRef<"svg">) {
@@ -15,29 +15,28 @@ function PersonIcon(props: React.ComponentPropsWithoutRef<"svg">) {
 	);
 }
 
-export default async function PodcastLayout({
-	children,
-	params,
-}: {
+export default async function PodcastLayout(props: {
 	children: React.ReactNode;
-	params: {
+	params: Promise<{
 		podcast: string;
-	};
+	}>;
 }) {
-	const data = await getPodcastById(params.podcast);
-	// console.log("layout", data);
+	const params = await props.params;
+	const data = await getPodcastBySlug(params.podcast);
+
 	if (!data) {
 		notFound();
 	}
+
 	return (
 		<div className="flex flex-col lg:flex-row min-h-screen bg-slate-50 text-slate-900">
-			{/* Left Panel (1/4 width, independently scrollable) */}
+			{/* Left Panel */}
 			<div className="lg:w-1/4 lg:overflow-y-auto lg:h-screen lg:pt-6 m-2">
 				<Card className="bg-slate-50 p-6 lg:min-h-screen">
 					<div className="sticky top-0">
 						<div className="mb-4">
 							<Link
-								href={`/podcasts/${data.id}`}
+								href={`/podcasts/${data.podcastSlug}`}
 								className="relative block w-48 mx-auto overflow-hidden rounded-lg shadow-xl bg-slate-200 shadow-slate-200 sm:w-64 sm:rounded-xl lg:w-auto lg:rounded-2xl"
 								aria-label="Homepage"
 							>
@@ -65,7 +64,7 @@ export default async function PodcastLayout({
 			</div>
 
 			<div className="lg:w-3/4 p-6 space-y-6 overflow-y-auto lg:h-screen">
-				{children}
+				{props.children}
 			</div>
 
 			<footer className="mt-auto border-t border-slate-200 bg-slate-50 py-10 pb-40 sm:py-16 sm:pb-32 lg:hidden">

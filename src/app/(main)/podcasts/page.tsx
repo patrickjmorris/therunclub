@@ -21,7 +21,7 @@ export default async function PodcastList() {
 							key={podcast.podcastId}
 							className="flex flex-col w-full gap-2 shadow-lg p-4 rounded-lg overflow-hidden dark:border-gray-800 dark:shadow-gray-800/50"
 						>
-							<Link href={`/podcasts/${podcast.podcastId}`}>
+							<Link href={`/podcasts/${podcast.podcastSlug}`}>
 								<img
 									alt={podcast.title}
 									className="object-cover w-full aspect-square rounded-lg overflow-hidden"

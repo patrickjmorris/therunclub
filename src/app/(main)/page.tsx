@@ -90,7 +90,7 @@ export default async function HomePage() {
 									<Button className="mt-4" variant="outline">
 										<Headphones className="mr-2 h-4 w-4" />
 										<Link
-											href={`/podcasts/${podcast.podcastId}/${podcast.episodeId}`}
+											href={`/podcasts/${podcast.podcastSlug}/${podcast.episodeSlug}`}
 										>
 											Listen Now
 										</Link>

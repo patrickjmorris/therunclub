@@ -1,18 +1,19 @@
 import { notFound } from "next/navigation";
 import { formatDuration } from "@/lib/formatDuration";
+import { Metadata } from "next";
 
 import { Container } from "@/components/Container";
 import { EpisodePlayButton } from "@/components/EpisodePlayButton";
 import { FormattedDate } from "@/components/FormattedDate";
 import { PauseIcon } from "@/components/PauseIcon";
 import { PlayIcon } from "@/components/PlayIcon";
-import { getEpisode, getLastTenEpisodesByPodcast } from "@/db/queries";
+import { getEpisode, getLastEpisodesByPodcast } from "@/db/queries";
 
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
 	try {
-		const allEpisodes = await getLastTenEpisodesByPodcast();
+		const allEpisodes = await getLastEpisodesByPodcast();
 
 		return allEpisodes.map((episode) => ({
 			podcast: episode.podcastSlug || "",
@@ -22,6 +23,54 @@ export async function generateStaticParams() {
 		console.error("Error in generateStaticParams:", error);
 		return [];
 	}
+}
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ podcast: string; episode: string }>;
+}): Promise<Metadata> {
+	const resolvedParams = await params;
+	const episode = await getEpisode(resolvedParams.episode);
+
+	if (!episode) return {};
+
+	const imageUrl = episode.image || episode.podcastImage || "";
+	const description =
+		episode.content?.substring(0, 155) ||
+		`Listen to ${episode.title} on The Run Club`;
+
+	return {
+		title: episode.title,
+		description: description,
+		openGraph: {
+			type: "article",
+			title: episode.title,
+			description: description,
+			siteName: "The Run Club",
+			publishedTime: new Date(episode.pubDate).toISOString(),
+			modifiedTime: new Date(episode.pubDate).toISOString(),
+			images: [
+				{
+					url: imageUrl,
+					width: 1200,
+					height: 630,
+					alt: episode.title,
+				},
+			],
+			locale: "en_US",
+			authors: ["The Run Club"],
+		},
+		twitter: {
+			card: "summary_large_image",
+			title: episode.title,
+			description: description,
+			images: [imageUrl],
+		},
+		alternates: {
+			canonical: `/podcasts/${resolvedParams.podcast}/${resolvedParams.episode}`,
+		},
+	};
 }
 
 export default async function Episode(props: {
@@ -37,14 +86,36 @@ export default async function Episode(props: {
 			notFound();
 		}
 
-		// console.log("Episode data:", episode);
-
 		const date = new Date(episode.pubDate);
 		const imageUrl = episode.image || episode.podcastImage;
 		const duration = episode.duration ? formatDuration(episode.duration) : null;
 
+		const jsonLd = {
+			"@context": "https://schema.org",
+			"@type": "PodcastEpisode",
+			name: episode.title,
+			datePublished: new Date(episode.pubDate).toISOString(),
+			description:
+				episode.content || `Listen to ${episode.title} on The Run Club`,
+			duration: episode.duration,
+			associatedMedia: {
+				"@type": "MediaObject",
+				contentUrl: episode.enclosureUrl,
+			},
+			partOfSeries: {
+				"@type": "PodcastSeries",
+				name: episode.podcastTitle,
+				image: episode.podcastImage,
+			},
+		};
+
 		return (
 			<article className="py-16">
+				<script
+					type="application/ld+json"
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+					dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+				/>
 				<Container>
 					<header className="flex flex-col">
 						<div className="flex flex-col lg:flex-row gap-6">

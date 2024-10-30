@@ -1,8 +1,6 @@
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import getPodcastandLastEpisodes from "@/lib/episodes";
-import { slugify } from "@/lib/utils";
 import {
 	Headphones,
 	Video,
@@ -11,34 +9,12 @@ import {
 	Users,
 } from "lucide-react";
 import Link from "next/link";
-import { siteConfig } from "@/config/site";
-import { getAllPodcastAndLastEpisodes, getNewEpisodes } from "@/db/queries";
-
-type Podcast = {
-	title: string;
-	slug: string;
-	description: string;
-	image: string;
-	episodes: {
-		title: string;
-		pubDate: Date;
-	};
-};
+import { getNewEpisodes } from "@/db/queries";
 
 export const revalidate = 3600; // 60 minutes in seconds
 
 export default async function HomePage() {
-	// const allPodcasts = await getPodcastandLastEpisodes();
-	// allPodcasts.sort(
-	// 	(a, b) =>
-	// 		new Date(b.episodes.pubDate).getTime() -
-	// 		new Date(a.episodes.pubDate).getTime(),
-	// );
-	// const podcasts = allPodcasts.slice(0, 3);
-
 	const podcasts = await getNewEpisodes();
-	// console.log("getNewEpisodes", podcasts.slice(0, 3));
-	// console.log("process.env.NODE_ENV", process.env.NODE_ENV);
 
 	return (
 		<div className="flex flex-col min-h-screen">
@@ -69,34 +45,36 @@ export default async function HomePage() {
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{podcasts.map((podcast) => (
-							<Card key={podcast.episodeSlug}>
-								<CardHeader>
-									<CardTitle>{podcast.podcastTitle}</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<img
-										src={podcast.podcastImage ?? ""}
-										alt={podcast.podcastTitle}
-										className="w-48 h-48 object-cover mb-4 rounded-md mx-auto"
-									/>
-									<p className="text-muted-foreground">
-										{podcast.episodeTitle}
-									</p>
-									<p className="text-sm text-muted-foreground mb-2">
-										{podcast.pubDate
-											? new Date(podcast.pubDate).toLocaleDateString()
-											: ""}
-									</p>
-									<Button className="mt-4" variant="outline">
-										<Headphones className="mr-2 h-4 w-4" />
-										<Link
-											href={`/podcasts/${podcast.podcastSlug}/${podcast.episodeSlug}`}
-										>
+							<Link
+								key={podcast.episodeSlug}
+								href={`/podcasts/${podcast.podcastSlug}/${podcast.episodeSlug}`}
+								className="block transition-transform hover:scale-[1.02]"
+							>
+								<Card>
+									<CardHeader>
+										<CardTitle>{podcast.podcastTitle}</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<img
+											src={podcast.podcastImage ?? ""}
+											alt={podcast.podcastTitle}
+											className="w-48 h-48 object-cover mb-4 rounded-md mx-auto"
+										/>
+										<p className="text-muted-foreground">
+											{podcast.episodeTitle}
+										</p>
+										<p className="text-sm text-muted-foreground mb-2">
+											{podcast.pubDate
+												? new Date(podcast.pubDate).toLocaleDateString()
+												: ""}
+										</p>
+										<Button className="mt-4" variant="outline">
+											<Headphones className="mr-2 h-4 w-4" />
 											Listen Now
-										</Link>
-									</Button>
-								</CardContent>
-							</Card>
+										</Button>
+									</CardContent>
+								</Card>
+							</Link>
 						))}
 					</div>
 				</div>

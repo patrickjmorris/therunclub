@@ -39,17 +39,26 @@ import { ThemeProvider } from "@/components/providers";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
 
 export const metadata: Metadata = {
+	metadataBase: new URL(siteConfig.url),
 	title: {
 		default: siteConfig.name,
-		template: `%s - ${siteConfig.name}`,
+		template: `%s | ${siteConfig.name}`,
 	},
-	metadataBase: new URL(siteConfig.url),
 	description: siteConfig.description,
-	keywords: ["Running", "Track", "Athletics", "Marathon", "Fitness"],
+	keywords: [
+		"Running Podcast",
+		"Running Tips",
+		"Marathon Training",
+		"Track and Field",
+		"Fitness Podcast",
+		"Runner Stories",
+		"Athletic Training",
+		"Running Community",
+	],
 	authors: [
 		{
 			name: "The Run Club",
-			url: "https://therunclub.xyz",
+			url: siteConfig.url,
 		},
 	],
 	creator: "The Run Club",
@@ -66,6 +75,7 @@ export const metadata: Metadata = {
 				width: 1200,
 				height: 630,
 				alt: siteConfig.name,
+				type: "image/jpeg",
 			},
 		],
 	},
@@ -80,6 +90,17 @@ export const metadata: Metadata = {
 		icon: "/favicon.ico",
 		shortcut: "/favicon-16x16.png",
 		apple: "/apple-touch-icon.png",
+	},
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			"max-video-preview": -1,
+			"max-image-preview": "large",
+			"max-snippet": -1,
+		},
 	},
 };
 

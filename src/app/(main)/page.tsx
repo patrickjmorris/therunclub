@@ -25,7 +25,7 @@ type Podcast = {
 	};
 };
 
-export const revalidate = 60 * 60;
+export const revalidate = 3600; // 60 minutes in seconds
 
 export default async function HomePage() {
 	// const allPodcasts = await getPodcastandLastEpisodes();

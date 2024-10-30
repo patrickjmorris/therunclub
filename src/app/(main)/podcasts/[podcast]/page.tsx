@@ -9,7 +9,7 @@ import { podcasts } from "@/db/schema";
 import { Container } from "@/components/Container";
 import EpisodeEntry from "@/components/podcasts/EpisodeEntry";
 
-export const revalidate = 60 * 60 * 24;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
 	const allPodcasts = await db

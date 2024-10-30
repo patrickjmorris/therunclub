@@ -1,35 +1,43 @@
 import { notFound } from "next/navigation";
 import {
-	getPodcastById,
 	getLastTenEpisodes,
-	getPodcastMetadata,
+	getLastTenEpisodesByPodcastSlug,
+	getPodcastBySlug,
 } from "@/db/queries";
 import { db } from "@/db";
 import { podcasts } from "@/db/schema";
 import { Container } from "@/components/Container";
 import EpisodeEntry from "@/components/podcasts/EpisodeEntry";
 
-export const revalidate = 60 * 60 * 24;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
-	const allPodcasts = await db.select({ id: podcasts.id }).from(podcasts);
+	const allPodcasts = await db
+		.select({ slug: podcasts.podcastSlug })
+		.from(podcasts);
 
 	return allPodcasts.map((podcast) => ({
-		podcast: podcast.id,
+		podcast: podcast.slug,
 	}));
 }
 
-export default async function PodcastPage({
-	params,
-}: { params: { podcast: string } }) {
-	const podcast = await getPodcastById(params.podcast);
-	// console.log(podcast);
+export default async function PodcastPage(props: {
+	params: Promise<{ podcast: string }>;
+}) {
+	const params = await props.params;
+	// console.log("params", params);
+	const podcast = await getPodcastBySlug(params.podcast);
+	// console.log("podcast", podcast);
 	if (!podcast) {
 		notFound();
 	}
 
-	const episodes = await getLastTenEpisodes(podcast.id);
-	// console.log(episodes);
+	if (!podcast.podcastSlug) {
+		notFound();
+	}
+
+	const episodes = await getLastTenEpisodesByPodcastSlug(podcast.podcastSlug);
+	// console.log("episodes", episodes);
 	return (
 		<div className="pt-16 pb-12 sm:pb-4 lg:pt-12 bg-stone-50">
 			<Container>
@@ -39,7 +47,10 @@ export default async function PodcastPage({
 			</Container>
 			<div className="divide-y divide-slate-100 sm:mt-4 lg:mt-8 lg:border-t lg:border-slate-100">
 				{episodes.map((episode) => (
-					<EpisodeEntry key={episode.id} episodeId={episode.id} />
+					<EpisodeEntry
+						key={episode.episodeSlug}
+						episodeSlug={episode.episodeSlug}
+					/>
 				))}
 			</div>
 		</div>

@@ -1,4 +1,4 @@
-export type EpisodeWithPodcast = {
+export interface EpisodeWithPodcast {
 	id: string;
 	title: string;
 	pubDate: Date;
@@ -11,4 +11,6 @@ export type EpisodeWithPodcast = {
 	duration: string | null;
 	explicit: "yes" | "no" | null;
 	image: string | null;
-};
+	episodeSlug: string | null;
+	podcastSlug: string | null;
+}

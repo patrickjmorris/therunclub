@@ -73,6 +73,11 @@ export const getLastTenEpisodes = unstable_cache(
 				podcastImage: podcasts.image,
 				duration: episodes.duration,
 				content: episodes.content,
+				episodeSlug: episodes.episodeSlug,
+				podcastSlug: podcasts.podcastSlug,
+				podcastAuthor: podcasts.author,
+				enclosureUrl: episodes.enclosureUrl,
+				explicit: episodes.explicit,
 			})
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
@@ -105,18 +110,20 @@ export const getLastTenEpisodesByPodcast = unstable_cache(
 			.select({
 				id: episodes.id,
 				podcastId: episodes.podcastId,
-				rowNum:
-					sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as(
-						"rowNum",
-					),
+				episodeSlug: episodes.episodeSlug,
+				podcastSlug: podcasts.podcastSlug,
+				rowNum: sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as("rowNum"),
 			})
 			.from(episodes)
+			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
 			.as("ranked");
 
 		return db
 			.select({
 				id: rankedEpisodes.id,
 				podcastId: rankedEpisodes.podcastId,
+				episodeSlug: rankedEpisodes.episodeSlug,
+				podcastSlug: rankedEpisodes.podcastSlug,
 			})
 			.from(rankedEpisodes)
 			.where(sql`${rankedEpisodes.rowNum} <= 10`);
@@ -246,6 +253,8 @@ export const getAllPodcastAndLastEpisodes = unstable_cache(
 				episodeTitle: episodes.title,
 				episodeId: episodes.id,
 				episodePubDate: episodes.pubDate,
+				episodeSlug: episodes.episodeSlug,
+				podcastSlug: podcasts.podcastSlug,
 			})
 			.from(podcasts)
 			.leftJoin(
@@ -282,7 +291,7 @@ export const getEpisodeTitles = unstable_cache(
 );
 
 export const getEpisode = unstable_cache(
-	async (episodeId: string) => {
+	async (episodeSlug: string) => {
 		return db
 			.select({
 				id: episodes.id,
@@ -297,14 +306,36 @@ export const getEpisode = unstable_cache(
 				duration: episodes.duration,
 				explicit: episodes.explicit,
 				image: episodes.image,
+				episodeSlug: episodes.episodeSlug,
+				podcastSlug: podcasts.podcastSlug,
 			})
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-			.where(and(eq(episodes.id, episodeId)))
+			.where(and(eq(episodes.episodeSlug, episodeSlug)))
 			.then((results) => results[0] || null);
 	},
 	["episode"],
 	{ tags: ["episodes"] },
+);
+
+export const getPodcastBySlug = unstable_cache(
+	async (podcastSlug: string) => {
+		return db
+			.select({
+				id: podcasts.id,
+				title: podcasts.title,
+				description: podcasts.description,
+				image: podcasts.image,
+				author: podcasts.author,
+				itunesExplicit: podcasts.itunesExplicit,
+				podcastSlug: podcasts.podcastSlug,
+			})
+			.from(podcasts)
+			.where(eq(podcasts.podcastSlug, podcastSlug))
+			.then((results) => results[0] || null);
+	},
+	["podcast-by-slug"],
+	{ tags: ["podcasts"] },
 );
 
 // Function to revalidate cache
@@ -312,3 +343,33 @@ export function revalidatePodcastsAndEpisodes() {
 	revalidateTag("podcasts");
 	revalidateTag("episodes");
 }
+
+// Add new function to get episodes by podcast slug
+export const getLastTenEpisodesByPodcastSlug = unstable_cache(
+	async (podcastSlug: string) => {
+		return db
+			.select({
+				id: episodes.id,
+				title: episodes.title,
+				pubDate: episodes.pubDate,
+				image: episodes.image,
+				podcastId: episodes.podcastId,
+				podcastTitle: podcasts.title,
+				podcastImage: podcasts.image,
+				duration: episodes.duration,
+				content: episodes.content,
+				episodeSlug: episodes.episodeSlug,
+				podcastSlug: podcasts.podcastSlug,
+				podcastAuthor: podcasts.author,
+				enclosureUrl: episodes.enclosureUrl,
+				explicit: episodes.explicit,
+			})
+			.from(episodes)
+			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+			.where(eq(podcasts.podcastSlug, podcastSlug))
+			.orderBy(desc(episodes.pubDate))
+			.limit(10);
+	},
+	["last-ten-episodes-by-slug"],
+	{ tags: ["episodes"] },
+);

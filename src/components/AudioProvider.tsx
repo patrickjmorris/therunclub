@@ -163,6 +163,7 @@ export function useAudioPlayer(episode?: EpisodeWithPodcast) {
 
 	return useMemo<PlayerAPI>(
 		() => ({
+			// biome-ignore lint/style/noNonNullAssertion: <explanation>
 			...player!,
 			play() {
 				player!.play(episode);

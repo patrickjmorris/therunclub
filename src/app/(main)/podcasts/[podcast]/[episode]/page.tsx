@@ -8,9 +8,6 @@ import { PauseIcon } from "@/components/PauseIcon";
 import { PlayIcon } from "@/components/PlayIcon";
 import { getEpisode, getLastTenEpisodesByPodcast } from "@/db/queries";
 
-import { db } from "@/db";
-import { episodes } from "@/db/schema";
-import { sql } from "drizzle-orm";
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
@@ -18,8 +15,8 @@ export async function generateStaticParams() {
 		const allEpisodes = await getLastTenEpisodesByPodcast();
 
 		return allEpisodes.map((episode) => ({
-			podcast: episode.podcastId?.toString() || "",
-			episode: episode.id.toString(),
+			podcast: episode.podcastSlug || "",
+			episode: episode.episodeSlug || "",
 		}));
 	} catch (error) {
 		console.error("Error in generateStaticParams:", error);
@@ -27,12 +24,11 @@ export async function generateStaticParams() {
 	}
 }
 
-export default async function Episode({
-	params,
-}: {
-	params: { podcast: string; episode: string };
+export default async function Episode(props: {
+	params: Promise<{ podcast: string; episode: string }>;
 }) {
-	// console.log("Fetching episode with params:", params);
+	const params = await props.params;
+	console.log("Fetching episode with params:", params);
 
 	try {
 		const episode = await getEpisode(params.episode);

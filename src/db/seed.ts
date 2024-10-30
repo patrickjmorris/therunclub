@@ -93,7 +93,7 @@ export async function seed() {
 									pubDate: new Date(item.pubDate || Date.now()),
 									content: item.content || "",
 									link: item.link || "",
-									enclosureUrl: item.enclosure?.url || null,
+									enclosureUrl: item.enclosure?.url ?? "",
 									duration: item.itunes?.duration || "",
 									explicit: item.itunes?.explicit || "no",
 									image: item.itunes?.image || "",

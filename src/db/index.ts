@@ -35,11 +35,11 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 				pubDate: new Date(item.pubDate ?? Date.now()),
 				content: item.content ?? "",
 				link: item.link ?? "",
-				enclosureUrl: item.enclosure?.url ?? null,
+				enclosureUrl: item.enclosure?.url ?? "",
 				duration: item.itunes?.duration ?? "",
-				explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+				explicit: item.itunes?.explicit === "yes" ? "yes" : "no", 
 				image: item.itunes?.image ?? "",
-				episodeNumber: item.itunes?.episode 
+				episodeNumber: item.itunes?.episode
 					? parseInt(item.itunes.episode) 
 					: null,
 				season: item.itunes?.season ?? "",
@@ -175,7 +175,7 @@ export async function loadInitialData() {
 					pubDate: new Date(item.pubDate || Date.now()),
 					content: item.content ?? null,
 					link: item.link ?? null,
-					enclosureUrl: item.enclosure?.url ?? null,
+					enclosureUrl: item.enclosure?.url ?? "",
 					duration: item.itunes?.duration ?? null,
 					explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
 					image: item.itunes?.image ?? null,

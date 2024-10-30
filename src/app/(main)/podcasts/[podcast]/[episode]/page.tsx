@@ -77,7 +77,7 @@ export default async function Episode(props: {
 	params: Promise<{ podcast: string; episode: string }>;
 }) {
 	const params = await props.params;
-	console.log("Fetching episode with params:", params);
+	// console.log("Fetching episode with params:", params);
 
 	try {
 		const episode = await getEpisode(params.episode);

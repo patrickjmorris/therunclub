@@ -1,6 +1,62 @@
+# Global rules for all robots
 User-agent: *
+
+# Allow crawling of all content
 Allow: /
-Disallow: /api/*
+
+# Important: Allow crawling of JavaScript and CSS
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.gif$
+Allow: /*.svg$
+Allow: /*.ico$
+
+# Optimize crawl budget by disallowing unnecessary paths
+Disallow: /api/
+Disallow: /_next/static/
+Disallow: /_next/image
+Disallow: /cdn-cgi/
+Disallow: /private/
+Disallow: /admin/
+Disallow: /login
+Disallow: /logout
+Disallow: /signup
+Disallow: /dashboard
+Disallow: /*?search=
+Disallow: /*?sort=
+Disallow: /*?filter=
+Disallow: /*?page=
+Disallow: /thankyou
+Disallow: /404
+Disallow: /500
+
+# Prevent duplicate content indexing
+Disallow: /*?utm_*
+Disallow: /*?ref=
+Disallow: /*?source=
+Disallow: /*?fbclid=
+
+# Specific rules for major search engines
+User-agent: Googlebot
+Crawl-delay: 1
+
+User-agent: bingbot
+Crawl-delay: 1
+
+User-agent: Yandexbot
+Crawl-delay: 1
+
+# Rules for image search engines
+User-agent: Googlebot-Image
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.gif$
+Allow: /*.png$
+Allow: /*.webp$
+Allow: /*.svg$
+Disallow: /
 
 # Sitemaps
 Sitemap: https://therunclub.xyz/sitemap.xml 

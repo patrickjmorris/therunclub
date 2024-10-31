@@ -104,7 +104,7 @@ export const getLastEpisode = unstable_cache(
 	{ tags: ["episodes"] },
 );
 
-export const getLastTenEpisodesByPodcast = unstable_cache(
+export const getLastEpisodesByPodcast = unstable_cache(
 	async () => {
 		const rankedEpisodes = db
 			.select({
@@ -112,6 +112,7 @@ export const getLastTenEpisodesByPodcast = unstable_cache(
 				podcastId: episodes.podcastId,
 				episodeSlug: episodes.episodeSlug,
 				podcastSlug: podcasts.podcastSlug,
+				pubDate: episodes.pubDate,
 				rowNum: sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as("rowNum"),
 			})
 			.from(episodes)
@@ -124,11 +125,12 @@ export const getLastTenEpisodesByPodcast = unstable_cache(
 				podcastId: rankedEpisodes.podcastId,
 				episodeSlug: rankedEpisodes.episodeSlug,
 				podcastSlug: rankedEpisodes.podcastSlug,
+				pubDate: rankedEpisodes.pubDate,
 			})
 			.from(rankedEpisodes)
-			.where(sql`${rankedEpisodes.rowNum} <= 10`);
+			.where(sql`${rankedEpisodes.rowNum} <= 100`);
 	},
-	["last-ten-episodes-by-podcast"],
+	["last-episodes-by-podcast"],
 	{ tags: ["episodes"] },
 );
 

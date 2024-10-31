@@ -38,16 +38,6 @@ Disallow: /*?ref=
 Disallow: /*?source=
 Disallow: /*?fbclid=
 
-# Specific rules for major search engines
-User-agent: Googlebot
-Crawl-delay: 1
-
-User-agent: bingbot
-Crawl-delay: 1
-
-User-agent: Yandexbot
-Crawl-delay: 1
-
 # Rules for image search engines
 User-agent: Googlebot-Image
 Allow: /*.jpg$

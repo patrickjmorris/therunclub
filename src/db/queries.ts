@@ -34,7 +34,7 @@ export const getLastEpisodeForEachPodcast = unstable_cache(
 	{ tags: ["podcasts"] },
 );
 
-export const getNewEpisodes = unstable_cache(
+export const getNewEpisodes = 
 	async () => {
 		return db
 			.select({
@@ -52,11 +52,8 @@ export const getNewEpisodes = unstable_cache(
 			.from(podcasts)
 			.leftJoin(episodes, eq(podcasts.id, episodes.podcastId))
 			.orderBy(desc(episodes.pubDate))
-			.limit(3);
-	},
-	["new-episodes"],
-	{ tags: ["podcasts"] },
-);
+		.limit(3);
+};
 
 // New queries based on episodes.ts functions
 

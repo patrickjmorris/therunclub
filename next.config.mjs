@@ -154,6 +154,11 @@ const nextConfig = {
 			},
 		],
 	},
+	experimental: {
+		serverActions: {
+			allowedOrigins: ["therunclub.xzy"],
+		},
+	},
 };
 
 export default nextConfig;

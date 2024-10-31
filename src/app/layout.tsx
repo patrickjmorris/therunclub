@@ -1,36 +1,8 @@
 import "@/styles/tailwind.css";
 import { AudioProvider } from "@/components/AudioProvider";
 import { AudioPlayer } from "@/components/player/AudioPlayer";
-
-// export default function RootLayout({ children }: { children: React.ReactNode }) {
-//   return (
-//     <html lang="en" className="h-full antialiased bg-white">
-//       <head>
-//         <link
-//           rel="preconnect"
-//           href="https://cdn.fontshare.com"
-//           crossOrigin="anonymous"
-//         />
-//         <link
-//           rel="stylesheet"
-//           href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap"
-//         />
-//       </head>
-//       <body className="flex min-h-full">
-//       <AudioProvider>
-//         <Navigation />
-//         <div className="w-full md:pt-16">{children}</div>
-//         <div className="fixed inset-x-0 bottom-0 z-10 lg:left-112 xl:left-120">
-//         <AudioPlayer />
-//       </div>
-//       </AudioProvider>
-//       <Analytics />
-//       </body>
-//     </html>
-//   )
-// }
 import { Metadata, Viewport } from "next";
-
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
@@ -135,7 +107,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 						<AudioProvider>
 							<div vaul-drawer-wrapper="">
 								<div className="relative flex min-h-screen flex-col bg-background">
-									{children}
+									<NuqsAdapter>{children}</NuqsAdapter>
 								</div>
 								<AudioPlayer />
 							</div>

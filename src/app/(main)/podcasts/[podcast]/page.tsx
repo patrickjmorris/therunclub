@@ -9,7 +9,7 @@ import { podcasts } from "@/db/schema";
 import { Container } from "@/components/Container";
 import EpisodeEntry from "@/components/podcasts/EpisodeEntry";
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 export async function generateMetadata({
 	params,

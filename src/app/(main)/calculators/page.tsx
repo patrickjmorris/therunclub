@@ -1,17 +1,30 @@
-"use client";
-
-import PaceCalculator from "@/components/calculator/pace-calculator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Suspense } from "react";
 import { Info } from "lucide-react";
-import { useQueryState } from "nuqs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import dynamic from "next/dynamic";
 
+// Dynamically import the client component with no SSR
+const CalculatorModeProvider = dynamic(
+	() =>
+		import("./calculator-mode-provider").then(
+			(mod) => mod.CalculatorModeProvider,
+		),
+	{ ssr: true },
+);
+
+// Loading state component
+function CalculatorLoading() {
+	return (
+		<div className="container mx-auto py-8 space-y-8">
+			<div className="h-8 bg-muted animate-pulse rounded" />
+			<div className="h-4 bg-muted animate-pulse rounded w-2/3" />
+			<div className="h-[600px] bg-muted animate-pulse rounded" />
+		</div>
+	);
+}
+
+// Main page component (Server Component)
 export default function CalculatorsPage() {
-	const [calculatorMode, setCalculatorMode] = useQueryState("mode", {
-		defaultValue: "simple",
-		parse: (value) => value as "simple" | "advanced",
-		serialize: (value) => value,
-	});
-
 	return (
 		<div className="container mx-auto py-8 space-y-8">
 			<div className="prose dark:prose-invert max-w-none">
@@ -22,75 +35,11 @@ export default function CalculatorsPage() {
 				</p>
 			</div>
 
-			<Tabs
-				defaultValue={calculatorMode}
-				value={calculatorMode}
-				className="space-y-8"
-				onValueChange={(value) => setCalculatorMode(value)}
-			>
-				<TabsList>
-					<TabsTrigger value="simple">Simple Calculator</TabsTrigger>
-					<TabsTrigger value="advanced">Advanced Calculator</TabsTrigger>
-				</TabsList>
-
-				<TabsContent value="simple" className="space-y-8">
-					<div className="grid md:grid-cols-[1fr,300px] gap-8">
-						<PaceCalculator mode="simple" />
-
-						<div className="space-y-6">
-							<div className="rounded-lg border p-4">
-								<h3 className="font-semibold flex items-center gap-2">
-									<Info className="w-4 h-4" />
-									Quick Tips
-								</h3>
-								<ul className="mt-2 space-y-2 text-sm">
-									<li>Enter your distance and time to calculate your pace</li>
-									<li>Use this to track your progress over time</li>
-									<li>Great for planning your first 5K or 10K race</li>
-								</ul>
-							</div>
-
-							<div className="rounded-lg border p-4">
-								<h3 className="font-semibold">Common Race Distances</h3>
-								<ul className="mt-2 space-y-1 text-sm">
-									<li>5K = 3.1 miles</li>
-									<li>10K = 6.2 miles</li>
-									<li>Half Marathon = 13.1 miles</li>
-									<li>Marathon = 26.2 miles</li>
-								</ul>
-							</div>
-						</div>
-					</div>
-				</TabsContent>
-
-				<TabsContent value="advanced" className="space-y-8">
-					<div className="grid md:grid-cols-[1fr,300px] gap-8">
-						<PaceCalculator mode="advanced" />
-
-						<div className="space-y-6">
-							<div className="rounded-lg border p-4">
-								<h3 className="font-semibold">Training Zones</h3>
-								<ul className="mt-2 space-y-2 text-sm">
-									<li>Easy: 65-75% of max effort</li>
-									<li>Tempo: 76-85% of max effort</li>
-									<li>Threshold: 86-92% of max effort</li>
-									<li>VO2 Max: 93-100% of max effort</li>
-								</ul>
-							</div>
-
-							<div className="rounded-lg border p-4">
-								<h3 className="font-semibold">Advanced Features</h3>
-								<ul className="mt-2 space-y-1 text-sm">
-									<li>Detailed splits for every mile/km</li>
-									<li>Track workout lap calculator</li>
-									<li>Training zone recommendations</li>
-									<li>Race prediction times</li>
-								</ul>
-							</div>
-						</div>
-					</div>
-				</TabsContent>
-			</Tabs>
+			<div>
+				<Suspense fallback={<CalculatorLoading />}>
+					<CalculatorModeProvider />
+				</Suspense>
+			</div>
 
 			<div className="prose dark:prose-invert max-w-none">
 				<h2>How to Use the Pace Calculator</h2>

@@ -1,11 +1,6 @@
 import { FormattedDate } from "@/components/FormattedDate";
-import {
-	getPodcastMetadata,
-	FEEDS,
-	getLastEpisode,
-} from "../../../lib/episodes";
 import Link from "next/link";
-import { getAllPodcastAndLastEpisodes, getDebugData } from "@/db/queries";
+import { getAllPodcastAndLastEpisodes } from "@/db/queries";
 
 export const revalidate = 3600;
 

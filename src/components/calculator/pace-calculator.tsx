@@ -28,6 +28,8 @@ import { TrainingZones } from "./training-zones";
 import { TrackWorkout } from "./track-workout";
 import { validateTime, WORLD_RECORDS } from "@/lib/utils/records";
 import { useQueryState } from "nuqs";
+import { useTimeInput } from "@/hooks/use-time-input";
+import { TimeInputTooltip } from "./time-input-tooltip";
 
 // Standard race distances in meters
 const DISTANCES = {
@@ -329,6 +331,19 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 		}
 	};
 
+	// Add time input handlers
+	const timeInput = useTimeInput({
+		setValue: form.setValue,
+		fieldName: "time",
+		initialValue: time || "00:00:00",
+	});
+
+	const paceInput = useTimeInput({
+		setValue: form.setValue,
+		fieldName: "pace",
+		initialValue: pace || "00:00",
+	});
+
 	return (
 		<Card className="w-full">
 			<CardHeader>
@@ -393,13 +408,21 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 										</Select>
 									</div>
 									<div className="space-y-2">
-										<Label>Target Time (hh:mm:ss)</Label>
+										<Label className="flex items-center">
+											Target Time (hh:mm:ss)
+											<TimeInputTooltip />
+										</Label>
 										<Input
 											type="text"
 											placeholder="00:00:00"
 											{...form.register("time")}
-											onChange={handleTimeInput}
+											onChange={(e) => {
+												handleTimeInput(e);
+												timeInput.setCurrentValue(e.target.value);
+											}}
+											onKeyDown={timeInput.handleKeyDown}
 											onBlur={handleTimeBlur}
+											value={timeInput.currentValue}
 											className={
 												form.formState.errors.time?.type === "manual" &&
 												form.formState.errors.time?.message?.includes(
@@ -458,15 +481,21 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 						<TabsContent value="pace-calculator" className="space-y-4">
 							<div className="grid gap-4">
 								<div className="space-y-2">
-									<Label>
+									<Label className="flex items-center">
 										Target Pace per {useMetric ? "Kilometer" : "Mile"}
+										<TimeInputTooltip />
 									</Label>
 									<Input
 										type="text"
 										placeholder="00:00"
 										{...form.register("pace")}
-										onChange={handleTimeInput}
+										onChange={(e) => {
+											handleTimeInput(e);
+											paceInput.setCurrentValue(e.target.value);
+										}}
+										onKeyDown={paceInput.handleKeyDown}
 										onBlur={handleTimeBlur}
+										value={paceInput.currentValue}
 										className={
 											form.formState.errors.pace?.type === "manual" &&
 											form.formState.errors.pace?.message?.includes(

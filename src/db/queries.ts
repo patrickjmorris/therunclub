@@ -233,7 +233,7 @@ export const getDebugData = unstable_cache(
 	{ tags: ["debug"] },
 );
 
-export const getAllPodcastAndLastEpisodes = unstable_cache(
+export const getAllPodcastAndLastEpisodes = 
 	async () => {
 		const lastEpisodeSubquery = db
 			.select({
@@ -268,10 +268,7 @@ export const getAllPodcastAndLastEpisodes = unstable_cache(
 				),
 			)
 			.orderBy(desc(lastEpisodeSubquery.maxPubDate));
-	},
-	["all-podcasts-and-last-episodes"],
-	{ tags: ["podcasts", "episodes"] },
-);
+	};
 
 export const getEpisodeTitles = unstable_cache(
 	async (podcastId: string) => {

@@ -1,6 +1,4 @@
 import { Suspense } from "react";
-import { Info } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import dynamic from "next/dynamic";
 
 // Dynamically import the client component with no SSR
@@ -26,7 +24,7 @@ function CalculatorLoading() {
 // Main page component (Server Component)
 export default function CalculatorsPage() {
 	return (
-		<div className="container mx-auto py-4 sm:py-8 px-4 sm:px-8 space-y-8">
+		<div className="container mx-auto py-8 space-y-8">
 			<div className="prose dark:prose-invert max-w-none">
 				<h1 className="text-4xl font-bold mb-4">Running Pace Calculator</h1>
 				<p className="text-xl text-muted-foreground">

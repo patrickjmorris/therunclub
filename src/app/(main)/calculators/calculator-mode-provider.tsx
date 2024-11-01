@@ -17,10 +17,10 @@ export function CalculatorModeProvider() {
 		<Tabs
 			defaultValue={calculatorMode}
 			value={calculatorMode}
-			className="space-y-8"
+			className="space-y-8 w-full flex flex-col items-center"
 			onValueChange={(value) => setCalculatorMode(value)}
 		>
-			<TabsList>
+			<TabsList className="w-fit">
 				<TabsTrigger value="simple">Simple Calculator</TabsTrigger>
 				<TabsTrigger value="advanced">Advanced Calculator</TabsTrigger>
 			</TabsList>

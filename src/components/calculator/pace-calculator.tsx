@@ -376,7 +376,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 						value={activeTab}
 						onValueChange={(value) => setActiveTab(value)}
 					>
-						<TabsList className="grid w-full grid-cols-3">
+						<TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2">
 							<TabsTrigger value="race-time">Race Time</TabsTrigger>
 							<TabsTrigger value="pace-calculator">Pace Calculator</TabsTrigger>
 							<TabsTrigger value="track-splits">Track Splits</TabsTrigger>
@@ -384,7 +384,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 
 						<TabsContent value="race-time" className="space-y-4">
 							<div className="grid gap-4">
-								<div className="grid grid-cols-2 gap-4">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div className="space-y-2">
 										<Label>Distance</Label>
 										<Select

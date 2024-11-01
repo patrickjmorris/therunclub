@@ -53,29 +53,43 @@ export function SplitsTable({
 	}, [distance, targetTime, useMetric]);
 
 	return (
-		<div className="overflow-x-auto">
-			<table className="w-full text-sm">
-				<thead>
-					<tr className="border-b">
-						<th className="text-left py-2">Split</th>
-						<th className="text-left py-2">
-							Distance ({useMetric ? "km" : "mi"})
-						</th>
-						<th className="text-left py-2">Split Time</th>
-						<th className="text-left py-2">Cumulative</th>
-					</tr>
-				</thead>
-				<tbody>
-					{splits.map((split) => (
-						<tr key={split.number} className="border-b">
-							<td className="py-2">{split.number}</td>
-							<td className="py-2">{split.distance}</td>
-							<td className="py-2 font-mono">{split.splitTime}</td>
-							<td className="py-2 font-mono">{split.cumulativeTime}</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
+		<div className="overflow-x-auto -mx-4 sm:mx-0">
+			<div className="min-w-full inline-block align-middle">
+				<div className="overflow-hidden">
+					<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+						<thead>
+							<tr className="border-b">
+								<th className="px-4 py-2 text-left text-xs font-medium">
+									Split
+								</th>
+								<th className="px-4 py-2 text-left text-xs font-medium">
+									{useMetric ? "KM" : "MI"}
+								</th>
+								<th className="px-4 py-2 text-left text-xs font-medium">
+									Split
+								</th>
+								<th className="px-4 py-2 text-left text-xs font-medium">
+									Total
+								</th>
+							</tr>
+						</thead>
+						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+							{splits.map((split) => (
+								<tr key={split.number}>
+									<td className="px-4 py-2 text-sm">{split.number}</td>
+									<td className="px-4 py-2 text-sm">{split.distance}</td>
+									<td className="px-4 py-2 text-sm font-mono">
+										{split.splitTime}
+									</td>
+									<td className="px-4 py-2 text-sm font-mono">
+										{split.cumulativeTime}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 	);
 }

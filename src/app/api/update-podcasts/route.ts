@@ -8,18 +8,26 @@ let lockTimeout: NodeJS.Timeout;
 
 // Validate the API key from the request
 async function isAuthorized(request: NextRequest): Promise<boolean> {
+	// Try both methods of getting the header
 	const headersList = await headers();
-	const apiKey = request.headers.get("x-api-key");
-	
-	// Get the API key from environment variable
+	const apiKeyFromHeaders = headersList.get("x-api-key");
+	const apiKeyFromRequest = request.headers.get("x-api-key");
 	const validApiKey = process.env.UPDATE_PODCASTS_API_KEY;
+	
+	// Debug logs
+	console.log('API Key from headers():', apiKeyFromHeaders);
+	console.log('API Key from request:', apiKeyFromRequest);
+	console.log('Expected API Key:', validApiKey);
 	
 	if (!validApiKey) {
 		console.error("API key not configured in environment variables");
 		return false;
 	}
 
-	return apiKey === validApiKey;
+	// Check both possible sources of the API key
+	const isValid = apiKeyFromHeaders === validApiKey || apiKeyFromRequest === validApiKey;
+	console.log('Is Valid:', isValid);
+	return isValid;
 }
 
 async function handleUpdate() {
@@ -64,7 +72,7 @@ async function handleUpdate() {
 
 export async function GET(request: NextRequest) {
 	// Check authorization before proceeding
-	if (!isAuthorized(request)) {
+	if (!await isAuthorized(request)) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 	return handleUpdate();
@@ -72,7 +80,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	// Check authorization before proceeding
-	if (!isAuthorized(request)) {
+	if (!await isAuthorized(request)) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 	return handleUpdate();

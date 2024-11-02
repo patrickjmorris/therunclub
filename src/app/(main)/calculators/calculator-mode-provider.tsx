@@ -17,25 +17,31 @@ export function CalculatorModeProvider() {
 		<Tabs
 			defaultValue={calculatorMode}
 			value={calculatorMode}
-			className="space-y-8 w-full flex flex-col items-center"
+			className="space-y-8"
 			onValueChange={(value) => setCalculatorMode(value)}
 		>
-			<TabsList className="w-fit">
-				<TabsTrigger value="simple">Simple Calculator</TabsTrigger>
-				<TabsTrigger value="advanced">Advanced Calculator</TabsTrigger>
-			</TabsList>
+			<div className="flex justify-center sm:justify-start">
+				<TabsList className="grid w-full sm:w-auto grid-cols-2">
+					<TabsTrigger value="simple">Simple Calculator</TabsTrigger>
+					<TabsTrigger value="advanced">Advanced Calculator</TabsTrigger>
+				</TabsList>
+			</div>
 
-			<TabsContent value="simple" className="space-y-8">
-				<div className="grid md:grid-cols-[1fr,300px] gap-8">
+			<TabsContent value="simple">
+				<div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-4 lg:gap-8">
 					<PaceCalculator mode="simple" />
-					<QuickTips />
+					<div className="hidden lg:block">
+						<QuickTips />
+					</div>
 				</div>
 			</TabsContent>
 
-			<TabsContent value="advanced" className="space-y-8">
-				<div className="grid md:grid-cols-[1fr,300px] gap-8">
+			<TabsContent value="advanced">
+				<div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-4 lg:gap-8">
 					<PaceCalculator mode="advanced" />
-					<AdvancedTips />
+					<div className="hidden lg:block">
+						<AdvancedTips />
+					</div>
 				</div>
 			</TabsContent>
 		</Tabs>

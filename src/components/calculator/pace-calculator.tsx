@@ -92,36 +92,80 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 		serialize: (value) => value,
 	});
 
-	// Persist distance value
-	const [distance, setDistance] = useQueryState("distance", {
-		defaultValue: "0",
-		parse: (value) => value,
-		serialize: (value) => value.toString(),
+	// Single distance state
+	const [selectedDistance, setSelectedDistance] = useQueryState<
+		keyof typeof DISTANCES
+	>("selectedDistance", {
+		defaultValue: "5k",
+		parse: (value) => value as keyof typeof DISTANCES,
+		serialize: (value) => value,
 	});
 
-	// Persist time input
+	// Total time for race
 	const [time, setTime] = useQueryState("time", {
 		defaultValue: "",
 		parse: (value) => value,
 		serialize: (value) => value,
 	});
 
-	// Persist pace input
+	// Pace per mile/km
 	const [pace, setPace] = useQueryState("pace", {
 		defaultValue: "",
 		parse: (value) => value,
 		serialize: (value) => value,
 	});
 
-	// Initialize form with URL parameter values
+	// Initialize form with URL parameter values and persist between modes
 	const form = useForm<FormData>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			time: time || "",
-			distance: Number(distance) || 0,
+			distance: DISTANCES[selectedDistance],
 			pace: pace || "",
 		},
 	});
+
+	// Calculate pace when race time changes
+	const updatePaceFromRaceTime = (raceTime: string, distance: number) => {
+		if (!raceTime || !distance) return;
+
+		const totalSeconds = timeStringToSeconds(raceTime);
+		const pacePerUnit = useMetric
+			? totalSeconds / (distance / 1000) // seconds per km
+			: totalSeconds / (distance / 1609.34); // seconds per mile
+
+		const paceFormatted = formatTime(pacePerUnit);
+		setPace(paceFormatted);
+	};
+
+	// Calculate track splits from pace
+	const calculateTrackSplits = (paceStr: string) => {
+		if (!paceStr) return { "100m": "00:00", "200m": "00:00", "400m": "00:00" };
+
+		const paceSeconds = timeStringToSeconds(paceStr);
+		const unitDistance = useMetric ? 1000 : 1609.34;
+		const secondsPerMeter = paceSeconds / unitDistance;
+
+		return {
+			"100m": formatTime(secondsPerMeter * 100),
+			"200m": formatTime(secondsPerMeter * 200),
+			"400m": formatTime(secondsPerMeter * 400),
+		};
+	};
+
+	// Handle time input in race time tab
+	const handleRaceTimeInput = (value: string) => {
+		setTime(value);
+		if (value.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+			const distance = DISTANCES[selectedDistance];
+			const calculatedPace = calculatePace(distance, value);
+			const paceValue = useMetric
+				? calculatedPace.perKm
+				: calculatedPace.perMile;
+			setPace(paceValue);
+			form.setValue("pace", paceValue);
+		}
+	};
 
 	// Calculate pace from distance and time
 	const calculatePace = (distance: number, time: string) => {
@@ -194,6 +238,37 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 		return true;
 	};
 
+	// Calculate and sync pace across tabs when race time changes
+	const syncPaceAcrossTabs = (raceTime: string, raceDistance: number) => {
+		try {
+			// Only calculate and update if we have valid inputs
+			if (!raceTime || !raceDistance) return;
+
+			// Calculate pace for the race
+			const pace = calculatePace(raceDistance, raceTime);
+			const paceValue = useMetric ? pace.perKm : pace.perMile;
+
+			// Only update pace calculator tab
+			if (activeTab === "pace-calculator") {
+				setPace(paceValue);
+				form.setValue("pace", paceValue);
+			}
+
+			// Only update track splits tab
+			if (activeTab === "track-splits") {
+				// Calculate 400m split based on race pace
+				const paceInSeconds = timeStringToSeconds(paceValue);
+				const distanceRatio = useMetric ? 0.4 : 0.4 * 1.60934; // Convert 400m to km or miles
+				const splitTime = formatTime(paceInSeconds * distanceRatio);
+
+				setTime(splitTime);
+				form.setValue("time", splitTime);
+			}
+		} catch (error) {
+			console.error("Error syncing pace:", error);
+		}
+	};
+
 	// Handle time input changes and validation
 	const handleTimeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
@@ -211,12 +286,27 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 		// Clear any previous errors
 		form.clearErrors(fieldName);
 
-		// Update the field value
+		// Update form value
 		form.setValue(fieldName, value, {
 			shouldValidate: true,
 		});
 
-		// Validate complete time entries against world records
+		// Update URL state based on field
+		if (fieldName === "time") {
+			setTime(value);
+
+			// Only sync pace when in race-time tab and we have a complete time entry
+			if (activeTab === "race-time" && value.match(/^\d{1,2}(:\d{2}){1,2}$/)) {
+				const distance = form.getValues("distance");
+				if (distance) {
+					syncPaceAcrossTabs(value, distance);
+				}
+			}
+		} else if (fieldName === "pace") {
+			setPace(value);
+		}
+
+		// Validate complete time entries
 		if (value.match(/^\d{1,2}(:\d{2}){1,2}$/)) {
 			if (fieldName === "time") {
 				const distance = form.getValues("distance");
@@ -299,7 +389,6 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 	// Sync form changes back to URL parameters
 	const onFormChange = async (data: FormData) => {
 		await setTime(data.time);
-		await setDistance(data.distance.toString()); // Convert number to string for URL
 		await setPace(data.pace || "");
 	};
 
@@ -344,6 +433,19 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 		initialValue: pace || "00:00",
 	});
 
+	// Update the distance selection handler
+	const handleDistanceChange = async (value: string) => {
+		const newDistance = DISTANCES[value as keyof typeof DISTANCES];
+		await setSelectedDistance(value as keyof typeof DISTANCES);
+		form.setValue("distance", newDistance);
+
+		// Recalculate pace if time exists
+		const currentTime = form.getValues("time");
+		if (currentTime) {
+			syncPaceAcrossTabs(currentTime, newDistance);
+		}
+	};
+
 	return (
 		<Card className="w-full">
 			<CardHeader>
@@ -384,16 +486,12 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 
 						<TabsContent value="race-time" className="space-y-4">
 							<div className="grid gap-4">
-								<div className="grid grid-cols-2 gap-4">
-									<div className="space-y-2">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+									<div className="flex flex-col justify-end space-y-2">
 										<Label>Distance</Label>
 										<Select
-											onValueChange={(value) => {
-												const newDistance =
-													DISTANCES[value as keyof typeof DISTANCES];
-												setDistance(newDistance.toString());
-												form.setValue("distance", newDistance);
-											}}
+											value={selectedDistance}
+											onValueChange={handleDistanceChange}
 										>
 											<SelectTrigger>
 												<SelectValue placeholder="Select distance" />
@@ -407,7 +505,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 											</SelectContent>
 										</Select>
 									</div>
-									<div className="space-y-2">
+									<div className="flex flex-col justify-end space-y-2">
 										<Label className="flex items-center">
 											Target Time (hh:mm:ss)
 											<TimeInputTooltip />
@@ -547,39 +645,62 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 						<TabsContent value="track-splits" className="space-y-4">
 							<div className="grid gap-4">
 								<div className="space-y-2">
-									<Label>Target Time (mm:ss)</Label>
+									<Label className="flex items-center">
+										Target 400m Time (based on current pace)
+										<TimeInputTooltip />
+									</Label>
 									<Input
 										type="text"
 										placeholder="00:00"
-										{...form.register("time")}
-										onChange={handleTimeInput}
+										{...form.register("pace")}
+										onChange={(e) => {
+											handleTimeInput(e);
+											paceInput.setCurrentValue(e.target.value);
+										}}
+										onKeyDown={paceInput.handleKeyDown}
+										onBlur={handleTimeBlur}
+										value={paceInput.currentValue}
 										className={
-											form.formState.errors.time ? "border-red-500" : ""
+											form.formState.errors.pace?.type === "manual" &&
+											form.formState.errors.pace?.message?.includes(
+												"extremely fast",
+											)
+												? "border-yellow-500"
+												: form.formState.errors.pace
+												  ? "border-red-500"
+												  : ""
 										}
 									/>
-									{form.formState.errors.time && (
-										<p className="text-sm text-red-500 mt-1">
-											{form.formState.errors.time.message}
+									{form.formState.errors.pace && (
+										<p
+											className={`text-sm mt-1 ${
+												form.formState.errors.pace.message?.includes(
+													"extremely fast",
+												)
+													? "text-yellow-500"
+													: "text-red-500"
+											}`}
+										>
+											{form.formState.errors.pace.message}
 										</p>
 									)}
 								</div>
-								<div className="p-4 border rounded-lg space-y-2">
-									{[100, 200, 400].map((distance) => {
-										const targetTime = form.watch("time");
-										const splitTime = targetTime
-											? calculateSplitTime(targetTime, distance)
-											: "00:00";
 
-										return (
-											<div
-												key={distance}
-												className="flex justify-between items-center"
-											>
-												<span>{distance}m Split</span>
-												<span className="font-mono">{splitTime}</span>
-											</div>
-										);
-									})}
+								<div className="space-y-2">
+									<Label>Track Splits (based on target 400m time)</Label>
+									<div className="p-4 border rounded-lg space-y-2">
+										{Object.entries(calculateTrackSplits(pace)).map(
+											([distance, splitTime]) => (
+												<div
+													key={distance}
+													className="flex justify-between items-center"
+												>
+													<span>{distance}</span>
+													<span className="font-mono">{splitTime}</span>
+												</div>
+											),
+										)}
+									</div>
 								</div>
 							</div>
 						</TabsContent>
@@ -607,7 +728,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 									/>
 								</div>
 
-								<div className="mt-6">
+								{/* <div className="mt-6">
 									<Label>Track Workout</Label>
 									<TrackWorkout
 										targetPace={
@@ -617,7 +738,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 										}
 										intervalDistance={400}
 									/>
-								</div>
+								</div> */}
 							</>
 						)}
 				</form>

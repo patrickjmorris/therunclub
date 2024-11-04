@@ -14,10 +14,10 @@ export const truncate = (str: string, num: number) => {
   if (str.length <= num) {
     return str;
   }
-  return str.slice(0, num) + "...";
+  return `${str.slice(0, num)}...`;
 };
 
-export const slugify = (text: String) => {
+export const slugify = (text: string) => {
   return text
     .toString()                           // Cast to string (optional)
     .normalize('NFKD')            // The normalize() using NFKD method returns the Unicode Normalization Form of a given string.
@@ -26,8 +26,4 @@ export const slugify = (text: String) => {
     .replace(/\s+/g, '-')            // Replace spaces with -
     .replace(/[^\w\-]+/g, '')     // Remove all non-word chars
     .replace(/\-\-+/g, '-');        // Replace multiple - with single -
-}
-
-export const onlyUnique = (value: any, index: any, self: any) => {
-  return self.indexOf(value) === index;
 }

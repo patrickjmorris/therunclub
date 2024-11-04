@@ -9,14 +9,30 @@ import { FEEDS } from "@/lib/episodes";
 
 config({ path: ".env" });
 
-const isDevelopment = process.env.NODE_ENV === "development";
-const BATCH_SIZE = 5; // Number of podcasts to process concurrently
 
+// Default to development unless explicitly set to production
+const isDevelopment = process.env.NODE_ENV !== "production";
+
+const BATCH_SIZE = 5; 
 const connectionString = isDevelopment
 	? process.env.LOCAL_DB_URL ?? ""
 	: process.env.DATABASE_URL ?? "";
 
-export const client = postgres(connectionString, { prepare: false });
+if (!connectionString) {
+	throw new Error("Database connection string is not defined");
+}
+
+console.log("Environment:", isDevelopment ? "development" : "production");
+console.log("Using connection:", connectionString.split("@")[1]); // Log only host part for security
+
+const clientOptions = {
+	prepare: false,
+	ssl: !isDevelopment,
+	max: 1, // Limit pool size for scripts
+	idle_timeout: 20, // Reduce idle timeout
+};
+
+export const client = postgres(connectionString, clientOptions);
 export const db = drizzle(client);
 
 async function processPodcast(podcast: Podcast, parser: Parser) {

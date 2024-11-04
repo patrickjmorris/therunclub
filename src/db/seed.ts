@@ -1,34 +1,39 @@
-import { db } from "./index";
+import { db, client } from "./index";
 import { podcasts, episodes } from "./schema";
 import { FEEDS } from "../lib/episodes";
 import Parser from "rss-parser";
 import { sql } from "drizzle-orm";
 import { slugify } from "@/lib/utils";
 
+async function checkConnection() {
+	try {
+		const result = await db.execute(sql`SELECT 1`);
+		console.log("Connection test result:", result);
+		return true;
+	} catch (error) {
+		console.error("Database connection failed:", error);
+		return false;
+	}
+}
+
 export async function seed() {
 	console.log("Starting database seeding process...");
 
 	try {
-		// Check if the database connection is working
-		await db.execute(sql`SELECT 1`);
-		console.log("Database connection successful");
+		// Check connection first
+		const isConnected = await checkConnection();
+		if (!isConnected) {
+			console.error("Failed to connect to database. Exiting...");
+			process.exit(1);
+		}
 
-		// Check if tables exist
-		const tablesExist = await db.execute(sql`
-			SELECT EXISTS (
-				SELECT FROM information_schema.tables 
-				WHERE table_name = 'podcasts'
-			) AS podcasts_exists,
-			EXISTS (
-				SELECT FROM information_schema.tables 
-				WHERE table_name = 'episodes'
-			) AS episodes_exists;
-		`);
-		console.log("Tables exist check:", tablesExist);
+		const parser = new Parser({
+			timeout: 5000, // Add timeout for RSS parser
+		});
 
 		for (const feed of FEEDS) {
 			console.log(`Processing feed: ${feed.url}`);
-			const parser = new Parser();
+			
 			try {
 				const data = await parser.parseURL(feed.url);
 				console.log(`Successfully parsed feed: ${feed.url}`);
@@ -138,16 +143,31 @@ export async function seed() {
 				}
 			} catch (parseError) {
 				console.error(`Error parsing feed: ${feed.url}`, parseError);
+				// biome-ignore lint/correctness/noUnnecessaryContinue: <explanation>
+continue; // Skip to next feed on error
 			}
 		}
+		
 		console.log("Database seeding completed");
+		
 	} catch (error) {
-		console.error("Error during seeding process:", error);
+		console.error("Fatal error during seeding process:", error);
 		throw error;
+	} finally {
+		// Clean up connection
+		await client.end();
 	}
 }
 
-seed()
+// Add timeout to the entire process
+const SEED_TIMEOUT = 60000; // 1 minute timeout
+
+Promise.race([
+	seed(),
+	new Promise((_, reject) => 
+		setTimeout(() => reject(new Error("Seeding timed out")), SEED_TIMEOUT)
+	)
+])
 	.then(() => {
 		console.log("Seeding completed successfully");
 		process.exit(0);

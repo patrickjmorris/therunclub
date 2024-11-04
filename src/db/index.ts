@@ -25,14 +25,7 @@ if (!connectionString) {
 console.log("Environment:", isDevelopment ? "development" : "production");
 console.log("Using connection:", connectionString.split("@")[1]); // Log only host part for security
 
-const clientOptions = {
-	prepare: false,
-	ssl: !isDevelopment,
-	max: 1, // Limit pool size for scripts
-	idle_timeout: 20, // Reduce idle timeout
-};
-
-export const client = postgres(connectionString, clientOptions);
+export const client = postgres(connectionString, { prepare: false })
 export const db = drizzle(client);
 
 async function processPodcast(podcast: Podcast, parser: Parser) {

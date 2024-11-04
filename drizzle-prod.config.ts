@@ -13,7 +13,6 @@ export default defineConfig({
     user: "postgres.akzhyzwiwjxtjuirmqyx",
     password: process.env.DATABASE_PASSWORD ?? "",
     database: "postgres",
-    ssl: true,
   },
   verbose: true,
   strict: true,

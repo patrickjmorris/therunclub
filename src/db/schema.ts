@@ -6,8 +6,48 @@ import {
 	uuid,
 	uniqueIndex,
 	boolean,
+	pgSchema,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
+import { authUsers } from "drizzle-orm/supabase";
+
+// Define auth schema
+export const authSchema = pgSchema("auth");
+
+// Define auth.users table
+export const users = authSchema.table("users", {
+	id: uuid("id").primaryKey(),
+	email: text("email"),
+});
+
+// This table extends Supabase auth.users
+export const profiles = pgTable(
+	"profiles",
+	{
+		id: uuid("id")
+			.primaryKey()
+			.references(() => authUsers.id, { onDelete: "cascade" }),
+		email: text("email").notNull(),
+		fullName: text("full_name"),
+		avatarUrl: text("avatar_url"),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(table) => {
+		return {
+			emailIdx: uniqueIndex("profiles_email_idx").on(table.email),
+		};
+	},
+);
+
+// Define relations between profiles and auth.users
+export const profilesRelations = relations(profiles, ({ one }) => ({
+	user: one(authUsers, {
+		fields: [profiles.id],
+		references: [authUsers.id],
+	}),
+}));
 
 export const podcasts = pgTable(
 	"podcasts",
@@ -55,34 +95,53 @@ export const episodes = pgTable("episodes", {
 	season: text("season").default(""),
 });
 
-export const users = pgTable(
-	"users",
-	{
-		id: uuid("id").primaryKey(),
-		email: text("email").notNull(),
-		fullName: text("full_name"),
-		avatarUrl: text("avatar_url"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").defaultNow().notNull(),
-	},
-	(table) => ({
-		emailIdx: uniqueIndex("email_idx").on(table.email),
-	}),
-);
-
 export const userPodcastPreferences = pgTable("user_podcast_preferences", {
 	id: uuid("id").primaryKey().defaultRandom(),
-	userId: uuid("user_id")
+	profileId: uuid("profile_id")
 		.notNull()
-		.references(() => users.id),
+		.references(() => profiles.id, { onDelete: "cascade" }),
 	podcastId: uuid("podcast_id")
 		.notNull()
-		.references(() => podcasts.id),
+		.references(() => podcasts.id, { onDelete: "cascade" }),
 	isFavorite: boolean("is_favorite").default(false),
 	lastViewedAt: timestamp("last_viewed_at"),
 });
 
+// Define all relations
+export const podcastsRelations = relations(podcasts, ({ many }) => ({
+	episodes: many(episodes),
+	preferences: many(userPodcastPreferences),
+}));
+
+export const episodesRelations = relations(episodes, ({ one }) => ({
+	podcast: one(podcasts, {
+		fields: [episodes.podcastId],
+		references: [podcasts.id],
+	}),
+}));
+
+export const userPodcastPreferencesRelations = relations(
+	userPodcastPreferences,
+	({ one }) => ({
+		profile: one(profiles, {
+			fields: [userPodcastPreferences.profileId],
+			references: [profiles.id],
+		}),
+		podcast: one(podcasts, {
+			fields: [userPodcastPreferences.podcastId],
+			references: [podcasts.id],
+		}),
+	}),
+);
+
+// Types
+export type User = typeof authUsers.$inferSelect;
+export type Profile = typeof profiles.$inferSelect;
 export type Podcast = typeof podcasts.$inferSelect;
 export type Episode = typeof episodes.$inferSelect;
-export type User = typeof users.$inferSelect;
 export type UserPodcastPreference = typeof userPodcastPreferences.$inferSelect;
+export type NewProfile = typeof profiles.$inferInsert;
+
+// Zod Schemas
+export const insertProfileSchema = createInsertSchema(profiles);
+export const selectProfileSchema = createSelectSchema(profiles);

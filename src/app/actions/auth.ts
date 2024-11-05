@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { profiles, insertProfileSchema } from "@/db/schema";
 import { redirect } from "next/navigation";
 
 interface SignUpData {
@@ -20,7 +20,7 @@ interface SignInData {
 export async function signIn(data: SignInData) {
 	const supabase = await createClient();
 
-	const { error, data: authData } = await supabase.auth.signInWithPassword({
+	const { error } = await supabase.auth.signInWithPassword({
 		email: data.email,
 		password: data.password,
 	});
@@ -51,13 +51,18 @@ export async function signUp(data: SignUpData) {
 		return { error: error.message };
 	}
 
-	// Create user record in our database
+	// Create profile record in our database
 	if (authData?.user?.id && authData?.user?.email) {
-		await db.insert(users).values({
+		const profileData = {
 			id: authData.user.id,
 			email: authData.user.email,
 			fullName: data.fullName,
-		});
+		};
+
+		// Validate profile data
+		const validatedData = insertProfileSchema.parse(profileData);
+
+		await db.insert(profiles).values(validatedData);
 	}
 
 	revalidatePath("/", "layout");

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { profiles } from "@/db/schema";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -74,7 +74,7 @@ export async function signup(formData: FormData) {
 	}
 
 	if (authData?.user?.id && authData?.user?.email) {
-		await db.insert(users).values({
+		await db.insert(profiles).values({
 			id: authData.user.id,
 			email: authData.user.email,
 		});

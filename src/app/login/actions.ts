@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { z } from "zod";
@@ -28,8 +28,7 @@ export async function login(formData: FormData) {
 	}
 
 	const { error } = await supabase.auth.signInWithPassword({
-		email: result.data.email,
-		password: result.data.password,
+		...result.data,
 	});
 
 	if (error) {
@@ -78,6 +77,7 @@ export async function signup(formData: FormData) {
 			id: authData.user.id,
 			email: authData.user.email,
 		});
+		console.log(`Profile created successfully for ${authData.user.email}`);
 	}
 
 	revalidatePath("/", "layout");

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Analytics } from "@/components/analytics";
 import { ThemeProvider } from "@/components/providers";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(siteConfig.url),
@@ -106,14 +107,17 @@ export default function RootLayout({ children }: RootLayoutProps) {
 					>
 						<AudioProvider>
 							<div vaul-drawer-wrapper="">
-								<div className="relative flex min-h-screen flex-col bg-background">
+								<main className="relative flex flex-1 min-h-screen flex-col bg-background">
 									<NuqsAdapter>{children}</NuqsAdapter>
+								</main>
+								<div className="fixed inset-x-0 bottom-0 z-10 lg:right-0 lg:left-auto lg:w-3/4">
+									<AudioPlayer />
 								</div>
-								<AudioPlayer />
 							</div>
 							<TailwindIndicator />
 
 							<Analytics />
+							<SpeedInsights />
 						</AudioProvider>
 					</ThemeProvider>
 				</body>

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { login, signup } from "@/app/(main)/login/actions";
+import { login, signup } from "@/app/login/actions";
 import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";

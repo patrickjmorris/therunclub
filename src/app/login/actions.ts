@@ -32,6 +32,7 @@ export async function login(formData: FormData) {
 	});
 
 	if (error) {
+		console.error("Login error:", error);
 		const errorMessage =
 			error.message === "Invalid login credentials"
 				? "Invalid credentials"
@@ -66,6 +67,7 @@ export async function signup(formData: FormData) {
 	});
 
 	if (error) {
+		console.error("Signup error:", error);
 		const errorMessage = error.message.includes("already registered")
 			? "This email is already registered"
 			: "Signup failed. Please try again.";

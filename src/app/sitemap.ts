@@ -1,31 +1,62 @@
-import { getLastEpisodesByPodcast } from "@/db/queries";
+import { MetadataRoute } from "next";
+import { CHANNELS, getChannelInfo, getAllPlaylistItems } from "@/lib/youtube";
+import { db } from "@/db";
+import { podcasts } from "@/db/schema";
 
-export default async function sitemap() {
-  const baseUrl = 'https://therunclub.xyz';
-  
-  // Get all episodes
-  const episodes = await getLastEpisodesByPodcast();
-  
-  const episodeUrls = episodes.map((episode) => ({
-    url: `${baseUrl}/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`,
-    lastModified: episode.pubDate,
-    changeFrequency: 'monthly',
-    priority: 0.8,
-  }));
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+	const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/podcasts`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    ...episodeUrls,
-  ];
-} 
+	// Get existing podcasts for sitemap
+	const podcastsData = await db.select().from(podcasts);
+	const podcastUrls = podcastsData.map((podcast) => ({
+		url: `${baseUrl}/podcasts/${podcast.podcastSlug}`,
+		lastModified: podcast.lastBuildDate ?? new Date(),
+	}));
+
+	// Get initial channels and their videos
+	const initialChannels = CHANNELS.slice(0, 5);
+	const channelsData = await Promise.all(
+		initialChannels.map(async (channelId) => {
+			const channelInfo = await getChannelInfo(channelId);
+			if (!channelInfo?.items[0]?.contentDetails?.relatedPlaylists?.uploads) {
+				return null;
+			}
+
+			const playlistId =
+				channelInfo.items[0].contentDetails.relatedPlaylists.uploads;
+			const playlistItems = await getAllPlaylistItems(playlistId);
+			return playlistItems?.slice(0, 10) ?? null;
+		}),
+	);
+
+	const videoUrls = channelsData
+		.filter((items): items is NonNullable<typeof items> => items !== null)
+		.flatMap((items) =>
+			items.map((item) => ({
+				url: `${baseUrl}/videos/${item.snippet.resourceId.videoId}`,
+				lastModified: new Date(item.snippet.publishedAt),
+			})),
+		);
+
+	// Combine all URLs
+	return [
+		{
+			url: baseUrl,
+			lastModified: new Date(),
+		},
+		{
+			url: `${baseUrl}/podcasts`,
+			lastModified: new Date(),
+		},
+		{
+			url: `${baseUrl}/videos`,
+			lastModified: new Date(),
+		},
+		{
+			url: `${baseUrl}/videos/channels`,
+			lastModified: new Date(),
+		},
+		...podcastUrls,
+		...videoUrls,
+	];
+}

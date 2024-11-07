@@ -41,13 +41,22 @@ export const profiles = pgTable(
 	},
 );
 
-// Define relations between profiles and auth.users
-export const profilesRelations = relations(profiles, ({ one }) => ({
-	user: one(authUsers, {
-		fields: [profiles.id],
-		references: [authUsers.id],
+// Videos schema
+export const videos = pgTable(
+	"videos",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		youtubeVideoId: text("youtube_video_id").notNull(),
+		title: text("title").notNull(),
+		channelTitle: text("channel_title"),
+		category: text("category"),
+		publishedAt: timestamp("published_at"),
+		createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+	},
+	(table) => ({
+		youtubeIdIdx: uniqueIndex("youtube_video_id_idx").on(table.youtubeVideoId),
 	}),
-}));
+);
 
 export const podcasts = pgTable(
 	"podcasts",
@@ -140,7 +149,9 @@ export type Profile = typeof profiles.$inferSelect;
 export type Podcast = typeof podcasts.$inferSelect;
 export type Episode = typeof episodes.$inferSelect;
 export type UserPodcastPreference = typeof userPodcastPreferences.$inferSelect;
+export type Video = typeof videos.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
+export type NewVideo = typeof videos.$inferInsert;
 
 // Zod Schemas
 export const insertProfileSchema = createInsertSchema(profiles);

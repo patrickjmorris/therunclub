@@ -7,38 +7,39 @@ import {
 	uniqueIndex,
 	boolean,
 	pgSchema,
+	foreignKey,
+	pgPolicy,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
-import { authUsers } from "drizzle-orm/supabase";
-
-// Define auth schema
-export const authSchema = pgSchema("auth");
-
-// Define auth.users table
-export const users = authSchema.table("users", {
-	id: uuid("id").primaryKey(),
-	email: text("email"),
-});
+import { authenticatedRole, authUsers } from "drizzle-orm/supabase";
 
 // This table extends Supabase auth.users
+
 export const profiles = pgTable(
 	"profiles",
 	{
-		id: uuid("id")
-			.primaryKey()
-			.references(() => authUsers.id, { onDelete: "cascade" }),
-		email: text("email").notNull(),
+		id: uuid().primaryKey().notNull(),
 		fullName: text("full_name"),
 		avatarUrl: text("avatar_url"),
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+		email: text().notNull(),
 	},
-	(table) => {
-		return {
-			emailIdx: uniqueIndex("profiles_email_idx").on(table.email),
-		};
-	},
+	(table) => [
+		foreignKey({
+			columns: [table.id],
+			// reference to the auth table from Supabase
+			foreignColumns: [authUsers.id],
+			name: "profiles_id_fk",
+		}).onDelete("cascade"),
+		pgPolicy("authenticated can view all profiles", {
+			for: "select",
+			// using predefined role from Supabase
+			to: authenticatedRole,
+			using: sql`true`,
+		}),
+	],
 );
 
 // Videos schema

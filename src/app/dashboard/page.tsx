@@ -24,6 +24,7 @@ export default async function DashboardPage() {
 			<h1 className="text-2xl font-bold mb-8">
 				Welcome back, {profile?.full_name || session.user.email}
 			</h1>
+			<code>{JSON.stringify(profile, null, 2)}</code>
 			{/* Rest of dashboard content */}
 		</div>
 	);

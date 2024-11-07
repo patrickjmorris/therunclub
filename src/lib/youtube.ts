@@ -1,5 +1,12 @@
 const YOUTUBE_HOST = "https://youtube.googleapis.com";
 
+interface ChannelStatistics {
+	subscriberCount: string;
+	videoCount: string;
+	viewCount: string;
+	hiddenSubscriberCount: boolean;
+}
+
 interface ChannelInfo {
 	// Define the structure of channel info based on the YouTube API response
 	kind: string;
@@ -24,12 +31,14 @@ interface ChannelInfo {
 					height: number;
 				};
 			};
+			country?: string;
 		};
 		contentDetails: {
 			relatedPlaylists: {
 				uploads: string;
 			};
 		};
+		statistics: ChannelStatistics;
 	}>;
 }
 
@@ -59,6 +68,12 @@ interface PlaylistItem {
 	};
 }
 
+interface VideoStatistics {
+	viewCount: string;
+	likeCount: string;
+	commentCount: string;
+}
+
 interface VideoInfo {
 	// Define the structure of video info based on the YouTube API response
 	kind: string;
@@ -83,7 +98,129 @@ interface VideoInfo {
 			tags: string[];
 			categoryId: string;
 		};
+		statistics: VideoStatistics;
 	}>;
+}
+
+// Add error types
+interface YouTubeAPIError {
+	error: {
+		code: number;
+		message: string;
+		errors: Array<{
+			message: string;
+			domain: string;
+			reason: string;
+		}>;
+	};
+}
+
+// Add video category mapping
+export const VIDEO_CATEGORIES = {
+	RACE_RESULTS: "race-results",
+	SHOE_REVIEWS: "shoe-reviews",
+	TRAINING_TIPS: "training-tips",
+	NUTRITION: "nutrition",
+	INSPIRATION: "inspiration",
+} as const;
+
+// Add search functionality
+export async function searchVideos(
+	query: string,
+	category?: keyof typeof VIDEO_CATEGORIES,
+	maxResults = 10,
+): Promise<VideoInfo | YouTubeAPIError> {
+	try {
+		const categoryQuery = category
+			? `&videoCategoryId=${VIDEO_CATEGORIES[category]}`
+			: "";
+		const response = await fetch(
+			`${YOUTUBE_HOST}/youtube/v3/search?part=snippet&q=${query}${categoryQuery}&type=video&maxResults=${maxResults}&key=${process.env.YOUTUBE_API_KEY}`,
+		);
+
+		if (!response.ok) {
+			const error = await response.json();
+			return error as YouTubeAPIError;
+		}
+
+		const data = await response.json();
+		return data as VideoInfo;
+	} catch (err) {
+		console.error("Error searching videos:", err);
+		throw new Error("Failed to search videos");
+	}
+}
+
+// Add caching wrapper
+const CACHE_DURATION = 1000 * 60 * 15; // 15 minutes
+const cache = new Map<string, { data: unknown; timestamp: number }>();
+
+function withCache<T>(key: string, fn: () => Promise<T>): Promise<T> {
+	const cached = cache.get(key);
+	if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+		return Promise.resolve(cached.data as T);
+	}
+
+	return fn().then((data) => {
+		cache.set(key, { data, timestamp: Date.now() });
+		return data;
+	});
+}
+
+// Update getVideoInfo to use caching
+export async function getVideoInfo(videoId: string): Promise<VideoInfo | null> {
+	return withCache(`video:${videoId}`, async () => {
+		try {
+			const response = await fetch(
+				`${YOUTUBE_HOST}/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`,
+			);
+
+			if (!response.ok) {
+				throw new Error(`YouTube API error: ${response.statusText}`);
+			}
+
+			const data: VideoInfo = await response.json();
+
+			return data;
+		} catch (err) {
+			console.error("Error fetching video info:", err);
+			return null;
+		}
+	});
+}
+
+// Add batch video fetching
+export async function getVideosInfo(videoIds: string[]): Promise<VideoInfo[]> {
+	try {
+		const response = await fetch(
+			`${YOUTUBE_HOST}/youtube/v3/videos?part=snippet,statistics&id=${videoIds.join(
+				",",
+			)}&key=${process.env.YOUTUBE_API_KEY}`,
+		);
+
+		if (!response.ok) {
+			throw new Error(`YouTube API error: ${response.statusText}`);
+		}
+
+		const data = await response.json();
+		return data.items;
+	} catch (err) {
+		console.error("Error fetching videos info:", err);
+		return [];
+	}
+}
+
+// Add rate limiting helper
+const RATE_LIMIT = 100; // Requests per day
+let requestCount = 0;
+const requestResetTime = Date.now() + 24 * 60 * 60 * 1000;
+
+function checkRateLimit() {
+	if (requestCount >= RATE_LIMIT) {
+		throw new Error("YouTube API rate limit exceeded");
+	}
+
+	requestCount++;
 }
 
 export async function getChannelInfo(
@@ -91,7 +228,7 @@ export async function getChannelInfo(
 ): Promise<ChannelInfo | null> {
 	try {
 		const response = await fetch(
-			`${YOUTUBE_HOST}/youtube/v3/channels?part=snippet,contentDetails&id=${channelId}&key=${process.env.YOUTUBE_API_KEY}`,
+			`${YOUTUBE_HOST}/youtube/v3/channels?part=snippet,contentDetails,statistics&id=${channelId}&key=${process.env.YOUTUBE_API_KEY}`,
 		);
 
 		const data: ChannelInfo = await response.json();
@@ -148,22 +285,6 @@ export async function getPlaylistItems(
 		const playlist5Items = data.items;
 
 		return playlist5Items;
-	} catch (err) {
-		console.log(err);
-	}
-
-	return null;
-}
-
-export async function getVideoInfo(videoId: string): Promise<VideoInfo | null> {
-	try {
-		const response = await fetch(
-			`${YOUTUBE_HOST}/youtube/v3/videos?part=snippet&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`,
-		);
-
-		const data: VideoInfo = await response.json();
-
-		return data;
 	} catch (err) {
 		console.log(err);
 	}

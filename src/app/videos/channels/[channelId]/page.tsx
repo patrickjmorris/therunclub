@@ -27,7 +27,6 @@ export async function generateMetadata({
 }: { params: Promise<{ channelId: string }> }): Promise<Metadata> {
 	const { channelId } = await params;
 	const channelInfo = await getChannelInfo(channelId);
-	console.log("channelInfo", channelInfo?.items[0]);
 
 	if (!channelInfo?.items.length) {
 		return {

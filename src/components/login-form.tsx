@@ -102,12 +102,6 @@ export function LoginForm() {
 						Privacy Policy
 					</Link>
 				</p>
-				<p>
-					Already have an account?{" "}
-					<Link href="/login" className="font-medium underline">
-						Sign in
-					</Link>
-				</p>
 			</CardFooter>
 		</Card>
 	);

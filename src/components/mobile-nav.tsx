@@ -10,7 +10,13 @@ import { cn } from "@/lib/utils";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+	Sheet,
+	SheetContent,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
+import { VisuallyHidden } from "react-aria";
 
 export function MobileNav() {
 	const [open, setOpen] = React.useState(false);
@@ -80,6 +86,9 @@ export function MobileNav() {
 						)}
 					</div>
 				</ScrollArea>
+				<VisuallyHidden>
+					<SheetTitle>Menu</SheetTitle>
+				</VisuallyHidden>
 			</SheetContent>
 		</Sheet>
 	);

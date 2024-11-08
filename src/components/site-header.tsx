@@ -8,8 +8,30 @@ import { MainNav } from "@/components/main-nav";
 import { MobileNav } from "@/components/mobile-nav";
 import { ModeToggle } from "@/components/mode-toggle";
 import { buttonVariants } from "@/components/ui/button";
+import { UserNav } from "./nav/user-nav";
+import { createClient } from "@/utils/supabase/server";
+import { getProfile } from "@/db/queries";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	let profileData = null;
+	if (user) {
+		const [profile] = await getProfile(user.id);
+		profileData = profile;
+	}
+
+	const profile = user
+		? {
+				// biome-ignore lint/style/noNonNullAssertion: primary key
+				email: user.email!,
+				fullName: profileData?.fullName,
+				avatarUrl: profileData?.avatarUrl,
+		  }
+		: null;
 	return (
 		<header className="sticky top-0 z-50 w-full border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 			<div className="container flex h-14 max-w-screen-2xl items-center">
@@ -19,26 +41,10 @@ export function SiteHeader() {
 					<div className="w-full flex-1 md:w-auto md:flex-none">
 						<CommandMenu />
 					</div>
-					<nav className="flex items-center">
-						<Link
-							href={siteConfig.links.twitter}
-							target="_blank"
-							rel="noreferrer"
-						>
-							<div
-								className={cn(
-									buttonVariants({
-										variant: "ghost",
-									}),
-									"h-8 w-8 px-0",
-								)}
-							>
-								<Icons.twitter className="h-3 w-3 fill-current" />
-								<span className="sr-only">Twitter</span>
-							</div>
-						</Link>
-						<ModeToggle />
-					</nav>
+
+					<div className="ml-auto flex items-center space-x-4">
+						<UserNav user={profile} />
+					</div>
 				</div>
 			</div>
 		</header>

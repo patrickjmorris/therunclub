@@ -156,7 +156,8 @@ const nextConfig = {
 	},
 	experimental: {
 		serverActions: {
-			allowedOrigins: ["therunclub.xzy"],
+			allowedOrigins: ["therunclub.xyz"],
+			bodySizeLimit: "3mb",
 		},
 	},
 };

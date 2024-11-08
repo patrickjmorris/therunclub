@@ -1,7 +1,7 @@
 import { desc, eq, sql, and, max } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { db } from "./index";
-import { podcasts, episodes } from "./schema";
+import { podcasts, episodes, profiles } from "./schema";
 
 // Existing query (for reference)
 // Need to fix this query
@@ -34,24 +34,23 @@ export const getLastEpisodeForEachPodcast = unstable_cache(
 	{ tags: ["podcasts"] },
 );
 
-export const getNewEpisodes = 
-	async () => {
-		return db
-			.select({
-				podcastId: podcasts.id,
-				podcastTitle: podcasts.title,
-				podcastImage: podcasts.image,
-				podcastSlug: podcasts.podcastSlug,
-				episodeId: episodes.id,
-				episodeTitle: episodes.title,
-				episodeImage: episodes.image,
-				episodeDuration: episodes.duration,
-				episodeSlug: episodes.episodeSlug,
-				pubDate: episodes.pubDate,
-			})
-			.from(podcasts)
-			.leftJoin(episodes, eq(podcasts.id, episodes.podcastId))
-			.orderBy(desc(episodes.pubDate))
+export const getNewEpisodes = async () => {
+	return db
+		.select({
+			podcastId: podcasts.id,
+			podcastTitle: podcasts.title,
+			podcastImage: podcasts.image,
+			podcastSlug: podcasts.podcastSlug,
+			episodeId: episodes.id,
+			episodeTitle: episodes.title,
+			episodeImage: episodes.image,
+			episodeDuration: episodes.duration,
+			episodeSlug: episodes.episodeSlug,
+			pubDate: episodes.pubDate,
+		})
+		.from(podcasts)
+		.leftJoin(episodes, eq(podcasts.id, episodes.podcastId))
+		.orderBy(desc(episodes.pubDate))
 		.limit(3);
 };
 
@@ -110,7 +109,10 @@ export const getLastEpisodesByPodcast = unstable_cache(
 				episodeSlug: episodes.episodeSlug,
 				podcastSlug: podcasts.podcastSlug,
 				pubDate: episodes.pubDate,
-				rowNum: sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as("rowNum"),
+				rowNum:
+					sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as(
+						"rowNum",
+					),
 			})
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
@@ -233,42 +235,41 @@ export const getDebugData = unstable_cache(
 	{ tags: ["debug"] },
 );
 
-export const getAllPodcastAndLastEpisodes = 
-	async () => {
-		const lastEpisodeSubquery = db
-			.select({
-				podcastId: episodes.podcastId,
-				maxPubDate: sql`max(${episodes.pubDate})`.as("maxPubDate"),
-			})
-			.from(episodes)
-			.groupBy(episodes.podcastId)
-			.as("lastEpisode");
+export const getAllPodcastAndLastEpisodes = async () => {
+	const lastEpisodeSubquery = db
+		.select({
+			podcastId: episodes.podcastId,
+			maxPubDate: sql`max(${episodes.pubDate})`.as("maxPubDate"),
+		})
+		.from(episodes)
+		.groupBy(episodes.podcastId)
+		.as("lastEpisode");
 
-		return db
-			.select({
-				title: podcasts.title,
-				podcastId: podcasts.id,
-				image: podcasts.image,
-				episodeTitle: episodes.title,
-				episodeId: episodes.id,
-				episodePubDate: episodes.pubDate,
-				episodeSlug: episodes.episodeSlug,
-				podcastSlug: podcasts.podcastSlug,
-			})
-			.from(podcasts)
-			.leftJoin(
-				lastEpisodeSubquery,
-				eq(podcasts.id, lastEpisodeSubquery.podcastId),
-			)
-			.leftJoin(
-				episodes,
-				and(
-					eq(podcasts.id, episodes.podcastId),
-					eq(episodes.pubDate, lastEpisodeSubquery.maxPubDate),
-				),
-			)
-			.orderBy(desc(lastEpisodeSubquery.maxPubDate));
-	};
+	return db
+		.select({
+			title: podcasts.title,
+			podcastId: podcasts.id,
+			image: podcasts.image,
+			episodeTitle: episodes.title,
+			episodeId: episodes.id,
+			episodePubDate: episodes.pubDate,
+			episodeSlug: episodes.episodeSlug,
+			podcastSlug: podcasts.podcastSlug,
+		})
+		.from(podcasts)
+		.leftJoin(
+			lastEpisodeSubquery,
+			eq(podcasts.id, lastEpisodeSubquery.podcastId),
+		)
+		.leftJoin(
+			episodes,
+			and(
+				eq(podcasts.id, episodes.podcastId),
+				eq(episodes.pubDate, lastEpisodeSubquery.maxPubDate),
+			),
+		)
+		.orderBy(desc(lastEpisodeSubquery.maxPubDate));
+};
 
 export const getEpisodeTitles = unstable_cache(
 	async (podcastId: string) => {
@@ -368,4 +369,12 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 	},
 	["last-ten-episodes-by-slug"],
 	{ tags: ["episodes"] },
+);
+
+export const getProfile = unstable_cache(
+	async (userId: string) => {
+		return db.select().from(profiles).where(eq(profiles.id, userId));
+	},
+	["profile"],
+	{ tags: ["profiles"] },
 );

@@ -85,3 +85,10 @@ export async function signup(formData: FormData) {
 	revalidatePath("/", "layout");
 	redirect("/verify-email");
 }
+
+export async function signOut() {
+	const supabase = await createClient();
+	const { error } = await supabase.auth.signOut();
+	if (error) throw error;
+	redirect("/");
+}

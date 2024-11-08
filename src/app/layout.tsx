@@ -10,6 +10,7 @@ import { Analytics } from "@/components/analytics";
 import { ThemeProvider } from "@/components/providers";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { MainNav } from "@/components/nav/main-nav";
 import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
@@ -110,6 +111,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 					>
 						<AudioProvider>
 							<div vaul-drawer-wrapper="">
+								{/* <MainNav /> */}
 								<SiteHeader />
 								<main className="relative flex flex-1 min-h-screen flex-col bg-background">
 									<NuqsAdapter>{children}</NuqsAdapter>

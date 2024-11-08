@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-
+import { profiles } from "@/db/schema";
+import { db } from "@/db";
+import { eq } from "drizzle-orm";
 interface ProfileFormProps {
 	initialProfile: {
 		id: string;
@@ -37,31 +39,46 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
 			// Upload new avatar if provided
 			if (avatarFile.size > 0) {
 				const fileExt = avatarFile.name.split(".").pop();
-				const fileName = `${initialProfile.id}-${Math.random()}.${fileExt}`;
+				const fileName = `${initialProfile.id}/${Date.now()}.${fileExt}`;
 
 				const { error: uploadError, data } = await supabase.storage
 					.from("avatars")
-					.upload(fileName, avatarFile);
+					.upload(fileName, avatarFile, {
+						upsert: true,
+						cacheControl: "3600",
+					});
 
 				if (uploadError) throw uploadError;
 
-				avatarUrl = data.path;
+				const {
+					data: { publicUrl },
+				} = supabase.storage.from("avatars").getPublicUrl(fileName);
+
+				avatarUrl = publicUrl;
 			}
 
 			// Update profile
-			const { error } = await supabase
-				.from("profiles")
-				.update({
-					fullName: fullName,
-					avatarUrl: avatarUrl,
-					updatedAt: new Date().toISOString(),
-				})
-				.eq("id", initialProfile.id);
+			try {
+				await db
+					.update(profiles)
+					.set({
+						fullName: fullName,
+						avatarUrl: avatarUrl,
+						updatedAt: new Date(),
+					})
+					.where(eq(profiles.id, initialProfile.id));
 
-			if (error) throw error;
-
-			toast.success("Profile updated successfully");
-			router.refresh();
+				toast.success("Profile updated successfully");
+				router.refresh();
+			} catch (error) {
+				// You can be more specific with error messages
+				if (error instanceof Error) {
+					toast.error(`Failed to update profile: ${error.message}`);
+				} else {
+					toast.error("Failed to update profile");
+				}
+				console.error(error);
+			}
 		} catch (error) {
 			toast.error("Error updating profile");
 			console.error(error);

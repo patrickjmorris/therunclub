@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { CHANNELS, getChannelInfo } from "@/lib/youtube";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Metadata } from "next";
 import { Globe, Play, Users, Video } from "lucide-react";
+import { getAllChannels } from "@/lib/services/video-service";
 
 // Define metadata for SEO
 export const metadata: Metadata = {
@@ -17,19 +17,16 @@ export const metadata: Metadata = {
 	},
 };
 
-export default async function ChannelsPage() {
-	// Fetch channel data for all channels
-	const channelsData = await Promise.all(
-		CHANNELS.map(async (channelId) => {
-			const channelInfo = await getChannelInfo(channelId);
-			return channelInfo;
-		}),
-	);
+function formatCompactNumber(num: number): string {
+	if (num >= 1000000)
+		return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+	if (num >= 1000) return `${(num / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+	return num.toString();
+}
 
-	// Filter out any null responses
-	const channels = channelsData.filter(
-		(channel) => channel && channel.items?.length > 0,
-	);
+export default async function ChannelsPage() {
+	// Fetch channels from database
+	const channels = await getAllChannels();
 
 	return (
 		<div className="container py-8">
@@ -37,42 +34,22 @@ export default async function ChannelsPage() {
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				<Suspense
 					fallback={Array.from({ length: 6 }).map((_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: Need skeleton
+						// biome-ignore lint/suspicious/noArrayIndexKey: needed for skeleton
 						<ChannelSkeleton key={`skeleton-${i}`} />
 					))}
 				>
 					{channels.map((channel) => {
-						const channelData = channel?.items[0];
-						const thumbnail = channelData?.snippet.thumbnails;
-						const stats = channelData?.statistics;
-
 						// Format numbers for better readability
-						const views = new Intl.NumberFormat().format(
-							Number(stats?.viewCount ?? 0),
+						const views = formatCompactNumber(Number(channel.viewCount ?? 0));
+						const subscribers = formatCompactNumber(
+							Number(channel.subscriberCount ?? 0),
 						);
-						const subscribers = new Intl.NumberFormat().format(
-							Number(stats?.subscriberCount ?? 0),
-						);
-						const videos = new Intl.NumberFormat().format(
-							Number(stats?.videoCount ?? 0),
-						);
-
-						// Use the highest quality thumbnail available
-						const imageUrl =
-							thumbnail?.high?.url ??
-							thumbnail?.medium?.url ??
-							thumbnail?.default?.url ??
-							"";
-						const imageSize =
-							thumbnail?.high?.width ??
-							thumbnail?.medium?.width ??
-							thumbnail?.default?.width ??
-							64;
+						const videos = formatCompactNumber(Number(channel.videoCount ?? 0));
 
 						return (
 							<Link
-								key={channelData?.id}
-								href={`/videos/channels/${channelData?.id}`}
+								key={channel.id}
+								href={`/videos/channels/${channel.youtubeChannelId}`}
 								className="transition-opacity hover:opacity-80"
 							>
 								<Card>
@@ -82,20 +59,20 @@ export default async function ChannelsPage() {
 												<div className="relative w-16 h-16">
 													<div className="absolute inset-0">
 														<Image
-															src={imageUrl}
-															alt={channelData?.snippet.title ?? ""}
-															width={imageSize}
-															height={imageSize}
+															src={channel.thumbnailUrl ?? ""}
+															alt={channel.title}
+															width={64}
+															height={64}
 															className="rounded-full object-cover w-full h-full"
 														/>
 													</div>
 												</div>
 												<div className="flex-1 min-w-0">
 													<h2 className="font-semibold line-clamp-1">
-														{channelData?.snippet.title ?? ""}
+														{channel.title}
 													</h2>
 													<p className="text-sm text-muted-foreground line-clamp-2">
-														{channelData?.snippet.description ?? ""}
+														{channel.description}
 													</p>
 												</div>
 											</div>
@@ -114,10 +91,10 @@ export default async function ChannelsPage() {
 													<Video className="h-4 w-4" />
 													<span>{videos} videos</span>
 												</div>
-												{channelData?.snippet.country && (
+												{channel.country && (
 													<div className="flex items-center gap-1 text-muted-foreground">
 														<Globe className="h-4 w-4" />
-														<span>{channelData?.snippet.country}</span>
+														<span>{channel.country}</span>
 													</div>
 												)}
 											</div>
@@ -147,7 +124,7 @@ function ChannelSkeleton() {
 					</div>
 					<div className="grid grid-cols-2 gap-2">
 						{Array.from({ length: 4 }).map((_, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: Need skeleton
+							// biome-ignore lint/suspicious/noArrayIndexKey: needed for skeleton
 							<div key={i} className="h-4 bg-muted animate-pulse rounded" />
 						))}
 					</div>

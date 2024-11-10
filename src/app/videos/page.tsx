@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { VideoFilter } from "@/components/videos/video-filter";
 import { VideoGrid } from "@/components/videos/video-grid";
-import { CHANNELS, getChannelInfo, getAllPlaylistItems } from "@/lib/youtube";
 import { Metadata } from "next";
 import { VideoGridSkeleton } from "@/components/videos/loading-ui";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +8,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import {
+	getFeaturedChannels,
+	getLatestVideos,
+	searchVideosWithChannels,
+} from "@/lib/services/video-service";
+import { parseAsString } from "nuqs/server";
 
 export const metadata: Metadata = {
 	title: "Running Videos | The Run Club",
@@ -25,56 +30,22 @@ export const metadata: Metadata = {
 	},
 };
 
-export const dynamic = "force-dynamic";
-export const revalidate = 3600; // Revalidate every hour
+interface PageProps {
+	searchParams: Promise<{ q?: string }>;
+}
 
-export default async function VideosPage() {
-	// Get first 5 channels for featured section
-	const featuredChannels = CHANNELS.slice(0, 4);
-	const channelsData = await Promise.all(
-		featuredChannels.map(async (channelId) => {
-			const channelInfo = await getChannelInfo(channelId);
-			return channelInfo;
-		}),
-	);
+export default async function VideosPage({ searchParams }: PageProps) {
+	// Parse search params
+	const { q } = await searchParams;
+	const query = parseAsString.withDefault("").parseServerSide(q);
 
-	// Filter out any null responses
-	const channels = channelsData.filter(
-		(channel) => channel && channel.items?.length > 0,
-	);
+	// Get featured channels
+	const featuredChannels = await getFeaturedChannels();
 
-	// Get videos from first 5 channels
-	const initialChannels = CHANNELS.slice(0, 5);
-	const videosData = await Promise.all(
-		initialChannels.map(async (channelId) => {
-			const channelInfo = await getChannelInfo(channelId);
-			if (!channelInfo?.items[0]?.contentDetails?.relatedPlaylists?.uploads) {
-				return null;
-			}
-
-			const playlistId =
-				channelInfo.items[0].contentDetails.relatedPlaylists.uploads;
-			const playlistItems = await getAllPlaylistItems(playlistId);
-
-			// Take only the first 10 items from each channel
-			return playlistItems?.slice(0, 10) ?? null;
-		}),
-	);
-
-	// Filter out null responses and flatten the data
-	const videos = videosData
-		.filter((items): items is NonNullable<typeof items> => items !== null)
-		.flatMap((items) =>
-			items.map((item) => ({
-				id: item.snippet.resourceId.videoId,
-				title: item.snippet.title,
-				channelTitle: item.snippet.channelTitle,
-				thumbnailUrl:
-					item.snippet.thumbnails.maxres?.url ||
-					item.snippet.thumbnails.standard?.url,
-				publishedAt: item.snippet.publishedAt,
-			})),
-		);
+	// Get videos based on search or latest
+	const videos = query
+		? await searchVideosWithChannels(query)
+		: await getLatestVideos();
 
 	return (
 		<div className="container py-8">
@@ -90,50 +61,36 @@ export default async function VideosPage() {
 					</Button>
 				</div>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-					{channels.map((channel) => {
-						const thumbnail = channel?.items[0].snippet.thumbnails;
-						const imageUrl =
-							thumbnail?.high?.url ??
-							thumbnail?.medium?.url ??
-							thumbnail?.default?.url ??
-							"";
-						const imageSize =
-							thumbnail?.high?.width ??
-							thumbnail?.medium?.width ??
-							thumbnail?.default?.width ??
-							64;
-
-						return (
-							<Link
-								key={channel?.items[0].id}
-								href={`/videos/channels/${channel?.items[0].id}`}
-								className="transition-opacity hover:opacity-80"
-							>
-								<Card>
-									<CardContent className="p-4">
-										<div className="flex flex-col items-center text-center gap-4">
-											<div className="relative w-20 h-20">
-												<div className="absolute inset-0">
-													<Image
-														src={imageUrl}
-														alt={channel?.items[0].snippet.title ?? ""}
-														width={imageSize}
-														height={imageSize}
-														className="rounded-full object-cover w-full h-full"
-													/>
-												</div>
-											</div>
-											<div>
-												<h3 className="font-semibold line-clamp-1">
-													{channel?.items[0].snippet.title}
-												</h3>
+					{featuredChannels.map((channel) => (
+						<Link
+							key={channel.id}
+							href={`/videos/channels/${channel.youtubeChannelId}`}
+							className="transition-opacity hover:opacity-80"
+						>
+							<Card>
+								<CardContent className="p-4">
+									<div className="flex flex-col items-center text-center gap-4">
+										<div className="relative w-20 h-20">
+											<div className="absolute inset-0">
+												<Image
+													src={channel.thumbnailUrl ?? ""}
+													alt={channel.title}
+													width={80}
+													height={80}
+													className="rounded-full object-cover w-full h-full"
+												/>
 											</div>
 										</div>
-									</CardContent>
-								</Card>
-							</Link>
-						);
-					})}
+										<div>
+											<h3 className="font-semibold line-clamp-1">
+												{channel.title}
+											</h3>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						</Link>
+					))}
 				</div>
 			</div>
 
@@ -143,7 +100,14 @@ export default async function VideosPage() {
 				<VideoFilter />
 				<div className="mt-8">
 					<Suspense fallback={<VideoGridSkeleton />}>
-						<VideoGrid videos={videos} />
+						<VideoGrid
+							videos={
+								"video" in (videos[0] || {})
+									? // biome-ignore lint/suspicious/noExplicitAny: need for now
+									  videos.map((item: any) => item.video)
+									: videos
+							}
+						/>
 					</Suspense>
 				</div>
 			</div>

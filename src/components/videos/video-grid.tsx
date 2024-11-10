@@ -2,17 +2,11 @@
 
 import { VideoCard } from "./video-card";
 import { useShare } from "./use-share";
-
-interface Video {
-	id: string;
-	title: string;
-	channelTitle: string;
-	thumbnailUrl: string;
-	publishedAt: string;
-}
+import { Video } from "@/db/schema";
 
 interface VideoGridProps {
 	videos: Video[];
+	onShare?: (id: string) => Promise<void>;
 }
 
 export function VideoGrid({ videos }: VideoGridProps) {
@@ -21,7 +15,7 @@ export function VideoGrid({ videos }: VideoGridProps) {
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			{videos.map((video) => (
-				<VideoCard key={video.id} {...video} onShare={handleShare} />
+				<VideoCard key={video.id} video={video} onShare={handleShare} />
 			))}
 		</div>
 	);

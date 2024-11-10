@@ -33,12 +33,12 @@ export const profiles = pgTable(
 			foreignColumns: [authUsers.id],
 			name: "profiles_id_fk",
 		}).onDelete("cascade"),
-		// pgPolicy("authenticated can view all profiles", {
-		// 	for: "select",
-		// 	// using predefined role from Supabase
-		// 	to: authenticatedRole,
-		// 	using: sql`true`,
-		// }),
+		pgPolicy("authenticated can view all profiles", {
+			for: "select",
+			// using predefined role from Supabase
+			to: authenticatedRole,
+			using: sql`true`,
+		}),
 	],
 );
 

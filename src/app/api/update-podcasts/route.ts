@@ -12,21 +12,22 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 	const headersList = await headers();
 	const apiKeyFromHeaders = headersList.get("x-api-key");
 	const apiKeyFromRequest = request.headers.get("x-api-key");
-	const validApiKey = process.env.UPDATE_PODCASTS_API_KEY;
-	
+	const validApiKey = process.env.UPDATE_API_KEY;
+
 	// Debug logs
-	console.log('API Key from headers():', apiKeyFromHeaders);
-	console.log('API Key from request:', apiKeyFromRequest);
-	console.log('Expected API Key:', validApiKey);
-	
+	console.log("API Key from headers():", apiKeyFromHeaders);
+	console.log("API Key from request:", apiKeyFromRequest);
+	console.log("Expected API Key:", validApiKey);
+
 	if (!validApiKey) {
 		console.error("API key not configured in environment variables");
 		return false;
 	}
 
 	// Check both possible sources of the API key
-	const isValid = apiKeyFromHeaders === validApiKey || apiKeyFromRequest === validApiKey;
-	console.log('Is Valid:', isValid);
+	const isValid =
+		apiKeyFromHeaders === validApiKey || apiKeyFromRequest === validApiKey;
+	console.log("Is Valid:", isValid);
 	return isValid;
 }
 
@@ -34,7 +35,7 @@ async function handleUpdate() {
 	if (!isUpdating) {
 		isUpdating = true;
 		clearTimeout(lockTimeout);
-		
+
 		// Set a timeout to release the lock in case of unexpected errors
 		lockTimeout = setTimeout(() => {
 			isUpdating = false;
@@ -43,20 +44,20 @@ async function handleUpdate() {
 		try {
 			const results = await updatePodcastData();
 			return NextResponse.json(
-				{ 
+				{
 					message: "Podcast data updated successfully",
-					results 
+					results,
 				},
-				{ status: 200 }
+				{ status: 200 },
 			);
 		} catch (error) {
 			console.error("Error updating podcast data:", error);
 			return NextResponse.json(
-				{ 
+				{
 					message: "Error updating podcast data",
-					error: error instanceof Error ? error.message : "Unknown error"
+					error: error instanceof Error ? error.message : "Unknown error",
 				},
-				{ status: 500 }
+				{ status: 500 },
 			);
 		} finally {
 			clearTimeout(lockTimeout);
@@ -65,14 +66,14 @@ async function handleUpdate() {
 	} else {
 		return NextResponse.json(
 			{ message: "Update already in progress" },
-			{ status: 409 }
+			{ status: 409 },
 		);
 	}
 }
 
 export async function GET(request: NextRequest) {
 	// Check authorization before proceeding
-	if (!await isAuthorized(request)) {
+	if (!(await isAuthorized(request))) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 	return handleUpdate();
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	// Check authorization before proceeding
-	if (!await isAuthorized(request)) {
+	if (!(await isAuthorized(request))) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 	return handleUpdate();

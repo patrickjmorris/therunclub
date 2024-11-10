@@ -49,7 +49,7 @@ export default async function ChannelsPage() {
 						return (
 							<Link
 								key={channel.id}
-								href={`/videos/channels/${channel.youtubeChannelId}`}
+								href={`/videos/channels/${channel.id}`}
 								className="transition-opacity hover:opacity-80"
 							>
 								<Card>

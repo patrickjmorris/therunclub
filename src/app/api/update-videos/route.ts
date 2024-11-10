@@ -11,7 +11,7 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 	const headersList = await headers();
 	const apiKeyFromHeaders = headersList.get("x-api-key");
 	const apiKeyFromRequest = request.headers.get("x-api-key");
-	const validApiKey = process.env.UPDATE_VIDEOS_API_KEY;
+	const validApiKey = process.env.UPDATE_API_KEY;
 
 	if (!validApiKey) {
 		console.error("API key not configured in environment variables");

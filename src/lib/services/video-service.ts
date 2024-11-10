@@ -40,7 +40,7 @@ export async function getChannelById(channelId: string) {
 	const [channel] = await db
 		.select()
 		.from(channels)
-		.where(eq(channels.youtubeChannelId, channelId))
+		.where(eq(channels.id, channelId))
 		.limit(1);
 
 	return channel;

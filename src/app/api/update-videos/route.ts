@@ -33,10 +33,11 @@ async function handleUpdate() {
 		}, LOCK_TIMEOUT);
 
 		try {
-			await seedVideos();
+			const results = await seedVideos();
 			return NextResponse.json(
 				{
 					message: "Video and channel data updated successfully",
+					results,
 				},
 				{ status: 200 },
 			);

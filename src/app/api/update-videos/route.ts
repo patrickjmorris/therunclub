@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updatePodcastData } from "@/db";
 import { headers } from "next/headers";
+import { seedVideos } from "@/db/seed-videos";
 
 let isUpdating = false;
-const LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 let lockTimeout: NodeJS.Timeout;
 
 // Validate the API key from the request
 async function isAuthorized(request: NextRequest): Promise<boolean> {
-	// Try both methods of getting the header
 	const headersList = await headers();
 	const apiKeyFromHeaders = headersList.get("x-api-key");
 	const apiKeyFromRequest = request.headers.get("x-api-key");
 	const validApiKey = process.env.UPDATE_API_KEY;
-
-	// Debug logs
-	console.log("API Key from headers():", apiKeyFromHeaders);
-	console.log("API Key from request:", apiKeyFromRequest);
-	console.log("Expected API Key:", validApiKey);
 
 	if (!validApiKey) {
 		console.error("API key not configured in environment variables");
@@ -25,10 +19,7 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 	}
 
 	// Check both possible sources of the API key
-	const isValid =
-		apiKeyFromHeaders === validApiKey || apiKeyFromRequest === validApiKey;
-	console.log("Is Valid:", isValid);
-	return isValid;
+	return apiKeyFromHeaders === validApiKey || apiKeyFromRequest === validApiKey;
 }
 
 async function handleUpdate() {
@@ -42,19 +33,18 @@ async function handleUpdate() {
 		}, LOCK_TIMEOUT);
 
 		try {
-			const results = await updatePodcastData();
+			await seedVideos();
 			return NextResponse.json(
 				{
-					message: "Podcast data updated successfully",
-					results,
+					message: "Video and channel data updated successfully",
 				},
 				{ status: 200 },
 			);
 		} catch (error) {
-			console.error("Error updating podcast data:", error);
+			console.error("Error updating video data:", error);
 			return NextResponse.json(
 				{
-					message: "Error updating podcast data",
+					message: "Error updating video data",
 					error: error instanceof Error ? error.message : "Unknown error",
 				},
 				{ status: 500 },

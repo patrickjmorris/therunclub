@@ -42,20 +42,57 @@ export const profiles = pgTable(
 	],
 );
 
-// Videos schema
+// YouTube Schemas
+export const channels = pgTable(
+	"channels",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		youtubeChannelId: text("youtube_channel_id").notNull(),
+		title: text("title").notNull(),
+		description: text("description"),
+		customUrl: text("custom_url"),
+		publishedAt: timestamp("published_at"),
+		thumbnailUrl: text("thumbnail_url"),
+		country: text("country"),
+		viewCount: text("view_count"),
+		subscriberCount: text("subscriber_count"),
+		videoCount: text("video_count"),
+		uploadsPlaylistId: text("uploads_playlist_id"),
+		createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+		updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
+	},
+	(table) => ({
+		youtubeChannelIdIdx: uniqueIndex("youtube_channel_id_idx").on(
+			table.youtubeChannelId,
+		),
+	}),
+);
+
 export const videos = pgTable(
 	"videos",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		youtubeVideoId: text("youtube_video_id").notNull(),
+		channelId: uuid("channel_id")
+			.notNull()
+			.references(() => channels.id, { onDelete: "cascade" }),
 		title: text("title").notNull(),
+		description: text("description"),
 		channelTitle: text("channel_title"),
-		category: text("category"),
+		thumbnailUrl: text("thumbnail_url"),
 		publishedAt: timestamp("published_at"),
+		viewCount: text("view_count"),
+		likeCount: text("like_count"),
+		commentCount: text("comment_count"),
+		tags: text("tags").array(),
+		duration: text("duration"),
 		createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+		updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
 	},
 	(table) => ({
-		youtubeIdIdx: uniqueIndex("youtube_video_id_idx").on(table.youtubeVideoId),
+		youtubeVideoIdIdx: uniqueIndex("youtube_video_id_idx").on(
+			table.youtubeVideoId,
+		),
 	}),
 );
 
@@ -144,6 +181,18 @@ export const userPodcastPreferencesRelations = relations(
 	}),
 );
 
+// Define relations
+export const channelsRelations = relations(channels, ({ many }) => ({
+	videos: many(videos),
+}));
+
+export const videosRelations = relations(videos, ({ one }) => ({
+	channel: one(channels, {
+		fields: [videos.channelId],
+		references: [channels.id],
+	}),
+}));
+
 // Types
 export type User = typeof authUsers.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
@@ -153,6 +202,8 @@ export type UserPodcastPreference = typeof userPodcastPreferences.$inferSelect;
 export type Video = typeof videos.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type NewVideo = typeof videos.$inferInsert;
+export type Channel = typeof channels.$inferSelect;
+export type NewChannel = typeof channels.$inferInsert;
 
 // Zod Schemas
 export const insertProfileSchema = createInsertSchema(profiles);

@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { VideoPlayer } from "@/components/videos/video-player";
-import { getVideoInfo } from "@/lib/youtube";
+import { getVideoById } from "@/lib/services/video-service";
 import { notFound } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
@@ -13,33 +13,29 @@ interface VideoPageProps {
 	}>;
 }
 
-// Generate dynamic metadata for SEO
 export async function generateMetadata({
 	params,
 }: VideoPageProps): Promise<Metadata> {
 	const { video } = await params;
-	const videoId = decodeURIComponent(video);
-	const videoData = await getVideoInfo(videoId);
+	const videoData = await getVideoById(video);
 
-	if (!videoData?.items.length) {
+	if (!videoData) {
 		return {
 			title: "Video Not Found",
 		};
 	}
 
-	const videoDetails = videoData.items[0];
-
 	return {
-		title: `${videoDetails.snippet.title} | The Run Club`,
-		description: videoDetails.snippet.description,
-		keywords: videoDetails.snippet.tags,
+		title: `${videoData.title} | The Run Club`,
+		description: videoData.description ?? undefined,
+		keywords: videoData.tags,
 		openGraph: {
-			title: videoDetails.snippet.title,
-			description: videoDetails.snippet.description,
+			title: videoData.title,
+			description: videoData.description ?? undefined,
 			type: "video.other",
 			videos: [
 				{
-					url: `https://youtube.com/watch?v=${videoId}`,
+					url: `https://youtube.com/watch?v=${videoData.youtubeVideoId}`,
 				},
 			],
 		},
@@ -48,44 +44,54 @@ export async function generateMetadata({
 
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
+	console.log("video", video);
 
 	try {
-		const videoId = decodeURIComponent(video);
-		const videoData = await getVideoInfo(videoId);
-
-		if (!videoData?.items?.length) {
+		const videoData = await getVideoById(video);
+		if (!videoData) {
 			notFound();
 		}
 
-		const videoDetails = videoData.items[0];
-		const { snippet, statistics } = videoDetails;
-
 		// Format numbers for better readability
-		const views = new Intl.NumberFormat().format(Number(statistics.viewCount));
-		const likes = new Intl.NumberFormat().format(Number(statistics.likeCount));
+		const views = new Intl.NumberFormat().format(
+			Number(videoData.viewCount ?? 0),
+		);
+		const likes = new Intl.NumberFormat().format(
+			Number(videoData.likeCount ?? 0),
+		);
 		const comments = new Intl.NumberFormat().format(
-			Number(statistics.commentCount),
+			Number(videoData.commentCount ?? 0),
 		);
 
 		return (
 			<div className="container py-8">
-				<VideoPlayer videoId={videoId} title={snippet.title} />
+				<VideoPlayer
+					videoId={videoData.youtubeVideoId}
+					title={videoData.title}
+				/>
 				<div className="mt-4">
-					<h1 className="text-2xl font-bold">{snippet.title}</h1>
+					<h1 className="text-2xl font-bold">{videoData.title}</h1>
 
 					{/* Channel and date info */}
 					<div className="mt-2 flex items-center gap-2 text-muted-foreground">
 						<Link
-							href={`/videos/channels/${snippet.channelId}`}
+							href={`/videos/channels/${videoData.channelId}`}
 							className="hover:text-foreground transition-colors"
 						>
-							{snippet.channelTitle}
+							{videoData.channelTitle}
 						</Link>
 						<span>•</span>
-						<span title={format(new Date(snippet.publishedAt), "PPP")}>
-							{formatDistanceToNow(new Date(snippet.publishedAt), {
-								addSuffix: true,
-							})}
+						<span
+							title={
+								videoData.publishedAt
+									? format(videoData.publishedAt, "PPP")
+									: undefined
+							}
+						>
+							{videoData.publishedAt &&
+								formatDistanceToNow(videoData.publishedAt, {
+									addSuffix: true,
+								})}
 						</span>
 					</div>
 
@@ -106,10 +112,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
 					</div>
 
 					{/* Tags */}
-					{snippet.tags && snippet.tags.length > 0 && (
+					{videoData.tags && videoData.tags.length > 0 && (
 						<div className="mt-4 flex flex-wrap gap-2">
 							<Tag className="h-4 w-4 text-muted-foreground" />
-							{snippet.tags.map((tag) => (
+							{videoData.tags.map((tag) => (
 								<Badge key={tag} variant="secondary">
 									{tag}
 								</Badge>
@@ -119,8 +125,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
 
 					{/* Description */}
 					<div className="mt-6 prose prose-sm max-w-none dark:prose-invert">
-						{snippet.description.split("\n").map((line, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: Iterating over lines
+						{videoData.description?.split("\n").map((line, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: needed for react
 							<p key={i}>{line}</p>
 						))}
 					</div>

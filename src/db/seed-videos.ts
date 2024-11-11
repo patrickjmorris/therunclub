@@ -52,7 +52,7 @@ export async function seedVideos(options = { limit: 5, videosPerChannel: 10 }) {
 					.where(sql`youtube_channel_id = ${channelId}`)
 					.limit(1);
 
-				let channelInfo;
+				let channelInfo: any;
 				if (!existingChannel.length) {
 					// Only fetch from API if channel doesn't exist
 					channelInfo = await getChannelInfo(channelId);

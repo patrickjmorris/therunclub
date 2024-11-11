@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +56,7 @@ export default async function HomePage() {
 										<CardTitle>{podcast.podcastTitle}</CardTitle>
 									</CardHeader>
 									<CardContent>
-										<img
+										<Image
 											src={podcast.podcastImage ?? ""}
 											alt={podcast.podcastTitle}
 											className="w-48 h-48 object-cover mb-4 rounded-md mx-auto"

@@ -2,7 +2,11 @@
 	"crons": [
 		{
 			"path": "/api/update-podcasts",
-			"schedule": "0 0 * * *"
+			"schedule": "15 9 * * *"
+		},
+		{
+			"path": "/api/update-videos",
+			"schedule": "15 9 * * *"
 		}
 	]
 }

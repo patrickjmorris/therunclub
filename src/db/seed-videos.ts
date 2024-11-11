@@ -8,6 +8,9 @@ import {
 } from "@/lib/youtube";
 import { sql } from "drizzle-orm";
 
+// Only run seeding if script is called directly
+const isDirectRun = require.main === module;
+
 async function checkConnection() {
 	try {
 		const result = await db.execute(sql`SELECT 1`);
@@ -19,7 +22,7 @@ async function checkConnection() {
 	}
 }
 
-export async function seedVideos() {
+export async function seedVideos(options = { limit: 5, videosPerChannel: 10 }) {
 	console.log("Starting video database seeding process...");
 
 	try {
@@ -29,26 +32,46 @@ export async function seedVideos() {
 		}
 
 		const results = {
-			channels: {
-				updated: 0,
-				failed: 0,
-			},
-			videos: {
-				updated: 0,
-				failed: 0,
-			},
+			channels: { updated: 0, failed: 0 },
+			videos: { updated: 0, failed: 0 },
 		};
 
-		// Process each channel
-		for (const channelId of CHANNELS) {
+		// Process only the specified number of channels
+		const channelsToProcess = CHANNELS.slice(0, options.limit);
+		console.log(`Processing ${channelsToProcess.length} channels...`);
+
+		// Process channels in sequence to respect rate limits
+		for (const channelId of channelsToProcess) {
 			console.log(`Processing channel: ${channelId}`);
 
 			try {
-				const channelInfo = await getChannelInfo(channelId);
-				if (!channelInfo?.items[0]) {
-					console.log(`No channel info found for ${channelId}`);
-					results.channels.failed++;
-					continue;
+				// Check if channel exists in database first
+				const existingChannel = await db
+					.select()
+					.from(channels)
+					.where(sql`youtube_channel_id = ${channelId}`)
+					.limit(1);
+
+				let channelInfo: any;
+				if (!existingChannel.length) {
+					// Only fetch from API if channel doesn't exist
+					channelInfo = await getChannelInfo(channelId);
+					if (!channelInfo?.items[0]) {
+						console.log(`No channel info found for ${channelId}`);
+						results.channels.failed++;
+						continue;
+					}
+				} else {
+					// Use existing channel data if it's less than 24 hours old
+					const lastUpdate = existingChannel[0].updatedAt;
+					if (
+						lastUpdate &&
+						Date.now() - lastUpdate.getTime() < 24 * 60 * 60 * 1000
+					) {
+						console.log(`Using cached channel data for ${channelId}`);
+						continue;
+					}
+					channelInfo = await getChannelInfo(channelId);
 				}
 
 				const channelData = channelInfo.items[0];
@@ -104,9 +127,39 @@ export async function seedVideos() {
 					continue;
 				}
 
-				// Process each video
-				for (const item of playlistItems.slice(0, 10)) {
+				// Process only the specified number of videos per channel
+				const videosToProcess = playlistItems.slice(
+					0,
+					options.videosPerChannel,
+				);
+				console.log(
+					`Processing ${videosToProcess.length} videos for channel ${channelId}`,
+				);
+
+				// Add delay between video processing to respect rate limits
+				for (const item of videosToProcess) {
 					try {
+						// Check if video exists in database first
+						const existingVideo = await db
+							.select()
+							.from(videos)
+							.where(sql`youtube_video_id = ${item.snippet.resourceId.videoId}`)
+							.limit(1);
+
+						if (existingVideo.length) {
+							// Skip if video exists and was updated recently
+							const lastUpdate = existingVideo[0].updatedAt;
+							if (
+								lastUpdate &&
+								Date.now() - lastUpdate.getTime() < 24 * 60 * 60 * 1000
+							) {
+								console.log(
+									`Using cached video data for ${item.snippet.resourceId.videoId}`,
+								);
+								continue;
+							}
+						}
+
 						const videoInfo = await getVideoInfo(
 							item.snippet.resourceId.videoId,
 						);
@@ -150,6 +203,9 @@ export async function seedVideos() {
 
 						results.videos.updated++;
 						console.log(`Updated video: ${videoData.snippet.title}`);
+
+						// Add small delay between video requests
+						await new Promise((resolve) => setTimeout(resolve, 100));
 					} catch (videoError) {
 						console.error(
 							`Error processing video: ${item.snippet.resourceId.videoId}`,
@@ -162,6 +218,9 @@ export async function seedVideos() {
 				console.error(`Error processing channel: ${channelId}`, channelError);
 				results.channels.failed++;
 			}
+
+			// Add delay between channel processing
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 		}
 
 		console.log("Video database update completed", results);
@@ -172,23 +231,25 @@ export async function seedVideos() {
 	}
 }
 
-// Add timeout to the entire process
-const SEED_TIMEOUT = 300000; // 5 minutes timeout
+// Only run if script is called directly
+if (isDirectRun) {
+	const SEED_TIMEOUT = 300000; // 5 minutes timeout
 
-Promise.race([
-	seedVideos(),
-	new Promise((_, reject) =>
-		setTimeout(
-			() => reject(new Error("Video seeding timed out")),
-			SEED_TIMEOUT,
+	Promise.race([
+		seedVideos(),
+		new Promise((_, reject) =>
+			setTimeout(
+				() => reject(new Error("Video seeding timed out")),
+				SEED_TIMEOUT,
+			),
 		),
-	),
-])
-	.then(() => {
-		console.log("Video seeding completed successfully");
-		process.exit(0);
-	})
-	.catch((error) => {
-		console.error("Error seeding video database:", error);
-		process.exit(1);
-	});
+	])
+		.then(() => {
+			console.log("Video seeding completed successfully");
+			process.exit(0);
+		})
+		.catch((error) => {
+			console.error("Error seeding video database:", error);
+			process.exit(1);
+		});
+}

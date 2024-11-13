@@ -33,7 +33,7 @@ export async function seed() {
 
 		for (const feed of FEEDS) {
 			console.log(`Processing feed: ${feed.url}`);
-			
+
 			try {
 				const data = await parser.parseURL(feed.url);
 				console.log(`Successfully parsed feed: ${feed.url}`);
@@ -144,12 +144,11 @@ export async function seed() {
 			} catch (parseError) {
 				console.error(`Error parsing feed: ${feed.url}`, parseError);
 				// biome-ignore lint/correctness/noUnnecessaryContinue: <explanation>
-continue; // Skip to next feed on error
+				continue; // Skip to next feed on error
 			}
 		}
-		
+
 		console.log("Database seeding completed");
-		
 	} catch (error) {
 		console.error("Fatal error during seeding process:", error);
 		throw error;
@@ -164,9 +163,9 @@ const SEED_TIMEOUT = 60000; // 1 minute timeout
 
 Promise.race([
 	seed(),
-	new Promise((_, reject) => 
-		setTimeout(() => reject(new Error("Seeding timed out")), SEED_TIMEOUT)
-	)
+	new Promise((_, reject) =>
+		setTimeout(() => reject(new Error("Seeding timed out")), SEED_TIMEOUT),
+	),
 ])
 	.then(() => {
 		console.log("Seeding completed successfully");

@@ -1,7 +1,14 @@
 import { desc, eq, sql, and, max } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { db } from "./index";
-import { podcasts, episodes, profiles } from "./schema";
+import {
+	podcasts,
+	episodes,
+	profiles,
+	videos,
+	channels,
+	runningClubs,
+} from "./schema";
 
 // Existing query (for reference)
 // Need to fix this query
@@ -377,4 +384,44 @@ export const getProfile = unstable_cache(
 	},
 	["profile"],
 	{ tags: ["profiles"] },
+);
+
+export const getLatestVideos = unstable_cache(
+	async () => {
+		return db
+			.select({
+				id: videos.id,
+				title: videos.title,
+				description: videos.description,
+				thumbnailUrl: videos.thumbnailUrl,
+				channelTitle: channels.title,
+				channelId: channels.id,
+				publishedAt: videos.publishedAt,
+				duration: videos.duration,
+			})
+			.from(videos)
+			.innerJoin(channels, eq(videos.channelId, channels.id))
+			.orderBy(desc(videos.publishedAt))
+			.limit(3);
+	},
+	["latest-videos"],
+	{ tags: ["videos"] },
+);
+
+export const getPopularRunClubs = unstable_cache(
+	async () => {
+		return db
+			.select({
+				id: runningClubs.id,
+				clubName: runningClubs.clubName,
+				description: runningClubs.description,
+				location: runningClubs.location,
+				website: runningClubs.website,
+				socialMedia: runningClubs.socialMedia,
+			})
+			.from(runningClubs)
+			.limit(3);
+	},
+	["popular-run-clubs"],
+	{ tags: ["run-clubs"] },
 );

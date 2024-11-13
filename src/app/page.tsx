@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { formatDistanceToNow } from "date-fns";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,14 +9,24 @@ import {
 	PersonStanding,
 	Dumbbell,
 	Users,
+	Clock,
+	MapPin,
 } from "lucide-react";
 import Link from "next/link";
-import { getNewEpisodes } from "@/db/queries";
+import {
+	getNewEpisodes,
+	getLatestVideos,
+	getPopularRunClubs,
+} from "@/db/queries";
 
 export const revalidate = 3600; // 60 minutes in seconds
 
 export default async function HomePage() {
-	const podcasts = await getNewEpisodes();
+	const [podcasts, videos, runClubs] = await Promise.all([
+		getNewEpisodes(),
+		getLatestVideos(),
+		getPopularRunClubs(),
+	]);
 
 	return (
 		<div className="flex flex-col min-h-screen">
@@ -38,8 +49,63 @@ export default async function HomePage() {
 				</div>
 			</section>
 
+			{/* Videos Section */}
+			<section className="w-full py-12 md:py-24">
+				<div className="container px-4 md:px-6">
+					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
+						Latest Videos
+					</h2>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						{videos.map((video) => (
+							<Link
+								key={video.id}
+								href={`/videos/${video.id}`}
+								className="block transition-transform hover:scale-[1.02]"
+							>
+								<Card>
+									<CardHeader>
+										<CardTitle className="line-clamp-2">
+											{video.title}
+										</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<div className="relative aspect-video mb-4">
+											<Image
+												src={video.thumbnailUrl ?? ""}
+												alt={video.title}
+												fill
+												className="object-cover rounded-md"
+											/>
+										</div>
+										<p className="text-sm text-muted-foreground mb-2">
+											{video.channelTitle}
+										</p>
+										<div className="flex items-center gap-4 text-sm text-muted-foreground">
+											<span className="flex items-center">
+												<Clock className="w-4 h-4 mr-1" />
+												{formatDistanceToNow(
+													new Date(video.publishedAt ?? ""),
+													{
+														addSuffix: true,
+													},
+												)}
+											</span>
+											<span>
+												{video.publishedAt
+													? new Date(video.publishedAt).toLocaleDateString()
+													: ""}
+											</span>
+										</div>
+									</CardContent>
+								</Card>
+							</Link>
+						))}
+					</div>
+				</div>
+			</section>
+
 			{/* Podcasts Row */}
-			<section className="w-full py-12 md:py-24 lg:py-32">
+			<section className="w-full py-12 md:py-24">
 				<div className="container px-4 md:px-6">
 					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
 						Featured Podcasts
@@ -59,6 +125,8 @@ export default async function HomePage() {
 										<Image
 											src={podcast.podcastImage ?? ""}
 											alt={podcast.podcastTitle}
+											width={192}
+											height={192}
 											className="w-48 h-48 object-cover mb-4 rounded-md mx-auto"
 										/>
 										<p className="text-muted-foreground">
@@ -73,6 +141,49 @@ export default async function HomePage() {
 											<Headphones className="mr-2 h-4 w-4" />
 											Listen Now
 										</Button>
+									</CardContent>
+								</Card>
+							</Link>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* Run Clubs Section */}
+			<section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+				<div className="container px-4 md:px-6">
+					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
+						Popular Run Clubs
+					</h2>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						{runClubs.map((club) => (
+							<Link
+								key={club.id}
+								href={`/clubs/${club.id}`}
+								className="block transition-transform hover:scale-[1.02]"
+							>
+								<Card>
+									<CardHeader>
+										<CardTitle>{club.clubName}</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<div className="relative h-48 mb-4">
+											{/* <Image
+												src={club.location.city}
+												alt={club.clubName}
+												fill
+												className="object-cover rounded-md"
+											/> */}
+										</div>
+										<p className="text-muted-foreground mb-4 line-clamp-2">
+											{club.description}
+										</p>
+										<div className="flex items-center justify-between text-sm text-muted-foreground">
+											<span className="flex items-center">
+												<MapPin className="w-4 h-4 mr-1" />
+												{club.location.city}, {club.location.state}
+											</span>
+										</div>
 									</CardContent>
 								</Card>
 							</Link>

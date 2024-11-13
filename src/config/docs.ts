@@ -12,7 +12,7 @@ export const docsConfig: DocsConfig = {
 		},
 		{
 			title: "Run Clubs",
-			href: "/run-clubs",
+			href: "/clubs",
 		},
 		{
 			title: "Videos",

@@ -9,6 +9,7 @@ import {
 	pgSchema,
 	foreignKey,
 	pgPolicy,
+	jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -33,12 +34,12 @@ export const profiles = pgTable(
 			foreignColumns: [authUsers.id],
 			name: "profiles_id_fk",
 		}).onDelete("cascade"),
-		pgPolicy("authenticated can view all profiles", {
-			for: "select",
-			// using predefined role from Supabase
-			to: authenticatedRole,
-			using: sql`true`,
-		}),
+		// pgPolicy("authenticated can view all profiles", {
+		// 	for: "select",
+		// 	// using predefined role from Supabase
+		// 	to: authenticatedRole,
+		// 	using: sql`true`,
+		// }),
 	],
 );
 
@@ -208,3 +209,65 @@ export type NewChannel = typeof channels.$inferInsert;
 // Zod Schemas
 export const insertProfileSchema = createInsertSchema(profiles);
 export const selectProfileSchema = createSelectSchema(profiles);
+
+export const runningClubs = pgTable("running_clubs", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	clubName: text("club_name").notNull(),
+	description: text("description"),
+	city: text("city").notNull(),
+
+	// Location as JSON object with nullish coordinates
+	location: jsonb("location").notNull().$type<{
+		city: string;
+		state: string | null;
+		country: string;
+		coordinates?: {
+			latitude?: number | null;
+			longitude?: number | null;
+		} | null;
+	}>(),
+
+	// URLs
+	website: text("website"),
+
+	// Social Media as JSON object with nullish fields
+	socialMedia: jsonb("social_media").$type<{
+		facebook?: string | null;
+		instagram?: string | null;
+		twitter?: string | null;
+		strava?: string | null;
+	}>(),
+
+	// Metadata as JSON object with nullish fields
+	metadata: jsonb("metadata").$type<{
+		foundedYear?: number | null;
+		memberCount?: number | null;
+		meetupSchedule?: string | null;
+		difficultyLevel?:
+			| "Beginner"
+			| "Intermediate"
+			| "Advanced"
+			| "All Levels"
+			| null;
+		tags?: string[] | null;
+		amenities?: string[] | null;
+		events?: Array<{
+			name: string;
+			date?: string | null;
+			description?: string | null;
+		}> | null;
+	}>(),
+
+	// Timestamps
+	createdAt: timestamp("created_at").defaultNow(),
+	updatedAt: timestamp("updated_at").defaultNow(),
+	lastUpdated: timestamp("last_updated").notNull(),
+});
+
+// Zod schemas for type validation
+export const insertClubSchema = createInsertSchema(runningClubs);
+export const selectClubSchema = createSelectSchema(runningClubs);
+
+// Types
+export type RunningClub = typeof runningClubs.$inferSelect;
+export type NewRunningClub = typeof runningClubs.$inferInsert;

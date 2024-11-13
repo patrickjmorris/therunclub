@@ -19,7 +19,8 @@
 		"db:seed-videos": "NODE_ENV=development bun run src/db/seed-videos.ts",
 		"db:seed-videos:prod": "NODE_ENV=production bun run src/db/seed-videos.ts",
 		"db:seed-clubs": "bun scripts/seed-clubs.ts",
-		"db:load-clubs": "bun scripts/load-clubs-csv.ts"
+		"db:load-clubs": "bun scripts/load-clubs-csv.ts",
+		"db:load-clubs:prod": "NODE_ENV=production bun scripts/load-clubs-csv.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {

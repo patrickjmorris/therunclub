@@ -30,9 +30,5 @@ export const docsConfig: DocsConfig = {
 			title: "Calculators",
 			href: "/calculators",
 		},
-		{
-			title: "Resources",
-			href: "/resources",
-		},
 	],
 };

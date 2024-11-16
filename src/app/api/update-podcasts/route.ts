@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updatePodcastData } from "@/db";
 import { headers } from "next/headers";
+import { updateAllPodcastColors } from "@/scripts/update-podcast-colors";
 
 let isUpdating = false;
 const LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -43,18 +44,20 @@ async function handleUpdate() {
 
 		try {
 			const results = await updatePodcastData();
+			await updateAllPodcastColors();
+
 			return NextResponse.json(
 				{
-					message: "Podcast data updated successfully",
+					message: "Podcast data and colors updated successfully",
 					results,
 				},
 				{ status: 200 },
 			);
 		} catch (error) {
-			console.error("Error updating podcast data:", error);
+			console.error("Error updating podcast data or colors:", error);
 			return NextResponse.json(
 				{
-					message: "Error updating podcast data",
+					message: "Error updating podcast data or colors",
 					error: error instanceof Error ? error.message : "Unknown error",
 				},
 				{ status: 500 },

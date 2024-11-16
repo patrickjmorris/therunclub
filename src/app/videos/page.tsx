@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { VideoFilter } from "@/components/videos/video-filter";
 import { VideoGrid } from "@/components/videos/video-grid";
 import { Metadata } from "next";
-import { VideoGridSkeleton } from "@/components/videos/loading-ui";
+import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
@@ -77,7 +77,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 													alt={channel.title}
 													width={80}
 													height={80}
-													className="rounded-full object-cover w-full h-full"
+													className="rounded-lg object-cover w-full h-full"
 												/>
 											</div>
 										</div>
@@ -99,7 +99,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 				<h2 className="text-2xl font-bold mb-6">Latest Videos</h2>
 				<VideoFilter />
 				<div className="mt-8">
-					<Suspense fallback={<VideoGridSkeleton />}>
+					<Suspense fallback={<LoadingGridSkeleton />}>
 						<VideoGrid
 							videos={
 								"video" in (videos[0] || {})

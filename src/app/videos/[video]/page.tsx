@@ -44,7 +44,6 @@ export async function generateMetadata({
 
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
-	console.log("video", video);
 
 	try {
 		const videoData = await getVideoById(video);
@@ -124,7 +123,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 					)}
 
 					{/* Description */}
-					<div className="mt-6 prose prose-sm max-w-none dark:prose-invert">
+					<div className="mt-6 prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words">
 						{videoData.description?.split("\n").map((line, i) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: needed for react
 							<p key={i}>{line}</p>

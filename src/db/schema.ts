@@ -34,12 +34,12 @@ export const profiles = pgTable(
 			foreignColumns: [authUsers.id],
 			name: "profiles_id_fk",
 		}).onDelete("cascade"),
-		// pgPolicy("authenticated can view all profiles", {
-		// 	for: "select",
-		// 	// using predefined role from Supabase
-		// 	to: authenticatedRole,
-		// 	using: sql`true`,
-		// }),
+		pgPolicy("authenticated can view all profiles", {
+			for: "select",
+			// using predefined role from Supabase
+			to: authenticatedRole,
+			using: sql`true`,
+		}),
 	],
 );
 
@@ -107,6 +107,7 @@ export const podcasts = pgTable(
 		feedUrl: text("feed_url").notNull(),
 		image: text("image").default(""),
 		creator: text("creator").default(""),
+		vibrantColor: text("vibrant_color"),
 		author: text("author").default(""),
 		link: text("link").default(""),
 		language: text("language").default("en"),

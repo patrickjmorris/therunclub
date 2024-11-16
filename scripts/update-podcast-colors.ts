@@ -1,6 +1,6 @@
-import { db } from "../db";
-import { podcasts } from "../db/schema";
-import { updatePodcastColors } from "../lib/update-podcast-colors";
+import { db } from "@/db";
+import { podcasts } from "@/db/schema";
+import { updatePodcastColors } from "@/lib/update-podcast-colors";
 import { isNotNull } from "drizzle-orm";
 
 export async function updateAllPodcastColors() {

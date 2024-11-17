@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updatePodcastData } from "@/db";
 import { headers } from "next/headers";
-import { updateAllPodcastColors } from "@/scripts/update-podcast-colors";
+import { updateAllPodcastColors } from "../../../../scripts/update-podcast-colors";
 
 let isUpdating = false;
 const LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds

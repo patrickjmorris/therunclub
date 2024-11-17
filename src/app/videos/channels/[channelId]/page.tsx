@@ -9,6 +9,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { Metadata } from "next";
 import { Globe, Play, Users, Video as VideoIcon } from "lucide-react";
+import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 
 interface ChannelPageProps {
 	params: Promise<{
@@ -150,27 +151,10 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 			{/* Videos Grid */}
 			<div className="mt-8">
 				<h2 className="text-xl font-semibold mb-4">Latest Videos</h2>
-				<Suspense fallback={<VideoGridSkeleton />}>
+				<Suspense fallback={<LoadingGridSkeleton />}>
 					<VideoGrid videos={videos} />
 				</Suspense>
 			</div>
-		</div>
-	);
-}
-
-function VideoGridSkeleton() {
-	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-			{Array.from({ length: 6 }).map((_, i) => (
-				<div
-					key={`skeleton-${
-						// biome-ignore lint/suspicious/noArrayIndexKey: need for skeleton
-						i
-					}`}
-					className="aspect-video bg-muted rounded-lg animate-pulse"
-					aria-hidden="true"
-				/>
-			))}
 		</div>
 	);
 }

@@ -7,7 +7,7 @@ import { siteConfig } from "@/config/site";
 import { fontSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import { Analytics } from "@/components/analytics";
-import { ThemeProvider } from "@/components/providers";
+import { ThemeProvider } from "@/components/theme-provider";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MainNav } from "@/components/nav/main-nav";

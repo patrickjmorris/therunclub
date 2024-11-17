@@ -98,17 +98,17 @@ export default async function PodcastPage(props: {
 	};
 
 	return (
-		<div className="pt-16 pb-12 sm:pb-4 lg:pt-12 bg-stone-50">
+		<div className="pt-4 pb-12 sm:pb-4 lg:pt-12">
 			<script
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
 			/>
-			<Container>
+			{/* <Container className="mb-4">
 				<h1 className="text-2xl font-bold leading-7 text-slate-900">
 					{podcast.title}
 				</h1>
-			</Container>
+			</Container> */}
 			<div className="divide-y divide-slate-100 sm:mt-4 lg:mt-8 lg:border-t lg:border-slate-100">
 				{episodes.map((episode) => (
 					<EpisodeEntry

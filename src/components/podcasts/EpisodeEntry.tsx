@@ -1,12 +1,13 @@
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Play, Pause } from "lucide-react";
 import Image from "next/image";
-import { Container } from "../Container";
 import Link from "next/link";
 import { FormattedDate } from "../FormattedDate";
 import { EpisodePlayButton } from "../EpisodePlayButton";
-import { Play, Pause } from "lucide-react";
-import { Button } from "../ui/button";
 import { formatDuration } from "@/lib/formatDuration";
 import { getEpisode } from "@/db/queries";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export default async function EpisodeEntry({
 	episodeSlug,
@@ -15,19 +16,14 @@ export default async function EpisodeEntry({
 }) {
 	const episode = await getEpisode(episodeSlug);
 
-	if (!episode) {
-		return null;
-	}
+	if (!episode) return null;
 
 	const date = new Date(episode.pubDate);
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
 
 	return (
-		<article
-			aria-labelledby={`episode-${episode.episodeSlug}-title`}
-			className="py-10 sm:py-12"
-		>
-			<Container>
+		<Card className="hover:bg-muted/50 transition-colors my-4">
+			<CardContent className="p-6">
 				<div className="grid grid-cols-[auto_1fr] lg:grid-cols-[180px_1fr] gap-4 lg:gap-6">
 					<div className="row-span-1 lg:row-span-3">
 						<Image
@@ -35,36 +31,35 @@ export default async function EpisodeEntry({
 							alt={episode.title}
 							width={180}
 							height={180}
-							className="rounded object-cover w-32 h-32 lg:w-[180px] lg:h-[180px]"
+							className="rounded-lg object-cover w-32 h-32 lg:w-[180px] lg:h-[180px]"
 						/>
 					</div>
 					<div className="flex flex-col">
-						<h2
-							id={`episode-${episode.episodeSlug}-title`}
-							className="text-lg font-bold text-slate-900 line-clamp-4 text-ellipsis"
-						>
+						<h2 className="text-lg font-bold line-clamp-2">
 							<Link
 								href={`/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`}
+								className="hover:underline"
 							>
 								{episode.title}
 							</Link>
 						</h2>
 						<FormattedDate
 							date={date}
-							className="font-mono text-sm leading-7 text-slate-500"
+							className="text-sm text-muted-foreground mt-1"
 						/>
 					</div>
-					<div
-						className="text-base leading-7 text-slate-700 line-clamp-4 prose prose-slate col-span-2 lg:col-span-1 lg:col-start-2"
-						// biome-ignore lint/security/noDangerouslySetInnerHtml: We want to use the HTML content to apply styling
-						dangerouslySetInnerHTML={{
-							__html: episode.content ?? "",
-						}}
-					/>
+					<div className="prose dark:prose-invert col-span-2 lg:col-span-1 lg:col-start-2 line-clamp-3">
+						<div
+							// biome-ignore lint/security/noDangerouslySetInnerHtml: Sanitized
+							dangerouslySetInnerHTML={{
+								__html: sanitizeHtml(episode.content ?? ""),
+							}}
+						/>
+					</div>
 					<div className="flex items-center gap-4 mt-4 col-span-2 lg:col-span-1 lg:col-start-2">
 						<EpisodePlayButton
 							episode={episode}
-							className="flex items-center text-sm font-bold leading-6 text-slate-500 gap-x-3 hover:text-slate-700 active:text-slate-900"
+							className="flex items-center gap-2"
 							playing={
 								<>
 									<Pause className="h-4 w-4 fill-current" />
@@ -78,31 +73,19 @@ export default async function EpisodeEntry({
 								</>
 							}
 						/>
-						<span
-							aria-hidden="true"
-							className="text-sm font-bold text-slate-400"
-						>
-							/
-						</span>
-						<Button variant="link">
+						<Button variant="ghost" size="sm" asChild>
 							<Link
 								href={`/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`}
-								className="flex items-center text-sm font-bold leading-6 text-slate-500 hover:text-slate-700 active:text-slate-900"
-								aria-label={`Show notes for episode ${episode.title}`}
 							>
 								Show notes
 							</Link>
 						</Button>
-						<span
-							aria-hidden="true"
-							className="text-sm font-bold text-slate-400"
-						>
-							/
-						</span>
-						<span className="text-sm font-bold text-slate-500">{duration}</span>
+						{duration && (
+							<span className="text-sm text-muted-foreground">{duration}</span>
+						)}
 					</div>
 				</div>
-			</Container>
-		</article>
+			</CardContent>
+		</Card>
 	);
 }

@@ -1,41 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import clsx from "clsx";
+import { Button } from "@/components/ui/button";
+import DOMPurify from "isomorphic-dompurify";
 
-import { TinyWaveFormIcon } from "@/components/TinyWaveFormIcon";
+interface AboutSectionProps {
+	description: string;
+}
 
-export function AboutSection(
-	props: React.ComponentPropsWithoutRef<"section"> & { description: string },
-) {
+export function AboutSection({ description }: AboutSectionProps) {
 	const [isExpanded, setIsExpanded] = useState(false);
+	const sanitizedHtml = DOMPurify.sanitize(description);
 
 	return (
-		<section {...props}>
-			<h2 className="flex items-center font-mono text-sm font-medium leading-7 text-slate-900">
-				<TinyWaveFormIcon
-					colors={["fill-violet-300", "fill-pink-300"]}
-					className="h-2.5 w-2.5"
-				/>
-				<span className="ml-2.5">About</span>
+		<div className="space-y-4">
+			<h2 className="text-sm font-medium text-muted-foreground uppercase">
+				About
 			</h2>
 			<div
-				className={clsx(
-					"mt-2 text-base leading-7 text-slate-700 whitespace-pre-wrap mb-4",
-					!isExpanded && "line-clamp-4",
-				)}
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: We want to use the HTML content to apply styling
-				dangerouslySetInnerHTML={{ __html: props.description }}
-			/>
-			{!isExpanded && (
-				<button
-					type="button"
-					className="mt-2 inline-block text-sm font-bold leading-6 text-pink-500 hover:text-pink-700 active:text-pink-900"
-					onClick={() => setIsExpanded(true)}
+				className={`prose dark:prose-invert max-w-none ${
+					!isExpanded ? "line-clamp-3" : ""
+				}`}
+			>
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: sanitizedHtml is sanitized */}
+				<div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+			</div>
+			{description.length > 200 && (
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => setIsExpanded(!isExpanded)}
 				>
-					Show more
-				</button>
+					{isExpanded ? "Show less" : "Show more"}
+				</Button>
 			)}
-		</section>
+		</div>
 	);
 }

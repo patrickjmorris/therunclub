@@ -1,4 +1,4 @@
-import { desc, eq, sql, and, max } from "drizzle-orm";
+import { desc, eq, sql, and, max, like } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { db } from "./index";
 import {
@@ -333,6 +333,7 @@ export const getPodcastBySlug = unstable_cache(
 				author: podcasts.author,
 				itunesExplicit: podcasts.itunesExplicit,
 				podcastSlug: podcasts.podcastSlug,
+				vibrantColor: podcasts.vibrantColor,
 			})
 			.from(podcasts)
 			.where(eq(podcasts.podcastSlug, podcastSlug))
@@ -425,3 +426,36 @@ export const getPopularRunClubs = unstable_cache(
 	["popular-run-clubs"],
 	{ tags: ["run-clubs"] },
 );
+
+export const searchEpisodesWithPodcasts = async (query: string) => {
+	return db
+		.select({
+			title: podcasts.title,
+			podcastId: podcasts.id,
+			image: podcasts.image,
+			episodeTitle: episodes.title,
+			episodeId: episodes.id,
+			episodePubDate: episodes.pubDate,
+			episodeSlug: episodes.episodeSlug,
+			podcastSlug: podcasts.podcastSlug,
+		})
+		.from(episodes)
+		.leftJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+		.where(like(episodes.title, query));
+};
+
+export async function getFeaturedPodcasts(limit = 4) {
+	return db
+		.select({
+			title: podcasts.title,
+			podcastId: podcasts.id,
+			image: podcasts.image,
+			podcastSlug: podcasts.podcastSlug,
+			count: sql<number>`count(${episodes.id})`.as("count"),
+		})
+		.from(podcasts)
+		.leftJoin(episodes, eq(podcasts.id, episodes.podcastId))
+		.groupBy(podcasts.id, podcasts.title, podcasts.image)
+		.orderBy(desc(sql<number>`count(${episodes.id})`))
+		.limit(limit);
+}

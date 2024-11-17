@@ -1,55 +1,143 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Headphones } from "lucide-react";
 import { FormattedDate } from "@/components/FormattedDate";
 import Link from "next/link";
-import { getAllPodcastAndLastEpisodes } from "@/db/queries";
+import Image from "next/image";
+import { Metadata } from "next";
+import {
+	getAllPodcastAndLastEpisodes,
+	getFeaturedPodcasts,
+	searchEpisodesWithPodcasts,
+} from "@/db/queries";
+import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
+import { Suspense } from "react";
+import { parseAsString } from "nuqs/server";
 
+export const metadata: Metadata = {
+	title: "Running Podcasts | The Run Club",
+	description:
+		"Discover the latest episodes from your favorite running podcasts",
+	openGraph: {
+		title: "Running Podcasts | The Run Club",
+		description:
+			"Discover the latest episodes from your favorite running podcasts",
+		type: "website",
+	},
+	alternates: {
+		canonical: "/podcasts",
+	},
+};
+
+interface PageProps {
+	searchParams: Promise<{ q?: string }>;
+}
 export const revalidate = 3600;
 
-export default async function PodcastList() {
-	try {
-		const podcasts = await getAllPodcastAndLastEpisodes();
+export default async function PodcastList({ searchParams }: PageProps) {
+	// Parse search params
+	const { q } = await searchParams;
+	const query = parseAsString.withDefault("").parseServerSide(q);
 
-		return (
-			<div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
-				<section className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:grid-cols-3">
-					{podcasts.map((podcast) => (
-						<div
+	// Get featured podcasts
+	const featuredPodcasts = await getFeaturedPodcasts();
+
+	const podcasts = query
+		? await searchEpisodesWithPodcasts(query)
+		: await getAllPodcastAndLastEpisodes();
+
+	return (
+		<div className="container py-8 md:py-12">
+			{/* Featured Channels Section */}
+			<div className="mb-12">
+				<div className="flex items-center justify-between mb-6">
+					<h2 className="text-2xl font-bold">Featured Channels</h2>
+					<Button variant="ghost" asChild>
+						<Link href="/videos/channels" className="group">
+							View All Podcasts
+							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+						</Link>
+					</Button>
+				</div>
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+					{featuredPodcasts.map((podcast) => (
+						<Link
 							key={podcast.podcastId}
-							className="flex flex-col w-full gap-2 shadow-lg p-4 rounded-lg overflow-hidden dark:border-gray-800 dark:shadow-gray-800/50"
+							href={`/podcasts/${podcast.podcastSlug}`}
+							className="transition-opacity hover:opacity-80"
+						>
+							<Card>
+								<CardContent className="p-4">
+									<div className="flex flex-col items-center text-center gap-4">
+										<div className="relative w-20 h-20">
+											<div className="absolute inset-0">
+												<Image
+													src={podcast.image ?? ""}
+													alt={podcast.title}
+													width={80}
+													height={80}
+													className="rounded-lg object-cover w-full h-full"
+												/>
+											</div>
+										</div>
+										<div>
+											<h3 className="font-semibold line-clamp-1">
+												{podcast.title}
+											</h3>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						</Link>
+					))}
+				</div>
+			</div>
+			<Suspense fallback={<LoadingGridSkeleton />}>
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					{podcasts.map((podcast) => (
+						<Card
+							key={podcast.podcastId}
+							className="group hover:shadow-lg transition-all"
 						>
 							<Link href={`/podcasts/${podcast.podcastSlug}`}>
-								<img
-									alt={podcast.title}
-									className="object-cover w-full aspect-square rounded-lg overflow-hidden"
-									height={100}
-									src={podcast.image ?? ""}
-									width={100}
-								/>
+								<CardHeader className="space-y-4">
+									<div className="aspect-square relative overflow-hidden rounded-lg">
+										<Image
+											alt={podcast.title ?? ""}
+											className="object-cover transition-transform group-hover:scale-105"
+											height={400}
+											src={podcast.image ?? ""}
+											width={400}
+										/>
+									</div>
+									<div className="space-y-2">
+										<CardTitle className="line-clamp-1">
+											{podcast.title}
+										</CardTitle>
+										{podcast.episodeTitle && (
+											<p className="text-sm text-muted-foreground line-clamp-2">
+												Latest: {podcast.episodeTitle}
+											</p>
+										)}
+									</div>
+								</CardHeader>
+								<CardContent className="space-y-2">
+									{podcast.episodePubDate && (
+										<FormattedDate
+											date={new Date(podcast.episodePubDate)}
+											className="text-sm text-muted-foreground"
+										/>
+									)}
+									<Button variant="secondary" className="w-full">
+										<Headphones className="mr-2 h-4 w-4" />
+										Listen Now
+									</Button>
+								</CardContent>
 							</Link>
-							<div className="flex flex-col gap-1">
-								<h1 className="font-bold text-lg md:text-xl">
-									{podcast.title}
-								</h1>
-								<h2 className="font-semibold text-sm md:text-base line-clamp-2">
-									{podcast.episodeTitle}
-								</h2>
-								{podcast.episodePubDate && (
-									<FormattedDate
-										date={new Date(podcast.episodePubDate)}
-										className="text-sm text-gray-500 dark:text-gray-400"
-									/>
-								)}
-							</div>
-						</div>
+						</Card>
 					))}
-				</section>
-			</div>
-		);
-	} catch (error) {
-		console.error("Error in PodcastList component:", error);
-		return (
-			<div>
-				An error occurred while loading podcasts. Please try again later.
-			</div>
-		);
-	}
+				</div>
+			</Suspense>
+		</div>
+	);
 }

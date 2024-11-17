@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function VideoCardSkeleton() {
+export function LoadingCardSkeleton() {
 	return (
 		<div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
 			<div className="aspect-video bg-muted animate-pulse" />
@@ -12,12 +12,12 @@ export function VideoCardSkeleton() {
 	);
 }
 
-export function VideoGridSkeleton() {
+export function LoadingGridSkeleton() {
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			{Array.from({ length: 6 }).map((_, i) => (
 				// biome-ignore lint/suspicious/noArrayIndexKey: Need skeleton
-				<VideoCardSkeleton key={`skeleton-${i}`} />
+				<LoadingCardSkeleton key={`skeleton-${i}`} />
 			))}
 		</div>
 	);

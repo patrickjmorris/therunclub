@@ -1,19 +1,18 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { type Podcast, type Episode, podcasts, episodes } from "./schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, isNotNull } from "drizzle-orm";
 import Parser from "rss-parser";
 import { config } from "dotenv";
 import { slugify } from "@/lib/utils";
 import { FEEDS } from "@/lib/episodes";
-
+import { updatePodcastColors } from "@/lib/update-podcast-colors";
 config({ path: ".env" });
-
 
 // Default to development unless explicitly set to production
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-const BATCH_SIZE = 5; 
+const BATCH_SIZE = 5;
 const connectionString = isDevelopment
 	? process.env.LOCAL_DB_URL ?? ""
 	: process.env.DATABASE_URL ?? "";
@@ -25,38 +24,41 @@ if (!connectionString) {
 console.log("Environment:", isDevelopment ? "development" : "production");
 console.log("Using connection:", connectionString.split("@")[1]); // Log only host part for security
 
-export const client = postgres(connectionString, { prepare: false })
+export const client = postgres(connectionString, { prepare: false });
 export const db = drizzle(client);
 
 async function processPodcast(podcast: Podcast, parser: Parser) {
 	try {
 		const data = await parser.parseURL(podcast.feedUrl);
-		
+
 		// Prepare episode values for bulk insert
 		const episodeValues = (data.items ?? [])
 			.filter((item): item is NonNullable<typeof item> => !!item.guid)
-			.map((item): Episode => ({
-				id: item.guid || "",
-				podcastId: podcast.id,
-				title: item.title ?? "",
-				episodeSlug: slugify(item.title ?? ""),
-				pubDate: new Date(item.pubDate ?? Date.now()),
-				content: item.content ?? "",
-				link: item.link ?? "",
-				enclosureUrl: item.enclosure?.url ?? "",
-				duration: item.itunes?.duration ?? "",
-				explicit: item.itunes?.explicit === "yes" ? "yes" : "no", 
-				image: item.itunes?.image ?? "",
-				episodeNumber: item.itunes?.episode
-					? parseInt(item.itunes.episode) 
-					: null,
-				season: item.itunes?.season ?? "",
-			}));
+			.map(
+				(item): Episode => ({
+					id: item.guid || "",
+					podcastId: podcast.id,
+					title: item.title ?? "",
+					episodeSlug: slugify(item.title ?? ""),
+					pubDate: new Date(item.pubDate ?? Date.now()),
+					content: item.content ?? "",
+					link: item.link ?? "",
+					enclosureUrl: item.enclosure?.url ?? "",
+					duration: item.itunes?.duration ?? "",
+					explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+					image: item.itunes?.image ?? "",
+					episodeNumber: item.itunes?.episode
+						? parseInt(item.itunes.episode)
+						: null,
+					season: item.itunes?.season ?? "",
+				}),
+			);
 
 		// Bulk operations
 		await Promise.all([
 			// Update podcast metadata
-			db.update(podcasts)
+			db
+				.update(podcasts)
 				.set({
 					title: data.title ?? "",
 					description: data.description ?? "",
@@ -64,7 +66,9 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 					author: data.itunes?.author ?? "",
 					link: data.link ?? "",
 					language: data.language ?? "",
-					lastBuildDate: data.lastBuildDate ? new Date(data.lastBuildDate) : null,
+					lastBuildDate: data.lastBuildDate
+						? new Date(data.lastBuildDate)
+						: null,
 					itunesOwnerName: data.itunes?.owner?.name ?? "",
 					itunesOwnerEmail: data.itunes?.owner?.email ?? "",
 					itunesImage: data.itunes?.image ?? "",
@@ -77,7 +81,8 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 			// Bulk upsert episodes
 			db.transaction(async (tx) => {
 				if (episodeValues.length > 0) {
-					await tx.insert(episodes)
+					await tx
+						.insert(episodes)
 						.values(episodeValues)
 						.onConflictDoUpdate({
 							target: episodes.id,
@@ -96,7 +101,7 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 							},
 						});
 				}
-			})
+			}),
 		]);
 
 		return { success: true, podcastId: podcast.id };
@@ -115,7 +120,7 @@ export async function updatePodcastData() {
 	for (let i = 0; i < allPodcasts.length; i += BATCH_SIZE) {
 		const batch = allPodcasts.slice(i, i + BATCH_SIZE);
 		const batchResults = await Promise.all(
-			batch.map(podcast => processPodcast(podcast, parser))
+			batch.map((podcast) => processPodcast(podcast, parser)),
 		);
 		results.push(...batchResults);
 	}
@@ -143,7 +148,9 @@ export async function loadInitialData() {
 					author: data.itunes?.author ?? "",
 					link: data.link ?? "",
 					language: data.language ?? "",
-					lastBuildDate: data.lastBuildDate ? new Date(data.lastBuildDate) : null,
+					lastBuildDate: data.lastBuildDate
+						? new Date(data.lastBuildDate)
+						: null,
 					itunesOwnerName: data.itunes?.owner?.name ?? "",
 					itunesOwnerEmail: data.itunes?.owner?.email ?? "",
 					itunesImage: data.itunes?.image ?? "",
@@ -161,7 +168,9 @@ export async function loadInitialData() {
 						author: data.itunes?.author ?? "",
 						link: data.link ?? "",
 						language: data.language ?? "",
-						lastBuildDate: data.lastBuildDate ? new Date(data.lastBuildDate) : null,
+						lastBuildDate: data.lastBuildDate
+							? new Date(data.lastBuildDate)
+							: null,
 						itunesOwnerName: data.itunes?.owner?.name ?? "",
 						itunesOwnerEmail: data.itunes?.owner?.email ?? "",
 						itunesImage: data.itunes?.image ?? "",
@@ -175,27 +184,30 @@ export async function loadInitialData() {
 			// Prepare episode values for bulk insert
 			const episodeValues = (data.items ?? [])
 				.filter((item): item is NonNullable<typeof item> => !!item.guid)
-				.map((item): Episode => ({
-					id: item.guid || "",
-					podcastId: insertedPodcast.id,
-					title: item.title || "",
-					episodeSlug: slugify(item.title || ""),
-					pubDate: new Date(item.pubDate || Date.now()),
-					content: item.content ?? null,
-					link: item.link ?? null,
-					enclosureUrl: item.enclosure?.url ?? "",
-					duration: item.itunes?.duration ?? null,
-					explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
-					image: item.itunes?.image ?? null,
-					episodeNumber: item.itunes?.episode 
-						? parseInt(item.itunes.episode) || null 
-						: null,
-					season: item.itunes?.season ?? null,
-				}));
+				.map(
+					(item): Episode => ({
+						id: item.guid || "",
+						podcastId: insertedPodcast.id,
+						title: item.title || "",
+						episodeSlug: slugify(item.title || ""),
+						pubDate: new Date(item.pubDate || Date.now()),
+						content: item.content ?? null,
+						link: item.link ?? null,
+						enclosureUrl: item.enclosure?.url ?? "",
+						duration: item.itunes?.duration ?? null,
+						explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+						image: item.itunes?.image ?? null,
+						episodeNumber: item.itunes?.episode
+							? parseInt(item.itunes.episode) || null
+							: null,
+						season: item.itunes?.season ?? null,
+					}),
+				);
 
 			// Bulk upsert episodes
 			if (episodeValues.length > 0) {
-				await db.insert(episodes)
+				await db
+					.insert(episodes)
 					.values(episodeValues)
 					.onConflictDoUpdate({
 						target: episodes.id,
@@ -223,4 +235,37 @@ export async function loadInitialData() {
 	}
 
 	return results;
+}
+
+export async function updateAllPodcastColors() {
+	try {
+		// Get all podcasts with images
+		const allPodcasts = await db
+			.select({
+				id: podcasts.id,
+				image: podcasts.image,
+			})
+			.from(podcasts)
+			.where(isNotNull(podcasts.image));
+		console.log("Updating podcast colors from script /////////");
+		console.log(`Found ${allPodcasts.length} podcasts to update`);
+
+		// Update colors for each podcast
+		for (const podcast of allPodcasts) {
+			if (podcast.image) {
+				try {
+					console.log(`Updating colors for podcast ${podcast.id}`);
+					await updatePodcastColors(podcast.id, podcast.image);
+					console.log(`Successfully updated colors for podcast ${podcast.id}`);
+				} catch (error) {
+					console.error(`Error updating podcast ${podcast.id}:`, error);
+				}
+			}
+		}
+
+		console.log("Finished updating podcast colors");
+	} catch (error) {
+		console.error("Error updating podcast colors:", error);
+		process.exit(1);
+	}
 }

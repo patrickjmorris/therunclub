@@ -222,7 +222,7 @@ export async function seed() {
 	}
 }
 
-const SEED_TIMEOUT = 300000;
+const SEED_TIMEOUT = 3000000;
 
 Promise.race([
 	seed(),

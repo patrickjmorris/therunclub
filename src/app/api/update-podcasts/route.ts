@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updatePodcastData, updateAllPodcastColors } from "@/db";
+import {
+	updatePodcastData,
+	updateAllPodcastColors,
+	updatePodcastByFeedUrl,
+} from "@/db";
 import { headers } from "next/headers";
 
 let isUpdating = false;
@@ -15,9 +19,9 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 	const validApiKey = process.env.UPDATE_API_KEY;
 
 	// Debug logs
-	console.log("API Key from headers():", apiKeyFromHeaders);
-	console.log("API Key from request:", apiKeyFromRequest);
-	console.log("Expected API Key:", validApiKey);
+	// console.log("API Key from headers():", apiKeyFromHeaders);
+	// console.log("API Key from request:", apiKeyFromRequest);
+	// console.log("Expected API Key:", validApiKey);
 
 	if (!validApiKey) {
 		console.error("API key not configured in environment variables");
@@ -31,19 +35,39 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 	return isValid;
 }
 
-async function handleUpdate() {
-	if (!isUpdating) {
-		isUpdating = true;
-		clearTimeout(lockTimeout);
+async function handleUpdate(feedUrl?: string) {
+	if (isUpdating) {
+		return NextResponse.json(
+			{ message: "Update already in progress" },
+			{ status: 409 },
+		);
+	}
 
-		// Set a timeout to release the lock in case of unexpected errors
-		lockTimeout = setTimeout(() => {
-			isUpdating = false;
-		}, LOCK_TIMEOUT);
+	isUpdating = true;
+	clearTimeout(lockTimeout);
 
-		try {
+	// Set a timeout to release the lock in case of unexpected errors
+	lockTimeout = setTimeout(() => {
+		isUpdating = false;
+	}, LOCK_TIMEOUT);
+
+	try {
+		if (feedUrl) {
+			// Update single podcast
+			const result = await updatePodcastByFeedUrl(feedUrl);
+			await updateAllPodcastColors();
+
+			return NextResponse.json(
+				{
+					message: "Single podcast update completed",
+					result,
+				},
+				{ status: 200 },
+			);
+			// biome-ignore lint/style/noUselessElse: <explanation>
+		} else {
+			// Update all podcasts
 			const results = await updatePodcastData();
-			console.log("Updating podcast colors from API /////////");
 			await updateAllPodcastColors();
 
 			return NextResponse.json(
@@ -53,39 +77,38 @@ async function handleUpdate() {
 				},
 				{ status: 200 },
 			);
-		} catch (error) {
-			console.error("Error updating podcast data or colors:", error);
-			return NextResponse.json(
-				{
-					message: "Error updating podcast data or colors",
-					error: error instanceof Error ? error.message : "Unknown error",
-				},
-				{ status: 500 },
-			);
-		} finally {
-			clearTimeout(lockTimeout);
-			isUpdating = false;
 		}
-	} else {
+	} catch (error) {
+		console.error("Error updating podcast data or colors:", error);
 		return NextResponse.json(
-			{ message: "Update already in progress" },
-			{ status: 409 },
+			{
+				message: "Error updating podcast data or colors",
+				error: error instanceof Error ? error.message : "Unknown error",
+			},
+			{ status: 500 },
 		);
+	} finally {
+		clearTimeout(lockTimeout);
+		isUpdating = false;
 	}
 }
 
 export async function GET(request: NextRequest) {
-	// Check authorization before proceeding
 	if (!(await isAuthorized(request))) {
 		return new Response("Unauthorized", { status: 401 });
 	}
-	return handleUpdate();
+
+	// Get feedUrl from searchParams
+	const feedUrl = request.nextUrl.searchParams.get("feedUrl");
+	return handleUpdate(feedUrl || undefined);
 }
 
 export async function POST(request: NextRequest) {
-	// Check authorization before proceeding
 	if (!(await isAuthorized(request))) {
 		return new Response("Unauthorized", { status: 401 });
 	}
-	return handleUpdate();
+
+	// Get feedUrl from searchParams
+	const feedUrl = request.nextUrl.searchParams.get("feedUrl");
+	return handleUpdate(feedUrl || undefined);
 }

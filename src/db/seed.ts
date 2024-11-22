@@ -1,9 +1,16 @@
 import { db, client } from "./index";
 import { podcasts, episodes } from "./schema";
-import { FEEDS } from "../lib/episodes";
 import Parser from "rss-parser";
 import { sql } from "drizzle-orm";
 import { slugify } from "@/lib/utils";
+import type { iTunesSearchResponse } from "@/lib/itunes-types";
+import { createPodcastIndexClient } from "@/lib/podcast-index";
+import { nanoid } from "nanoid";
+
+const podcastIndex = createPodcastIndexClient({
+	key: process.env.PODCAST_INDEX_API_KEY || "",
+	secret: process.env.PODCAST_INDEX_API_SECRET || "",
+});
 
 async function checkConnection() {
 	try {
@@ -16,11 +23,54 @@ async function checkConnection() {
 	}
 }
 
+async function getITunesPodcasts() {
+	const response = await fetch(
+		"https://itunes.apple.com/search?term=podcast&genreId=1551&limit=200",
+		{ next: { revalidate: 3600 } },
+	);
+
+	if (!response.ok) {
+		throw new Error(`iTunes API error: ${response.statusText}`);
+	}
+
+	const data = (await response.json()) as iTunesSearchResponse;
+	return data.results;
+}
+
+async function deletePodcastAndEpisodes(feedUrl: string) {
+	try {
+		// First, get the podcast ID
+		const [podcast] = await db
+			.select({ id: podcasts.id })
+			.from(podcasts)
+			.where(sql`${podcasts.feedUrl} = ${feedUrl}`);
+
+		if (podcast) {
+			// Delete all episodes first
+			await db
+				.delete(episodes)
+				.where(sql`${episodes.podcastId} = ${podcast.id}`);
+
+			// Then delete the podcast
+			await db.delete(podcasts).where(sql`${podcasts.id} = ${podcast.id}`);
+
+			console.log(
+				`Successfully deleted podcast and episodes for feed: ${feedUrl}`,
+			);
+		}
+	} catch (error) {
+		console.error(
+			`Error deleting podcast and episodes for feed: ${feedUrl}`,
+			error,
+		);
+		throw error;
+	}
+}
+
 export async function seed() {
 	console.log("Starting database seeding process...");
 
 	try {
-		// Check connection first
 		const isConnected = await checkConnection();
 		if (!isConnected) {
 			console.error("Failed to connect to database. Exiting...");
@@ -28,38 +78,56 @@ export async function seed() {
 		}
 
 		const parser = new Parser({
-			timeout: 5000, // Add timeout for RSS parser
+			timeout: 5000,
 		});
 
-		for (const feed of FEEDS) {
-			console.log(`Processing feed: ${feed.url}`);
+		const itunesPodcasts = await getITunesPodcasts();
+		console.log(`Found ${itunesPodcasts.length} podcasts from iTunes`);
+
+		for (const itunesPodcast of itunesPodcasts) {
+			console.log(`Processing podcast: ${itunesPodcast.collectionName}`);
+
+			// Check if podcast exists and needs to be removed
+			const healthCheck = await podcastIndex.getPodcastByFeedUrl(
+				itunesPodcast.feedUrl,
+			);
+			if (!healthCheck) {
+				console.log(
+					`Podcast ${itunesPodcast.collectionName} failed health check, removing if exists...`,
+				);
+				await deletePodcastAndEpisodes(itunesPodcast.feedUrl);
+				continue;
+			}
 
 			try {
-				const data = await parser.parseURL(feed.url);
-				console.log(`Successfully parsed feed: ${feed.url}`);
+				const data = await parser.parseURL(itunesPodcast.feedUrl);
+				console.log(`Successfully parsed feed: ${itunesPodcast.feedUrl}`);
 
-				// Insert or update podcast
 				try {
 					const [insertedPodcast] = await db
 						.insert(podcasts)
 						.values({
-							title: data.title || "",
-							podcastSlug: slugify(data.title || ""),
-							feedUrl: feed.url,
-							description: data.description || "",
-							image: data.image?.url || data.itunes?.image || "",
-							author: data.itunes?.author || "",
+							title: data.title || itunesPodcast.collectionName,
+							podcastSlug: slugify(data.title || itunesPodcast.collectionName),
+							feedUrl: itunesPodcast.feedUrl,
+							description: data.description || itunesPodcast.description || "",
+							image: data.image?.url || "",
+							author: itunesPodcast.artistName || data.itunes?.author || "",
 							link: data.link || "",
 							language: data.language || "",
 							lastBuildDate: data.lastBuildDate
 								? new Date(data.lastBuildDate)
-								: null,
+								: new Date(itunesPodcast.releaseDate),
 							itunesOwnerName: data.itunes?.owner?.name || "",
 							itunesOwnerEmail: data.itunes?.owner?.email || "",
 							itunesImage: data.itunes?.image || "",
 							itunesAuthor: data.itunes?.author || "",
 							itunesSummary: data.itunes?.summary || "",
 							itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
+							episodeCount: healthCheck.episodeCount,
+							isDead: healthCheck.isDead,
+							hasParseErrors: healthCheck.hasParseErrors,
+							iTunesId: itunesPodcast.collectionId.toString(),
 						})
 						.onConflictDoUpdate({
 							target: podcasts.feedUrl,
@@ -78,6 +146,10 @@ export async function seed() {
 								itunesAuthor: sql`EXCLUDED.itunes_author`,
 								itunesSummary: sql`EXCLUDED.itunes_summary`,
 								itunesExplicit: sql`EXCLUDED.itunes_explicit`,
+								episodeCount: sql`EXCLUDED.episode_count`,
+								isDead: sql`EXCLUDED.is_dead`,
+								hasParseErrors: sql`EXCLUDED.has_parse_errors`,
+								iTunesId: sql`EXCLUDED.itunes_id`,
 							},
 						})
 						.returning();
@@ -85,27 +157,21 @@ export async function seed() {
 
 					const podcastId = insertedPodcast.id;
 
-					// Insert or update episodes
 					for (const item of data.items) {
 						try {
 							await db
 								.insert(episodes)
 								.values({
-									id: item.guid || "",
 									podcastId: podcastId,
 									episodeSlug: slugify(item.title || ""),
 									title: item.title || "",
-									pubDate: new Date(item.pubDate || Date.now()),
+									pubDate: new Date(item.pubDate || ""),
 									content: item.content || "",
 									link: item.link || "",
 									enclosureUrl: item.enclosure?.url ?? "",
 									duration: item.itunes?.duration || "",
 									explicit: item.itunes?.explicit || "no",
 									image: item.itunes?.image || "",
-									episodeNumber: item.itunes?.episode
-										? parseInt(item.itunes.episode)
-										: null,
-									season: item.itunes?.season || "",
 								})
 								.onConflictDoUpdate({
 									target: episodes.id,
@@ -114,14 +180,12 @@ export async function seed() {
 										episodeSlug: sql`EXCLUDED.episode_slug`,
 										title: sql`EXCLUDED.title`,
 										pubDate: sql`EXCLUDED.pub_date`,
-										content: item.content || "",
+										content: sql`EXCLUDED.content`,
 										link: sql`EXCLUDED.link`,
 										enclosureUrl: sql`EXCLUDED.enclosure_url`,
 										duration: sql`EXCLUDED.duration`,
 										explicit: sql`EXCLUDED.explicit`,
 										image: sql`EXCLUDED.image`,
-										episodeNumber: sql`EXCLUDED.episode_number`,
-										season: sql`EXCLUDED.season`,
 									},
 								});
 							console.log(`Inserted/updated episode: ${item.title}`);
@@ -133,18 +197,19 @@ export async function seed() {
 						}
 					}
 					console.log(
-						`Processed ${data.items.length} episodes for ${data.title}`,
+						`Processed ${data.items.length} episodes for ${itunesPodcast.collectionName}`,
 					);
 				} catch (podcastError) {
 					console.error(
-						`Error inserting/updating podcast: ${feed.url}`,
+						`Error inserting/updating podcast: ${itunesPodcast.feedUrl}`,
 						podcastError,
 					);
 				}
 			} catch (parseError) {
-				console.error(`Error parsing feed: ${feed.url}`, parseError);
-				// biome-ignore lint/correctness/noUnnecessaryContinue: <explanation>
-				continue; // Skip to next feed on error
+				console.error(
+					`Error parsing feed: ${itunesPodcast.feedUrl}`,
+					parseError,
+				);
 			}
 		}
 
@@ -153,13 +218,11 @@ export async function seed() {
 		console.error("Fatal error during seeding process:", error);
 		throw error;
 	} finally {
-		// Clean up connection
 		await client.end();
 	}
 }
 
-// Add timeout to the entire process
-const SEED_TIMEOUT = 60000; // 1 minute timeout
+const SEED_TIMEOUT = 300000;
 
 Promise.race([
 	seed(),

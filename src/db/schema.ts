@@ -34,12 +34,12 @@ export const profiles = pgTable(
 			foreignColumns: [authUsers.id],
 			name: "profiles_id_fk",
 		}).onDelete("cascade"),
-		pgPolicy("authenticated can view all profiles", {
-			for: "select",
-			// using predefined role from Supabase
-			to: authenticatedRole,
-			using: sql`true`,
-		}),
+		// pgPolicy("authenticated can view all profiles", {
+		// 	for: "select",
+		// 	// using predefined role from Supabase
+		// 	to: authenticatedRole,
+		// 	using: sql`true`,
+		// }),
 	],
 );
 
@@ -102,24 +102,27 @@ export const podcasts = pgTable(
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		title: text("title").notNull(),
-		podcastSlug: text("podcast_slug").default(""),
-		description: text("description").default(""),
+		podcastSlug: text("podcast_slug").notNull(),
+		description: text("description"),
 		feedUrl: text("feed_url").notNull(),
-		image: text("image").default(""),
-		creator: text("creator").default(""),
+		image: text("image"),
 		vibrantColor: text("vibrant_color"),
-		author: text("author").default(""),
-		link: text("link").default(""),
+		author: text("author"),
+		link: text("link"),
 		language: text("language").default("en"),
-		lastBuildDate: timestamp("last_build_date").default(sql`CURRENT_TIMESTAMP`),
-		itunesOwnerName: text("itunes_owner_name").default(""),
-		itunesOwnerEmail: text("itunes_owner_email").default(""),
-		itunesImage: text("itunes_image").default(""),
-		itunesAuthor: text("itunes_author").default(""),
-		itunesSummary: text("itunes_summary").default(""),
+		lastBuildDate: timestamp("last_build_date"),
+		itunesOwnerName: text("itunes_owner_name"),
+		itunesOwnerEmail: text("itunes_owner_email"),
+		itunesImage: text("itunes_image"),
+		itunesAuthor: text("itunes_author"),
+		itunesSummary: text("itunes_summary"),
 		itunesExplicit: text("itunes_explicit", { enum: ["yes", "no"] }).default(
 			"no",
 		),
+		episodeCount: integer("episode_count"),
+		isDead: integer("is_dead").default(0),
+		hasParseErrors: integer("has_parse_errors").default(0),
+		iTunesId: text("itunes_id"),
 	},
 	(table) => ({
 		feedUrlIdx: uniqueIndex("feed_url_idx").on(table.feedUrl),
@@ -127,21 +130,19 @@ export const podcasts = pgTable(
 );
 
 export const episodes = pgTable("episodes", {
-	id: text("id").notNull().primaryKey(),
+	id: uuid("id").primaryKey().defaultRandom(),
 	podcastId: uuid("podcast_id")
 		.notNull()
 		.references(() => podcasts.id),
 	episodeSlug: text("episode_slug").notNull(),
 	title: text("title").notNull(),
-	pubDate: timestamp("pub_date").default(sql`CURRENT_TIMESTAMP`).notNull(),
-	content: text("content").default(""),
-	link: text("link").default(""),
-	enclosureUrl: text("enclosure_url").notNull(),
-	duration: text("duration").default(""),
+	pubDate: timestamp("pub_date"),
+	content: text("content"),
+	link: text("link"),
+	enclosureUrl: text("enclosure_url").notNull().unique(),
+	duration: text("duration").notNull(),
 	explicit: text("explicit", { enum: ["yes", "no"] }).default("no"),
-	image: text("image").default(""),
-	episodeNumber: integer("episode_number"),
-	season: text("season").default(""),
+	image: text("image"),
 });
 
 export const userPodcastPreferences = pgTable("user_podcast_preferences", {
@@ -183,7 +184,6 @@ export const userPodcastPreferencesRelations = relations(
 	}),
 );
 
-// Define relations
 export const channelsRelations = relations(channels, ({ many }) => ({
 	videos: many(videos),
 }));

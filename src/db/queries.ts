@@ -1,4 +1,4 @@
-import { desc, eq, sql, and, max, like } from "drizzle-orm";
+import { desc, eq, sql, and, max, like, isNotNull } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
 import { db } from "./index";
 import {
@@ -10,44 +10,14 @@ import {
 	runningClubs,
 } from "./schema";
 
-// Existing query (for reference)
-// Need to fix this query
-export const getLastEpisodeForEachPodcast = unstable_cache(
-	async () => {
-		return db
-			.select({
-				podcastId: podcasts.id,
-				podcastTitle: podcasts.title,
-				episodeId: episodes.id,
-				episodeTitle: episodes.title,
-				pubDate: episodes.pubDate,
-			})
-			.from(podcasts)
-			.leftJoin(episodes, eq(podcasts.id, episodes.podcastId))
-			.groupBy(podcasts.id, podcasts.title)
-			.having(
-				eq(
-					episodes.pubDate,
-					db
-						.select({ maxPubDate: sql<Date>`max(${episodes.pubDate})` })
-						.from(episodes)
-						.where(eq(episodes.podcastId, podcasts.id))
-						.as("subquery"),
-				),
-			)
-			.orderBy(desc(episodes.pubDate));
-	},
-	["last-episodes-for-each-podcast"],
-	{ tags: ["podcasts"] },
-);
-
-export const getNewEpisodes = async () => {
+export const getNewEpisodes = async (limit = 3) => {
 	return db
 		.select({
 			podcastId: podcasts.id,
 			podcastTitle: podcasts.title,
 			podcastImage: podcasts.image,
 			podcastSlug: podcasts.podcastSlug,
+			itunesImage: podcasts.itunesImage,
 			episodeId: episodes.id,
 			episodeTitle: episodes.title,
 			episodeImage: episodes.image,
@@ -56,9 +26,9 @@ export const getNewEpisodes = async () => {
 			pubDate: episodes.pubDate,
 		})
 		.from(podcasts)
-		.leftJoin(episodes, eq(podcasts.id, episodes.podcastId))
+		.innerJoin(episodes, eq(podcasts.id, episodes.podcastId))
 		.orderBy(desc(episodes.pubDate))
-		.limit(3);
+		.limit(limit);
 };
 
 // New queries based on episodes.ts functions
@@ -111,11 +81,14 @@ export const getLastEpisodesByPodcast = unstable_cache(
 	async () => {
 		const rankedEpisodes = db
 			.select({
-				id: episodes.id,
-				podcastId: episodes.podcastId,
+				podcastTitle: podcasts.title,
+				podcastId: podcasts.id,
+				podcastImage: podcasts.image,
+				episodeTitle: episodes.title,
+				episodeId: episodes.id,
+				episodePubDate: episodes.pubDate,
 				episodeSlug: episodes.episodeSlug,
 				podcastSlug: podcasts.podcastSlug,
-				pubDate: episodes.pubDate,
 				rowNum:
 					sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as(
 						"rowNum",
@@ -127,14 +100,17 @@ export const getLastEpisodesByPodcast = unstable_cache(
 
 		return db
 			.select({
-				id: rankedEpisodes.id,
+				podcastTitle: rankedEpisodes.podcastTitle,
 				podcastId: rankedEpisodes.podcastId,
+				podcastImage: rankedEpisodes.podcastImage,
+				episodeTitle: rankedEpisodes.episodeTitle,
+				episodeId: rankedEpisodes.episodeId,
+				episodePubDate: rankedEpisodes.episodePubDate,
 				episodeSlug: rankedEpisodes.episodeSlug,
 				podcastSlug: rankedEpisodes.podcastSlug,
-				pubDate: rankedEpisodes.pubDate,
 			})
 			.from(rankedEpisodes)
-			.where(sql`${rankedEpisodes.rowNum} <= 100`);
+			.where(sql`${rankedEpisodes.rowNum} = 1`);
 	},
 	["last-episodes-by-podcast"],
 	{ tags: ["episodes"] },
@@ -168,78 +144,40 @@ export const getPodcastMetadata = unstable_cache(
 
 export const getPodcastAndLastEpisodes = unstable_cache(
 	async () => {
-		const lastEpisodeSubquery = db
+		const lastEpisode = db
 			.select({
+				episodeId: episodes.id,
 				podcastId: episodes.podcastId,
-				maxPubDate: sql`max(${episodes.pubDate})`.as("maxPubDate"),
+				rowNum:
+					sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as(
+						"rowNum",
+					),
 			})
 			.from(episodes)
-			.groupBy(episodes.podcastId)
-			.as("lastEpisode");
-
-		return db
-			.select({
-				title: podcasts.title,
-				description: podcasts.description,
-				image: podcasts.image,
-				episodeTitle: episodes.title,
-				episodePubDate: episodes.pubDate,
-			})
-			.from(podcasts)
-			.leftJoin(
-				lastEpisodeSubquery,
-				eq(podcasts.id, lastEpisodeSubquery.podcastId),
-			)
-			.leftJoin(
-				episodes,
-				and(
-					eq(podcasts.id, episodes.podcastId),
-					eq(episodes.pubDate, lastEpisodeSubquery.maxPubDate),
-				),
-			)
-			.orderBy(desc(lastEpisodeSubquery.maxPubDate));
-	},
-	["podcasts-and-last-episodes"],
-	{ tags: ["podcasts", "episodes"] },
-);
-
-export const getDebugData = unstable_cache(
-	async () => {
-		const lastEpisodeSubquery = db
-			.select({
-				podcastId: episodes.podcastId,
-				maxPubDate: sql`max(${episodes.pubDate})`.as("maxPubDate"),
-			})
-			.from(episodes)
-			.groupBy(episodes.podcastId)
+			.groupBy(episodes.id, episodes.podcastId)
 			.as("lastEpisode");
 
 		return db
 			.select({
 				title: podcasts.title,
 				podcastId: podcasts.id,
-				description: podcasts.description,
 				image: podcasts.image,
 				episodeTitle: episodes.title,
 				episodeId: episodes.id,
 				episodePubDate: episodes.pubDate,
+				episodeSlug: episodes.episodeSlug,
+				podcastSlug: podcasts.podcastSlug,
 			})
 			.from(podcasts)
-			.leftJoin(
-				lastEpisodeSubquery,
-				eq(podcasts.id, lastEpisodeSubquery.podcastId),
+			.innerJoin(
+				lastEpisode,
+				and(eq(podcasts.id, lastEpisode.podcastId), eq(lastEpisode.rowNum, 1)),
 			)
-			.leftJoin(
-				episodes,
-				and(
-					eq(podcasts.id, episodes.podcastId),
-					eq(episodes.pubDate, lastEpisodeSubquery.maxPubDate),
-				),
-			)
-			.orderBy(desc(lastEpisodeSubquery.maxPubDate));
+			.innerJoin(episodes, eq(podcasts.id, episodes.podcastId))
+			.orderBy(desc(lastEpisode.rowNum));
 	},
-	["debug-data"],
-	{ tags: ["debug"] },
+	["podcasts-and-last-episodes"],
+	{ tags: ["podcasts", "episodes"] },
 );
 
 export const getAllPodcastAndLastEpisodes = async () => {
@@ -262,6 +200,7 @@ export const getAllPodcastAndLastEpisodes = async () => {
 			episodePubDate: episodes.pubDate,
 			episodeSlug: episodes.episodeSlug,
 			podcastSlug: podcasts.podcastSlug,
+			itunesImage: podcasts.itunesImage,
 		})
 		.from(podcasts)
 		.leftJoin(
@@ -276,6 +215,7 @@ export const getAllPodcastAndLastEpisodes = async () => {
 			),
 		)
 		.orderBy(desc(lastEpisodeSubquery.maxPubDate));
+	// .limit(21);
 };
 
 export const getEpisodeTitles = unstable_cache(
@@ -430,12 +370,13 @@ export const getPopularRunClubs = unstable_cache(
 export const searchEpisodesWithPodcasts = async (query: string) => {
 	return db
 		.select({
-			title: podcasts.title,
+			podcastTitle: podcasts.title,
 			podcastId: podcasts.id,
-			image: podcasts.image,
+			podcastImage: podcasts.image,
+			itunesImage: podcasts.itunesImage,
 			episodeTitle: episodes.title,
 			episodeId: episodes.id,
-			episodePubDate: episodes.pubDate,
+			pubDate: episodes.pubDate,
 			episodeSlug: episodes.episodeSlug,
 			podcastSlug: podcasts.podcastSlug,
 		})

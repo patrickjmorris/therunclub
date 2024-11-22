@@ -39,8 +39,12 @@ export async function generateMetadata({
 			title: episode.title,
 			description: description,
 			siteName: "The Run Club",
-			publishedTime: new Date(episode.pubDate).toISOString(),
-			modifiedTime: new Date(episode.pubDate).toISOString(),
+			publishedTime: episode.pubDate
+				? new Date(episode.pubDate).toISOString()
+				: "",
+			modifiedTime: episode.pubDate
+				? new Date(episode.pubDate).toISOString()
+				: "",
 			images: [
 				{
 					url: imageUrl,
@@ -72,7 +76,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		notFound();
 	}
 
-	const date = new Date(episode.pubDate);
+	const date = episode.pubDate ? new Date(episode.pubDate) : new Date();
 	const imageUrl = episode.image || episode.podcastImage;
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
 
@@ -80,7 +84,9 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		"@context": "https://schema.org",
 		"@type": "PodcastEpisode",
 		name: episode.title,
-		datePublished: new Date(episode.pubDate).toISOString(),
+		datePublished: episode.pubDate
+			? new Date(episode.pubDate).toISOString()
+			: "",
 		description:
 			episode.content || `Listen to ${episode.title} on The Run Club`,
 		duration: episode.duration,

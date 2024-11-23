@@ -104,7 +104,7 @@ export const podcasts = pgTable(
 		title: text("title").notNull(),
 		podcastSlug: text("podcast_slug").notNull(),
 		description: text("description"),
-		feedUrl: text("feed_url").notNull(),
+		feedUrl: text("feed_url").notNull().unique(),
 		image: text("image"),
 		vibrantColor: text("vibrant_color"),
 		author: text("author"),
@@ -122,7 +122,7 @@ export const podcasts = pgTable(
 		episodeCount: integer("episode_count"),
 		isDead: integer("is_dead").default(0),
 		hasParseErrors: integer("has_parse_errors").default(0),
-		iTunesId: text("itunes_id"),
+		iTunesId: text("itunes_id").notNull().unique(),
 	},
 	(table) => ({
 		feedUrlIdx: uniqueIndex("feed_url_idx").on(table.feedUrl),

@@ -1,11 +1,11 @@
 import { db, client } from "./index";
-import { podcasts, episodes } from "./schema";
+import { podcasts, episodes, Episode } from "./schema";
 import Parser from "rss-parser";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { slugify } from "@/lib/utils";
 import type { iTunesSearchResponse } from "@/lib/itunes-types";
 import { createPodcastIndexClient } from "@/lib/podcast-index";
-import { nanoid } from "nanoid";
+import { decode } from "html-entities";
 
 const podcastIndex = createPodcastIndexClient({
 	key: process.env.PODCAST_INDEX_API_KEY || "",
@@ -37,36 +37,6 @@ async function getITunesPodcasts() {
 	return data.results;
 }
 
-async function deletePodcastAndEpisodes(feedUrl: string) {
-	try {
-		// First, get the podcast ID
-		const [podcast] = await db
-			.select({ id: podcasts.id })
-			.from(podcasts)
-			.where(sql`${podcasts.feedUrl} = ${feedUrl}`);
-
-		if (podcast) {
-			// Delete all episodes first
-			await db
-				.delete(episodes)
-				.where(sql`${episodes.podcastId} = ${podcast.id}`);
-
-			// Then delete the podcast
-			await db.delete(podcasts).where(sql`${podcasts.id} = ${podcast.id}`);
-
-			console.log(
-				`Successfully deleted podcast and episodes for feed: ${feedUrl}`,
-			);
-		}
-	} catch (error) {
-		console.error(
-			`Error deleting podcast and episodes for feed: ${feedUrl}`,
-			error,
-		);
-		throw error;
-	}
-}
-
 export async function seed() {
 	console.log("Starting database seeding process...");
 
@@ -85,130 +55,148 @@ export async function seed() {
 		console.log(`Found ${itunesPodcasts.length} podcasts from iTunes`);
 
 		for (const itunesPodcast of itunesPodcasts) {
-			console.log(`Processing podcast: ${itunesPodcast.collectionName}`);
-
-			// Check if podcast exists and needs to be removed
-			const healthCheck = await podcastIndex.getPodcastByFeedUrl(
-				itunesPodcast.feedUrl,
-			);
-			if (!healthCheck) {
-				console.log(
-					`Podcast ${itunesPodcast.collectionName} failed health check, removing if exists...`,
-				);
-				await deletePodcastAndEpisodes(itunesPodcast.feedUrl);
-				continue;
-			}
-
 			try {
-				const data = await parser.parseURL(itunesPodcast.feedUrl);
-				console.log(`Successfully parsed feed: ${itunesPodcast.feedUrl}`);
+				// Check if podcast already exists
+				const [existingPodcast] = await db
+					.select()
+					.from(podcasts)
+					.where(eq(podcasts.iTunesId, itunesPodcast.collectionId.toString()))
+					.limit(1);
 
-				try {
-					const [insertedPodcast] = await db
-						.insert(podcasts)
-						.values({
-							title: data.title || itunesPodcast.collectionName,
-							podcastSlug: slugify(data.title || itunesPodcast.collectionName),
-							feedUrl: itunesPodcast.feedUrl,
-							description: data.description || itunesPodcast.description || "",
-							image: data.image?.url || "",
-							author: itunesPodcast.artistName || data.itunes?.author || "",
-							link: data.link || "",
-							language: data.language || "",
-							lastBuildDate: data.lastBuildDate
-								? new Date(data.lastBuildDate)
-								: new Date(itunesPodcast.releaseDate),
-							itunesOwnerName: data.itunes?.owner?.name || "",
-							itunesOwnerEmail: data.itunes?.owner?.email || "",
-							itunesImage: data.itunes?.image || "",
-							itunesAuthor: data.itunes?.author || "",
-							itunesSummary: data.itunes?.summary || "",
-							itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
-							episodeCount: healthCheck.episodeCount,
-							isDead: healthCheck.isDead,
-							hasParseErrors: healthCheck.hasParseErrors,
-							iTunesId: itunesPodcast.collectionId.toString(),
-						})
-						.onConflictDoUpdate({
-							target: podcasts.feedUrl,
-							set: {
-								title: sql`EXCLUDED.title`,
-								podcastSlug: sql`EXCLUDED.podcast_slug`,
-								description: sql`EXCLUDED.description`,
-								image: sql`EXCLUDED.image`,
-								author: sql`EXCLUDED.author`,
-								link: sql`EXCLUDED.link`,
-								language: sql`EXCLUDED.language`,
-								lastBuildDate: sql`EXCLUDED.last_build_date`,
-								itunesOwnerName: sql`EXCLUDED.itunes_owner_name`,
-								itunesOwnerEmail: sql`EXCLUDED.itunes_owner_email`,
-								itunesImage: sql`EXCLUDED.itunes_image`,
-								itunesAuthor: sql`EXCLUDED.itunes_author`,
-								itunesSummary: sql`EXCLUDED.itunes_summary`,
-								itunesExplicit: sql`EXCLUDED.itunes_explicit`,
-								episodeCount: sql`EXCLUDED.episode_count`,
-								isDead: sql`EXCLUDED.is_dead`,
-								hasParseErrors: sql`EXCLUDED.has_parse_errors`,
-								iTunesId: sql`EXCLUDED.itunes_id`,
-							},
-						})
-						.returning();
-					console.log(`Inserted/updated podcast: ${insertedPodcast.title}`);
-
-					const podcastId = insertedPodcast.id;
-
-					for (const item of data.items) {
-						try {
-							await db
-								.insert(episodes)
-								.values({
-									podcastId: podcastId,
-									episodeSlug: slugify(item.title || ""),
-									title: item.title || "",
-									pubDate: new Date(item.pubDate || ""),
-									content: item.content || "",
-									link: item.link || "",
-									enclosureUrl: item.enclosure?.url ?? "",
-									duration: item.itunes?.duration || "",
-									explicit: item.itunes?.explicit || "no",
-									image: item.itunes?.image || "",
-								})
-								.onConflictDoUpdate({
-									target: episodes.id,
-									set: {
-										podcastId: sql`EXCLUDED.podcast_id`,
-										episodeSlug: sql`EXCLUDED.episode_slug`,
-										title: sql`EXCLUDED.title`,
-										pubDate: sql`EXCLUDED.pub_date`,
-										content: sql`EXCLUDED.content`,
-										link: sql`EXCLUDED.link`,
-										enclosureUrl: sql`EXCLUDED.enclosure_url`,
-										duration: sql`EXCLUDED.duration`,
-										explicit: sql`EXCLUDED.explicit`,
-										image: sql`EXCLUDED.image`,
-									},
-								});
-							console.log(`Inserted/updated episode: ${item.title}`);
-						} catch (episodeError) {
-							console.error(
-								`Error inserting/updating episode: ${item.title}`,
-								episodeError,
-							);
-						}
-					}
+				// Parse feed and get health check regardless of existence
+				const healthCheck = await podcastIndex.getPodcastByFeedUrl(
+					itunesPodcast.feedUrl,
+				);
+				if (!healthCheck) {
 					console.log(
-						`Processed ${data.items.length} episodes for ${itunesPodcast.collectionName}`,
+						`Skipping ${itunesPodcast.collectionName} - failed health check`,
 					);
-				} catch (podcastError) {
-					console.error(
-						`Error inserting/updating podcast: ${itunesPodcast.feedUrl}`,
-						podcastError,
+					continue;
+				}
+
+				const data = await parser.parseURL(itunesPodcast.feedUrl);
+
+				// Always insert/update podcast data
+				const [insertedPodcast] = await db
+					.insert(podcasts)
+					.values({
+						title: decode(data.title || itunesPodcast.collectionName),
+						podcastSlug: slugify(
+							decode(data.title || itunesPodcast.collectionName),
+						),
+						feedUrl: itunesPodcast.feedUrl,
+						description: decode(
+							data.description || itunesPodcast.description || "",
+						),
+						image: data.image?.url || itunesPodcast.artworkUrl600 || "",
+						author: decode(
+							itunesPodcast.artistName || data.itunes?.author || "",
+						),
+						link: data.link || itunesPodcast.collectionViewUrl || "",
+						language: data.language || "",
+						lastBuildDate: data.lastBuildDate
+							? new Date(data.lastBuildDate)
+							: new Date(itunesPodcast.releaseDate),
+						itunesOwnerName: decode(data.itunes?.owner?.name || ""),
+						itunesOwnerEmail: data.itunes?.owner?.email || "",
+						itunesImage:
+							itunesPodcast.artworkUrl600 || data.itunes?.image || "",
+						itunesAuthor: decode(
+							itunesPodcast.artistName || data.itunes?.author || "",
+						),
+						itunesSummary: decode(data.itunes?.summary || ""),
+						itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
+						episodeCount: healthCheck.episodeCount,
+						isDead: healthCheck.isDead,
+						hasParseErrors: healthCheck.hasParseErrors,
+						iTunesId: itunesPodcast.collectionId.toString(),
+					})
+					.onConflictDoUpdate({
+						target: podcasts.iTunesId,
+						set: {
+							title: sql`EXCLUDED.title`,
+							podcastSlug: sql`EXCLUDED.podcast_slug`,
+							description: sql`EXCLUDED.description`,
+							image: sql`EXCLUDED.image`,
+							author: sql`EXCLUDED.author`,
+							link: sql`EXCLUDED.link`,
+							language: sql`EXCLUDED.language`,
+							lastBuildDate: sql`EXCLUDED.last_build_date`,
+							itunesOwnerName: sql`EXCLUDED.itunes_owner_name`,
+							itunesOwnerEmail: sql`EXCLUDED.itunes_owner_email`,
+							itunesImage: sql`EXCLUDED.itunes_image`,
+							itunesAuthor: sql`EXCLUDED.itunes_author`,
+							itunesSummary: sql`EXCLUDED.itunes_summary`,
+							itunesExplicit: sql`EXCLUDED.itunes_explicit`,
+							episodeCount: sql`EXCLUDED.episode_count`,
+							isDead: sql`EXCLUDED.is_dead`,
+							hasParseErrors: sql`EXCLUDED.has_parse_errors`,
+						},
+					})
+					.returning();
+
+				if (insertedPodcast) {
+					// Get latest episode if podcast existed
+					const [latestEpisode] = existingPodcast
+						? await db
+								.select({ pubDate: episodes.pubDate })
+								.from(episodes)
+								.where(eq(episodes.podcastId, existingPodcast.id))
+								.orderBy(sql`${episodes.pubDate} DESC`)
+								.limit(1)
+						: [null];
+
+					// Filter and prepare episodes
+					const episodeValues = (data.items ?? [])
+						.filter((item): item is NonNullable<typeof item> => {
+							if (!item.enclosure?.url) return false;
+							if (latestEpisode?.pubDate && item.pubDate) {
+								return new Date(item.pubDate) > latestEpisode.pubDate;
+							}
+							return true;
+						})
+						.map((item) => ({
+							title: decode(item.title || ""),
+							podcastId: insertedPodcast.id,
+							episodeSlug: slugify(decode(item.title || "")),
+							pubDate: new Date(item.pubDate || Date.now()),
+							content: item.content || null,
+							link: item.link || null,
+							enclosureUrl: item.enclosure?.url,
+							duration: item.itunes?.duration || "",
+							explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+							image: item.itunes?.image || null,
+						}));
+
+					if (episodeValues.length > 0) {
+						await db
+							.insert(episodes)
+							.values(episodeValues as Episode[])
+							.onConflictDoUpdate({
+								target: [episodes.enclosureUrl],
+								set: {
+									title: sql`EXCLUDED.title`,
+									episodeSlug: sql`EXCLUDED.episode_slug`,
+									pubDate: sql`EXCLUDED.pub_date`,
+									content: sql`EXCLUDED.content`,
+									link: sql`EXCLUDED.link`,
+									duration: sql`EXCLUDED.duration`,
+									explicit: sql`EXCLUDED.explicit`,
+									image: sql`EXCLUDED.image`,
+								},
+							});
+					}
+
+					console.log(
+						`${existingPodcast ? "Updated" : "Created"} podcast ${
+							itunesPodcast.collectionName
+						} with ${episodeValues.length} episodes`,
 					);
 				}
-			} catch (parseError) {
+			} catch (error) {
 				console.error(
-					`Error parsing feed: ${itunesPodcast.feedUrl}`,
-					parseError,
+					`Error processing podcast ${itunesPodcast.collectionName}:`,
+					error,
 				);
 			}
 		}
@@ -222,7 +210,7 @@ export async function seed() {
 	}
 }
 
-const SEED_TIMEOUT = 3000000;
+const SEED_TIMEOUT = 3000000; // 5 minutes
 
 Promise.race([
 	seed(),

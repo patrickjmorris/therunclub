@@ -10,26 +10,31 @@ import {
 	runningClubs,
 } from "./schema";
 
-export const getNewEpisodes = async (limit = 3) => {
-	return db
-		.select({
-			podcastId: podcasts.id,
-			podcastTitle: podcasts.title,
-			podcastImage: podcasts.image,
-			podcastSlug: podcasts.podcastSlug,
-			itunesImage: podcasts.itunesImage,
-			episodeId: episodes.id,
-			episodeTitle: episodes.title,
-			episodeImage: episodes.image,
-			episodeDuration: episodes.duration,
-			episodeSlug: episodes.episodeSlug,
-			pubDate: episodes.pubDate,
-		})
-		.from(podcasts)
-		.innerJoin(episodes, eq(podcasts.id, episodes.podcastId))
-		.orderBy(desc(episodes.pubDate))
-		.limit(limit);
-};
+export const getNewEpisodes = unstable_cache(
+	async (limit = 3) => {
+		return db
+			.select({
+				podcastId: podcasts.id,
+				podcastTitle: podcasts.title,
+				podcastImage: podcasts.image,
+				podcastSlug: podcasts.podcastSlug,
+				itunesImage: podcasts.itunesImage,
+				episodeId: episodes.id,
+				episodeTitle: episodes.title,
+				episodeImage: episodes.image,
+				episodeDuration: episodes.duration,
+				episodeSlug: episodes.episodeSlug,
+				pubDate: episodes.pubDate,
+			})
+			.from(podcasts)
+			.innerJoin(episodes, eq(podcasts.id, episodes.podcastId))
+			.where(isNotNull(episodes.pubDate))
+			.orderBy(desc(episodes.pubDate))
+			.limit(limit);
+	},
+	["new-episodes"],
+	{ tags: ["episodes"], revalidate: 10800 }, // 3 hours in seconds
+);
 
 // New queries based on episodes.ts functions
 

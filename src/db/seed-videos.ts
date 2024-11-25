@@ -22,7 +22,9 @@ async function checkConnection() {
 	}
 }
 
-export async function seedVideos(options = { limit: 5, videosPerChannel: 10 }) {
+export async function seedVideos(
+	options = { limit: 50, videosPerChannel: 10 },
+) {
 	console.log("Starting video database seeding process...");
 
 	try {

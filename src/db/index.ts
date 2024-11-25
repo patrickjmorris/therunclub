@@ -340,7 +340,7 @@ export async function loadInitialData() {
 					podcastId: insertedPodcast.id,
 					title: item.title || "",
 					episodeSlug: slugify(item.title || ""),
-					pubDate: new Date(item.pubDate || ""),
+					pubDate: item.pubDate ? new Date(item.pubDate) : null,
 					content: item.content ?? null,
 					link: item.link ?? null,
 					enclosureUrl: item.enclosure?.url ?? "",

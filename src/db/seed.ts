@@ -159,7 +159,7 @@ export async function seed() {
 							title: decode(item.title || ""),
 							podcastId: insertedPodcast.id,
 							episodeSlug: slugify(decode(item.title || "")),
-							pubDate: new Date(item.pubDate || Date.now()),
+							pubDate: item.pubDate ? new Date(item.pubDate) : null,
 							content: item.content || null,
 							link: item.link || null,
 							enclosureUrl: item.enclosure?.url,

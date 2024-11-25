@@ -54,9 +54,23 @@ async function getITunesPodcastByID(iTunesId: string) {
 }
 
 async function processPodcast(podcast: Podcast, parser: Parser) {
+	console.log("\n--- Starting podcast processing ---");
+	console.log({
+		podcastId: podcast.id,
+		title: podcast.title,
+		feedUrl: podcast.feedUrl,
+		lastBuildDate: podcast.lastBuildDate,
+	});
+
 	try {
 		// Get health check from Podcast Index
 		const healthCheck = await podcastIndex.getPodcastByFeedUrl(podcast.feedUrl);
+		console.log("Health check result:", {
+			isDead: healthCheck?.isDead,
+			episodeCount: healthCheck?.episodeCount,
+			hasParseErrors: healthCheck?.hasParseErrors,
+		});
+
 		if (!healthCheck) {
 			console.log(
 				`Podcast ${podcast.title} failed health check, skipping update`,
@@ -70,11 +84,18 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 
 		// Get iTunes data
 		const itunesData = await getITunesPodcastByID(podcast.iTunesId ?? "");
-		console.log(`iTunes data for ${podcast.title}:`);
+		console.log("iTunes data status:", {
+			found: !!itunesData,
+			iTunesId: podcast.iTunesId,
+		});
 
 		// Parse RSS feed
 		const data = await parser.parseURL(podcast.feedUrl);
-		console.log(`Processing podcast ${podcast.title}`);
+		console.log("RSS feed parsed:", {
+			itemCount: data.items?.length ?? 0,
+			feedTitle: data.title,
+			lastBuildDate: data.lastBuildDate,
+		});
 
 		// Determine the lastBuildDate
 		let lastBuildDate: Date | null = null;
@@ -85,27 +106,29 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 		}
 
 		// Check if we need to update based on lastBuildDate
-		if (
-			lastBuildDate &&
-			podcast.lastBuildDate &&
-			lastBuildDate <= podcast.lastBuildDate
-		) {
-			console.log(
-				`Skipping episode updates for ${podcast.title} - no new content since last update`,
-			);
-			return {
-				success: true,
-				podcastId: podcast.id,
-				episodesUpdated: 0,
-				skippedReason: "No new content",
-			};
-		}
+		// if (
+		// 	lastBuildDate &&
+		// 	podcast.lastBuildDate &&
+		// 	lastBuildDate <= podcast.lastBuildDate
+		// ) {
+		// 	console.log(
+		// 		`Skipping episode updates for ${podcast.title} - no new content since last update`,
+		// 	);
+		// 	return {
+		// 		success: true,
+		// 		podcastId: podcast.id,
+		// 		episodesUpdated: 0,
+		// 		skippedReason: "No new content",
+		// 	};
+		// }
 
 		// Update podcast metadata first with decoded text
 		const [updatedPodcast] = await db
-			.update(podcasts)
-			.set({
+			.insert(podcasts)
+			.values({
 				title: decode(data.title || podcast.title),
+				podcastSlug: slugify(decode(data.title || podcast.title)),
+				feedUrl: podcast.feedUrl,
 				description:
 					data.description || itunesData?.description || podcast.description,
 
@@ -137,8 +160,29 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 				isDead: healthCheck.isDead,
 				hasParseErrors: healthCheck.hasParseErrors,
 				iTunesId: itunesData?.collectionId?.toString() || "",
+			} satisfies Partial<Podcast>)
+			.onConflictDoUpdate({
+				target: podcasts.feedUrl,
+				set: {
+					title: sql`EXCLUDED.title`,
+					description: sql`EXCLUDED.description`,
+					image: sql`EXCLUDED.image`,
+					author: sql`EXCLUDED.author`,
+					link: sql`EXCLUDED.link`,
+					language: sql`EXCLUDED.language`,
+					lastBuildDate: sql`EXCLUDED.last_build_date`,
+					itunesOwnerName: sql`EXCLUDED.itunes_owner_name`,
+					itunesOwnerEmail: sql`EXCLUDED.itunes_owner_email`,
+					itunesImage: sql`EXCLUDED.itunes_image`,
+					itunesAuthor: sql`EXCLUDED.itunes_author`,
+					itunesSummary: sql`EXCLUDED.itunes_summary`,
+					itunesExplicit: sql`EXCLUDED.itunes_explicit`,
+					episodeCount: sql`EXCLUDED.episode_count`,
+					isDead: sql`EXCLUDED.is_dead`,
+					hasParseErrors: sql`EXCLUDED.has_parse_errors`,
+					iTunesId: sql`EXCLUDED.itunes_id`,
+				},
 			})
-			.where(eq(podcasts.id, podcast.id))
 			.returning();
 
 		// Process episodes if podcast was updated successfully
@@ -152,7 +196,7 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 				.limit(1);
 
 			// Prepare episode values for bulk insert/update with decoded text
-			const episodeValues = (data.items ?? [])
+			let episodeValues = (data.items ?? [])
 				.filter((item): item is NonNullable<typeof item> => {
 					// Filter out episodes without enclosure URL
 					if (!item.enclosure?.url) return false;
@@ -179,24 +223,65 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 				}));
 
 			if (episodeValues.length > 0) {
-				// Bulk upsert episodes using enclosureUrl as the unique identifier
-				await db
-					.insert(episodes)
-					.values(episodeValues as Episode[])
-					.onConflictDoUpdate({
-						target: [episodes.enclosureUrl],
-						set: {
-							title: sql`EXCLUDED.title`,
-							episodeSlug: sql`EXCLUDED.episode_slug`,
-							pubDate: sql`EXCLUDED.pub_date`,
-							content: sql`EXCLUDED.content`,
-							link: sql`EXCLUDED.link`,
-							duration: sql`EXCLUDED.duration`,
-							explicit: sql`EXCLUDED.explicit`,
-							image: sql`EXCLUDED.image`,
-							enclosureUrl: sql`EXCLUDED.enclosure_url`,
-						},
+				console.log(`Attempting to upsert ${episodeValues.length} episodes`);
+
+				// Check for duplicate enclosureUrls
+				// const enclosureUrls = episodeValues.map((ep) => ep.enclosureUrl);
+				// const duplicates = enclosureUrls.filter(
+				// 	(url, index) => enclosureUrls.indexOf(url) !== index,
+				// );
+				// New Logic to remove duplicates
+				const enclosureUrls = episodeValues.map((ep) => ep.enclosureUrl);
+				const duplicates = enclosureUrls.filter(
+					(url, index) => enclosureUrls.indexOf(url) !== index,
+				);
+
+				if (duplicates.length > 0) {
+					console.warn("Found duplicate enclosureUrls:", duplicates);
+					// Remove duplicates by keeping only the first occurrence
+					const uniqueEpisodes = episodeValues.filter(
+						(episode, index, self) =>
+							index ===
+							self.findIndex((e) => e.enclosureUrl === episode.enclosureUrl),
+					);
+					console.log(
+						`Removed ${
+							episodeValues.length - uniqueEpisodes.length
+						} duplicate episodes`,
+					);
+					episodeValues = uniqueEpisodes;
+				}
+
+				if (duplicates.length > 0) {
+					console.warn("Found duplicate enclosureUrls:", duplicates);
+				}
+
+				try {
+					await db
+						.insert(episodes)
+						.values(episodeValues as Episode[])
+						.onConflictDoUpdate({
+							target: [episodes.enclosureUrl],
+							set: {
+								title: sql`EXCLUDED.title`,
+								episodeSlug: sql`EXCLUDED.episode_slug`,
+								pubDate: sql`EXCLUDED.pub_date`,
+								content: sql`EXCLUDED.content`,
+								link: sql`EXCLUDED.link`,
+								duration: sql`EXCLUDED.duration`,
+								explicit: sql`EXCLUDED.explicit`,
+								image: sql`EXCLUDED.image`,
+							},
+						});
+				} catch (upsertError) {
+					console.error("Episode upsert error details:", {
+						podcastId: podcast.id,
+						podcastTitle: podcast.title,
+						episodeCount: episodeValues.length,
+						error: upsertError,
 					});
+					throw upsertError;
+				}
 			}
 
 			return {
@@ -214,8 +299,12 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 			skippedReason: "No podcast update needed",
 		};
 	} catch (error) {
-		console.error(`Error updating podcast ${podcast.title}:`, error);
-		return { success: false, podcastId: podcast.id, error };
+		console.error("Podcast processing error:", {
+			podcastId: podcast.id,
+			title: podcast.title,
+			error: error instanceof Error ? error.message : error,
+		});
+		throw error;
 	}
 }
 
@@ -307,6 +396,7 @@ export async function loadInitialData() {
 					itunesSummary: data.itunes?.summary ?? "",
 					itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
 					iTunesId: itunesData?.collectionId?.toString() || "",
+					vibrantColor: null,
 				})
 				.onConflictDoUpdate({
 					target: podcasts.feedUrl,
@@ -329,6 +419,7 @@ export async function loadInitialData() {
 						itunesSummary: data.itunes?.summary ?? "",
 						itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
 						iTunesId: itunesData?.collectionId?.toString() || "",
+						vibrantColor: null,
 					},
 				})
 				.returning()) as [Podcast];
@@ -355,7 +446,7 @@ export async function loadInitialData() {
 					.insert(episodes)
 					.values(episodeValues as Episode[])
 					.onConflictDoUpdate({
-						target: [episodes.id, episodes.enclosureUrl],
+						target: [episodes.enclosureUrl, episodes.episodeSlug],
 						set: {
 							title: sql`EXCLUDED.title`,
 							episodeSlug: sql`EXCLUDED.episode_slug`,

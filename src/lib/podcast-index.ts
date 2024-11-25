@@ -57,11 +57,11 @@ export function createPodcastIndexClient(config: PodcastIndexConfig) {
 		const timestamp = Math.floor(Date.now() / 1000);
 		const authString = `${config.key}${config.secret}${timestamp}`;
 		const hash = crypto.createHash("sha1").update(authString).digest("hex");
-		// console.log("hash", hash);
-		// console.log("timestamp", timestamp);
-		// console.log("authString", authString);
-		// console.log("config.key", config.key);
-		// console.log("config.secret", config.secret);
+		console.log("hash", hash);
+		console.log("timestamp", timestamp);
+		console.log("authString", authString);
+		console.log("config.key", config.key);
+		console.log("config.secret", config.secret);
 
 		return {
 			"User-Agent": "TheRunClub/1.0",

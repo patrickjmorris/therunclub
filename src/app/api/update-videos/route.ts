@@ -42,9 +42,11 @@ async function handleUpdate(request: NextRequest) {
 		// Get channelId from query parameters
 		const searchParams = request.nextUrl.searchParams;
 		const channelId = searchParams.get("channelId");
+		const force = searchParams.get("force") === "true";
 
 		const results = await seedVideos({
 			...(channelId ? { youtubeChannelId: channelId } : {}),
+			forceUpdate: force,
 		});
 
 		return NextResponse.json(
@@ -52,6 +54,7 @@ async function handleUpdate(request: NextRequest) {
 				message: channelId
 					? `Channel ${channelId} updated successfully`
 					: "Video and channel data updated successfully",
+				forced: force,
 				results,
 			},
 			{ status: 200 },

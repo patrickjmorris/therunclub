@@ -27,6 +27,7 @@ export async function seedVideos(
 		limit?: number;
 		videosPerChannel?: number;
 		youtubeChannelId?: string;
+		forceUpdate?: boolean;
 	} = { limit: 50, videosPerChannel: 10 },
 ) {
 	console.log("Starting video database seeding process...");
@@ -68,8 +69,8 @@ export async function seedVideos(
 
 				// biome-ignore lint/suspicious/noExplicitAny: fix me
 				let channelInfo: any;
-				if (!existingChannel.length) {
-					// Only fetch from API if channel doesn't exist
+				if (!existingChannel.length || options.forceUpdate) {
+					// Always fetch if forced or channel doesn't exist
 					channelInfo = await getChannelInfo(channelId);
 					if (!channelInfo?.items[0]) {
 						console.log(`No channel info found for ${channelId}`);
@@ -77,9 +78,10 @@ export async function seedVideos(
 						continue;
 					}
 				} else {
-					// Use existing channel data if it's less than 24 hours old
+					// Check cache only if not forced
 					const lastUpdate = existingChannel[0].updatedAt;
 					if (
+						!options.forceUpdate &&
 						lastUpdate &&
 						Date.now() - lastUpdate.getTime() < 24 * 60 * 60 * 1000
 					) {
@@ -161,8 +163,8 @@ export async function seedVideos(
 							.where(sql`youtube_video_id = ${item.snippet.resourceId.videoId}`)
 							.limit(1);
 
-						if (existingVideo.length) {
-							// Skip if video exists and was updated recently
+						if (existingVideo.length && !options.forceUpdate) {
+							// Skip if video exists and not forced
 							const lastUpdate = existingVideo[0].updatedAt;
 							if (
 								lastUpdate &&

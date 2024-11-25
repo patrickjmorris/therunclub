@@ -8,6 +8,7 @@ import { Metadata } from "next";
 import {
 	getAllPodcastAndLastEpisodes,
 	getFeaturedPodcasts,
+	getNewEpisodes,
 	searchEpisodesWithPodcasts,
 } from "@/db/queries";
 import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
@@ -44,7 +45,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 
 	const podcasts = query
 		? await searchEpisodesWithPodcasts(query)
-		: await getAllPodcastAndLastEpisodes();
+		: await getNewEpisodes(25);
 
 	return (
 		<div className="container py-8 md:py-12">
@@ -62,7 +63,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 					{featuredPodcasts.map((podcast) => (
 						<Link
-							key={podcast.podcastId}
+							key={`featured-${podcast.podcastId}`}
 							href={`/podcasts/${podcast.podcastSlug}`}
 							className="transition-opacity hover:opacity-80"
 						>
@@ -71,7 +72,14 @@ export default async function PodcastList({ searchParams }: PageProps) {
 									<div className="flex flex-col items-center text-center gap-4">
 										<div className="relative w-20 h-20">
 											<div className="absolute inset-0">
-												<Image
+												{/* <Image
+													src={podcast.image ?? ""}
+													alt={podcast.title}
+													width={80}
+													height={80}
+													className="rounded-lg object-cover w-full h-full"
+												/> */}
+												<img
 													src={podcast.image ?? ""}
 													alt={podcast.title}
 													width={80}
@@ -96,23 +104,30 @@ export default async function PodcastList({ searchParams }: PageProps) {
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					{podcasts.map((podcast) => (
 						<Card
-							key={podcast.podcastId}
+							key={podcast.episodeId}
 							className="group hover:shadow-lg transition-all"
 						>
 							<Link href={`/podcasts/${podcast.podcastSlug}`}>
 								<CardHeader className="space-y-4">
 									<div className="aspect-square relative overflow-hidden rounded-lg">
 										<Image
+											alt={podcast.podcastTitle ?? ""}
+											className="object-cover transition-transform group-hover:scale-105"
+											height={400}
+											src={podcast.podcastImage || podcast.itunesImage || ""}
+											width={400}
+										/>
+										{/* <img
 											alt={podcast.title ?? ""}
 											className="object-cover transition-transform group-hover:scale-105"
 											height={400}
-											src={podcast.image ?? ""}
+											src={podcast.image || podcast.itunesImage || ""}
 											width={400}
-										/>
+										/> */}
 									</div>
 									<div className="space-y-2">
 										<CardTitle className="line-clamp-1">
-											{podcast.title}
+											{podcast.podcastTitle}
 										</CardTitle>
 										{podcast.episodeTitle && (
 											<p className="text-sm text-muted-foreground line-clamp-2">
@@ -122,9 +137,9 @@ export default async function PodcastList({ searchParams }: PageProps) {
 									</div>
 								</CardHeader>
 								<CardContent className="space-y-2">
-									{podcast.episodePubDate && (
+									{podcast.pubDate && (
 										<FormattedDate
-											date={new Date(podcast.episodePubDate)}
+											date={new Date(podcast.pubDate)}
 											className="text-sm text-muted-foreground"
 										/>
 									)}

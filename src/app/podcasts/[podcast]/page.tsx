@@ -6,8 +6,8 @@ import {
 } from "@/db/queries";
 import { db } from "@/db";
 import { podcasts } from "@/db/schema";
-import { Container } from "@/components/Container";
 import EpisodeEntry from "@/components/podcasts/EpisodeEntry";
+import { isNotNull } from "drizzle-orm";
 
 export const revalidate = 3600;
 
@@ -59,7 +59,8 @@ export async function generateMetadata({
 export async function generateStaticParams() {
 	const allPodcasts = await db
 		.select({ slug: podcasts.podcastSlug })
-		.from(podcasts);
+		.from(podcasts)
+		.where(isNotNull(podcasts.podcastSlug));
 
 	return allPodcasts.map((podcast) => ({
 		podcast: podcast.slug,
@@ -70,6 +71,7 @@ export default async function PodcastPage(props: {
 	params: Promise<{ podcast: string }>;
 }) {
 	const params = await props.params;
+	// console.log("params", params);
 	const podcast = await getPodcastBySlug(params.podcast);
 
 	if (!podcast || !podcast.podcastSlug) {
@@ -92,7 +94,9 @@ export default async function PodcastPage(props: {
 		episodes: episodes.map((episode) => ({
 			"@type": "PodcastEpisode",
 			name: episode.title,
-			datePublished: new Date(episode.pubDate).toISOString(),
+			datePublished: episode.pubDate
+				? new Date(episode.pubDate).toISOString()
+				: "",
 			url: `/podcasts/${podcast.podcastSlug}/${episode.episodeSlug}`,
 		})),
 	};
@@ -104,11 +108,6 @@ export default async function PodcastPage(props: {
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
 			/>
-			{/* <Container className="mb-4">
-				<h1 className="text-2xl font-bold leading-7 text-slate-900">
-					{podcast.title}
-				</h1>
-			</Container> */}
 			<div className="divide-y divide-slate-100 sm:mt-4 lg:mt-8 lg:border-t lg:border-slate-100">
 				{episodes.map((episode) => (
 					<EpisodeEntry

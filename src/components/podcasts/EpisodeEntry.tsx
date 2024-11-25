@@ -18,7 +18,7 @@ export default async function EpisodeEntry({
 
 	if (!episode) return null;
 
-	const date = new Date(episode.pubDate);
+	const date = episode.pubDate ? new Date(episode.pubDate) : null;
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
 
 	return (
@@ -43,12 +43,14 @@ export default async function EpisodeEntry({
 								{episode.title}
 							</Link>
 						</h2>
-						<FormattedDate
-							date={date}
-							className="text-sm text-muted-foreground mt-1"
-						/>
+						{date && (
+							<FormattedDate
+								date={date}
+								className="text-sm text-muted-foreground mt-1"
+							/>
+						)}
 					</div>
-					<div className="prose dark:prose-invert col-span-2 lg:col-span-1 lg:col-start-2 line-clamp-3">
+					<div className="prose dark:prose-invert col-span-2 lg:col-span-1 lg:col-start-2 h-18 line-clamp-3">
 						<div
 							// biome-ignore lint/security/noDangerouslySetInnerHtml: Sanitized
 							dangerouslySetInnerHTML={{

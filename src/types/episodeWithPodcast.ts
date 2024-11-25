@@ -1,7 +1,7 @@
 export interface EpisodeWithPodcast {
 	id: string;
 	title: string;
-	pubDate: Date;
+	pubDate: Date | null;
 	content: string | null;
 	podcastId: string | null;
 	podcastTitle: string;

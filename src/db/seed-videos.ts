@@ -23,7 +23,11 @@ async function checkConnection() {
 }
 
 export async function seedVideos(
-	options = { limit: 50, videosPerChannel: 10 },
+	options: {
+		limit?: number;
+		videosPerChannel?: number;
+		youtubeChannelId?: string;
+	} = { limit: 50, videosPerChannel: 10 },
 ) {
 	console.log("Starting video database seeding process...");
 
@@ -38,8 +42,16 @@ export async function seedVideos(
 			videos: { updated: 0, failed: 0 },
 		};
 
-		// Process only the specified number of channels
-		const channelsToProcess = CHANNELS.slice(0, options.limit);
+		// Use single channel or process multiple channels
+		const channelsToProcess = options.youtubeChannelId
+			? [options.youtubeChannelId]
+			: CHANNELS.slice(0, options.limit);
+
+		// If specific channel provided, override videosPerChannel limit
+		if (options.youtubeChannelId) {
+			options.videosPerChannel = Infinity; // Load all videos
+		}
+
 		console.log(`Processing ${channelsToProcess.length} channels...`);
 
 		// Process channels in sequence to respect rate limits

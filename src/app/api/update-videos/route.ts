@@ -22,58 +22,65 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 	return apiKeyFromHeaders === validApiKey || apiKeyFromRequest === validApiKey;
 }
 
-async function handleUpdate() {
-	if (!isUpdating) {
-		isUpdating = true;
-		clearTimeout(lockTimeout);
-
-		// Set a timeout to release the lock in case of unexpected errors
-		lockTimeout = setTimeout(() => {
-			isUpdating = false;
-		}, LOCK_TIMEOUT);
-
-		try {
-			const results = await seedVideos();
-			return NextResponse.json(
-				{
-					message: "Video and channel data updated successfully",
-					results,
-				},
-				{ status: 200 },
-			);
-		} catch (error) {
-			console.error("Error updating video data:", error);
-			return NextResponse.json(
-				{
-					message: "Error updating video data",
-					error: error instanceof Error ? error.message : "Unknown error",
-				},
-				{ status: 500 },
-			);
-		} finally {
-			clearTimeout(lockTimeout);
-			isUpdating = false;
-		}
-	} else {
+async function handleUpdate(request: NextRequest) {
+	if (isUpdating) {
 		return NextResponse.json(
 			{ message: "Update already in progress" },
 			{ status: 409 },
 		);
 	}
+
+	isUpdating = true;
+	clearTimeout(lockTimeout);
+
+	// Set a timeout to release the lock
+	lockTimeout = setTimeout(() => {
+		isUpdating = false;
+	}, LOCK_TIMEOUT);
+
+	try {
+		// Get channelId from query parameters
+		const searchParams = request.nextUrl.searchParams;
+		const channelId = searchParams.get("channelId");
+
+		const results = await seedVideos({
+			...(channelId ? { youtubeChannelId: channelId } : {}),
+		});
+
+		return NextResponse.json(
+			{
+				message: channelId
+					? `Channel ${channelId} updated successfully`
+					: "Video and channel data updated successfully",
+				results,
+			},
+			{ status: 200 },
+		);
+	} catch (error) {
+		console.error("Error updating video data:", error);
+		return NextResponse.json(
+			{
+				message: "Error updating video data",
+				error: error instanceof Error ? error.message : "Unknown error",
+			},
+			{ status: 500 },
+		);
+	} finally {
+		clearTimeout(lockTimeout);
+		isUpdating = false;
+	}
 }
 
 export async function GET(request: NextRequest) {
-	// Check authorization before proceeding
 	if (!(await isAuthorized(request))) {
 		return new Response("Unauthorized", { status: 401 });
 	}
-	return handleUpdate();
+	return handleUpdate(request);
 }
 
 export async function POST(request: NextRequest) {
-	// Check authorization before proceeding
 	if (!(await isAuthorized(request))) {
 		return new Response("Unauthorized", { status: 401 });
 	}
-	return handleUpdate();
+	return handleUpdate(request);
 }

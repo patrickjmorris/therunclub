@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { runningClubs } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { createSafeActionClient } from "next-safe-action";

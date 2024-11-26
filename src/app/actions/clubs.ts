@@ -2,7 +2,7 @@
 
 import { createSafeActionClient } from "next-safe-action";
 import { z } from "zod";
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { runningClubs } from "@/db/schema";
 import { extractClubInfo } from "@/lib/services/openai-service";
 import { revalidatePath } from "next/cache";

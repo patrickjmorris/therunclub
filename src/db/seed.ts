@@ -37,7 +37,7 @@ async function getITunesPodcasts() {
 	return data.results;
 }
 
-export async function seed() {
+export async function seedPodcasts() {
 	console.log("Starting database seeding process...");
 
 	try {
@@ -213,7 +213,7 @@ export async function seed() {
 const SEED_TIMEOUT = 3000000; // 5 minutes
 
 Promise.race([
-	seed(),
+	seedPodcasts(),
 	new Promise((_, reject) =>
 		setTimeout(() => reject(new Error("Seeding timed out")), SEED_TIMEOUT),
 	),

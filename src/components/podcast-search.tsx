@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PodcastSearchResult } from "@/lib/podcast-index";
-import { searchPodcasts } from "@/app/actions";
+import { searchPodcasts } from "@/app/search/actions";
 
 function convertToCSV(results: PodcastSearchResult[]): string {
 	const header = ["title", "url", "description", "author", "categories"].join(",");

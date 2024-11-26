@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "next-safe-action/hooks";
-import { extractClubInfo_Action } from "@/app/actions/clubs";
+import { extractClubInfo_Action } from "@/app/clubs/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 

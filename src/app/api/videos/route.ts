@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { searchVideos, getVideoInfo } from "@/lib/youtube";
-import { headers } from "next/headers";
+
 
 export const runtime = "edge";
 

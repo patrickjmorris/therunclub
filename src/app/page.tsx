@@ -18,6 +18,7 @@ import {
 	getLatestVideos,
 	getPopularRunClubs,
 } from "@/db/queries";
+import { GlobalSearch } from "@/components/search/global-search";
 
 export const revalidate = 3600; // 60 minutes in seconds
 
@@ -32,7 +33,7 @@ export default async function HomePage() {
 		<div className="flex flex-col min-h-screen">
 			{/* Hero Section */}
 			<PageHeader />
-			<section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-primary">
+			{/* <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-primary">
 				<div className="container px-4 md:px-6">
 					<div className="flex flex-col items-center space-y-4 text-center">
 						<h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none text-white">
@@ -46,6 +47,13 @@ export default async function HomePage() {
 							<Link href="/podcasts">Explore Now</Link>
 						</Button>
 					</div>
+				</div>
+			</section> */}
+
+			{/* Global Search Section */}
+			<section className="w-full py-12 bg-background">
+				<div className="container px-4 md:px-6">
+					<GlobalSearch />
 				</div>
 			</section>
 

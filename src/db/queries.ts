@@ -387,7 +387,10 @@ export const searchEpisodesWithPodcasts = async (query: string) => {
 		})
 		.from(episodes)
 		.leftJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-		.where(like(episodes.title, query));
+		.where(
+			sql`to_tsvector('english', ${episodes.title} || ' ' || ${episodes.content}) @@ to_tsquery('english', ${query})`
+		)
+		.orderBy(desc(episodes.pubDate));
 };
 
 export async function getFeaturedPodcasts(limit = 4) {

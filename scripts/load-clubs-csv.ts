@@ -1,4 +1,4 @@
-import { db, client } from "@/db";
+import { db , client} from "@/db/client";
 import { runningClubs } from "@/db/schema";
 import { parse } from "csv-parse";
 import { createReadStream } from "fs";

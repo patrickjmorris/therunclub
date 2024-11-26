@@ -1,16 +1,17 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { type Podcast, type Episode, podcasts, episodes } from "./schema";
+import { db, client } from "./client";
+import { podcasts, episodes, Episode, Podcast } from "./schema";
 import { eq, sql, isNotNull, and, isNull } from "drizzle-orm";
 import Parser from "rss-parser";
-import { config } from "dotenv";
-import { slugify } from "@/lib/utils";
-
 import { updatePodcastColors } from "@/lib/update-podcast-colors";
 import { createPodcastIndexClient } from "@/lib/podcast-index";
 import type { iTunesSearchResponse } from "@/lib/itunes-types";
-
 import { decode } from "html-entities";
+import { config } from "dotenv";
+import { slugify } from "@/lib/utils";
+
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+
 config({ path: ".env" });
 
 // Default to development unless explicitly set to production
@@ -27,9 +28,6 @@ if (!connectionString) {
 
 console.log("Environment:", isDevelopment ? "development" : "production");
 console.log("Using connection:", connectionString.split("@")[1]); // Log only host part for security
-
-export const client = postgres(connectionString, { prepare: false });
-export const db = drizzle({ client, casing: "snake_case" });
 
 const podcastIndex = createPodcastIndexClient({
 	key: process.env.PODCAST_INDEX_API_KEY || "",

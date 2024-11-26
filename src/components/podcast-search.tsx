@@ -4,21 +4,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PodcastSearchResult } from "@/lib/podcast-index";
+import { searchPodcasts } from "@/app/search/actions";
 
 function convertToCSV(results: PodcastSearchResult[]): string {
-	// Create CSV header
-	const header = ["title", "url", "categories"].join(",");
+	const header = ["title", "url", "description", "author", "categories"].join(",");
 
-	// Create CSV rows
 	const rows = results.map((podcast) => {
 		const categories = podcast.categories
 			? Object.values(podcast.categories).join(";")
 			: "";
 
 		return [
-			// Escape quotes and wrap fields in quotes to handle commas
 			`"${podcast.title.replace(/"/g, '""')}"`,
 			`"${podcast.url.replace(/"/g, '""')}"`,
+			`"${(podcast.description || "").replace(/"/g, '""')}"`,
+			`"${(podcast.author || "").replace(/"/g, '""')}"`,
 			`"${categories.replace(/"/g, '""')}"`,
 		].join(",");
 	});
@@ -50,11 +50,12 @@ export function PodcastSearch() {
 
 		setIsLoading(true);
 		try {
-			const response = await fetch(
-				`/api/podcast-search?q=${encodeURIComponent(query)}`,
-			);
-			const data = await response.json();
-			setResults(data.results);
+			const response = await searchPodcasts(query);
+			if (response.error) {
+				console.error("Search failed:", response.error);
+				return;
+			}
+			setResults(response.results);
 		} catch (error) {
 			console.error("Search failed:", error);
 		} finally {
@@ -105,16 +106,24 @@ export function PodcastSearch() {
 							<div>
 								<h3 className="font-bold">{podcast.title}</h3>
 								{podcast.author && (
-									<p className="text-sm text-gray-600">{podcast.author}</p>
+									<p className="text-sm text-muted-foreground">{podcast.author}</p>
 								)}
 								{podcast.description && (
 									<p className="text-sm mt-2">{podcast.description}</p>
 								)}
 								{podcast.categories && (
-									<p className="text-sm mt-2">
+									<p className="text-sm mt-2 text-muted-foreground">
 										Categories: {Object.values(podcast.categories).join(", ")}
 									</p>
 								)}
+								<a
+									href={podcast.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-sm text-primary hover:underline mt-2 inline-block"
+								>
+									View Feed
+								</a>
 							</div>
 						</div>
 					</div>

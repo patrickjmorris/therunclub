@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { runningClubs } from "@/db/schema";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";

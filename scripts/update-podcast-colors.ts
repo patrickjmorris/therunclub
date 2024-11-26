@@ -1,4 +1,4 @@
-// import { db } from "@/db";
+// import { db } from "@/db/client";
 // import { podcasts } from "@/db/schema";
 // import { updatePodcastColors } from "@/lib/update-podcast-colors";
 // import { isNotNull } from "drizzle-orm";

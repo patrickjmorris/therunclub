@@ -1,4 +1,4 @@
-import { db, client } from "@/db";
+import { db, client } from "@/db/client";
 import { runningClubs } from "@/db/schema";
 import type { NewRunningClub } from "@/db/schema";
 

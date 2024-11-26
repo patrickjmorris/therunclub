@@ -4,7 +4,7 @@ import {
 	getLastTenEpisodesByPodcastSlug,
 	getPodcastBySlug,
 } from "@/db/queries";
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
 import EpisodeEntry from "@/components/podcasts/EpisodeEntry";
 import { isNotNull } from "drizzle-orm";

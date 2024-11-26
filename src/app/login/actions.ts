@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { profiles } from "@/db/schema";
 import { z } from "zod";
 

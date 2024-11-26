@@ -1,6 +1,6 @@
 import { MetadataRoute } from "next";
 import { CHANNELS, getChannelInfo, getAllPlaylistItems } from "@/lib/youtube";
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

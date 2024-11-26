@@ -14,6 +14,7 @@ import {
 import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";
+import { PodcastFilter } from "@/components/podcasts/podcast-filter";
 
 export const metadata: Metadata = {
 	title: "Running Podcasts | The Run Club",
@@ -49,6 +50,10 @@ export default async function PodcastList({ searchParams }: PageProps) {
 
 	return (
 		<div className="container py-8 md:py-12">
+			{/* Search Section */}
+			<div className="mb-8">
+				<PodcastFilter />
+			</div>
 			{/* Featured Channels Section */}
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
@@ -107,7 +112,9 @@ export default async function PodcastList({ searchParams }: PageProps) {
 							key={podcast.episodeId}
 							className="group hover:shadow-lg transition-all"
 						>
-							<Link href={`/podcasts/${podcast.podcastSlug}`}>
+							<Link
+								href={`/podcasts/${podcast.podcastSlug}/${podcast.episodeSlug}`}
+							>
 								<CardHeader className="space-y-4">
 									<div className="aspect-square relative overflow-hidden rounded-lg">
 										<Image

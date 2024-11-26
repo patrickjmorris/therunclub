@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { videos, channels, type Video, type Channel } from "@/db/schema";
 import { desc, eq, ilike, sql } from "drizzle-orm";
 

@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { videos, channels, podcasts, episodes } from "@/db/schema";
 import { desc, sql } from "drizzle-orm";
 import DOMPurify from "isomorphic-dompurify";

@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db } from "@/db/client";
 import { podcasts, episodes, type Podcast, type Episode } from "@/db/schema";
 import { desc, ilike, sql } from "drizzle-orm";
 

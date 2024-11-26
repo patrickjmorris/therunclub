@@ -57,8 +57,12 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 
     // Perform the update based on content type
     if (type === "videos") {
-      await seedVideos();
-    } else {
+      await seedVideos({
+        limit: 50,
+        videosPerChannel: 10,
+        forceUpdate: true
+      });
+    } else if (type === "podcasts") {
       await seedPodcasts();
     }
 

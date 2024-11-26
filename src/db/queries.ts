@@ -1,6 +1,6 @@
 import { desc, eq, sql, and, max, like, isNotNull } from "drizzle-orm";
 import { unstable_cache, revalidateTag } from "next/cache";
-import { db } from "./index";
+import { db } from "@/db/client";
 import {
 	podcasts,
 	episodes,

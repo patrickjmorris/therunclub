@@ -21,7 +21,7 @@ interface ChannelPageProps {
 export async function generateStaticParams() {
 	// Get first 5 channels from database ordered by subscriber count
 	const channels = await getAllChannels();
-	return channels.slice(0, 5).map((channel) => ({
+	return channels.map((channel) => ({
 		channelId: channel.id,
 	}));
 }

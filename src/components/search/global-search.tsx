@@ -4,6 +4,9 @@ import { useCallback, useState } from "react";
 import { SearchBar } from "./search-bar";
 import { SearchResults } from "./search-results";
 import type { SearchResult } from "@/lib/services/search-service";
+import { search } from "@/app/actions";
+import type { SearchError } from "@/app/actions";
+import { toast } from "sonner";
 
 export function GlobalSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -17,11 +20,18 @@ export function GlobalSearch() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      setResults(data.results ?? []);
+      const response = await search(query);
+      
+      if (response.error) {
+        toast.error(response.error.message);
+        setResults([]);
+        return;
+      }
+      
+      setResults(response.results ?? []);
     } catch (error) {
       console.error("Search failed:", error);
+      toast.error("An unexpected error occurred. Please try again.");
       setResults([]);
     } finally {
       setIsLoading(false);

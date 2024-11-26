@@ -112,7 +112,9 @@ export default async function PodcastList({ searchParams }: PageProps) {
 							key={podcast.episodeId}
 							className="group hover:shadow-lg transition-all"
 						>
-							<Link href={`/podcasts/${podcast.podcastSlug}`}>
+							<Link
+								href={`/podcasts/${podcast.podcastSlug}/${podcast.episodeSlug}`}
+							>
 								<CardHeader className="space-y-4">
 									<div className="aspect-square relative overflow-hidden rounded-lg">
 										<Image

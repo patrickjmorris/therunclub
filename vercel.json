@@ -1,12 +1,12 @@
 {
 	"crons": [
 		{
-			"path": "/api/update-podcasts",
-			"schedule": "15 9 * * *"
+			"path": "/api/content?type=podcasts",
+			"schedule": "15 12 * * *"
 		},
 		{
-			"path": "/api/update-videos",
-			"schedule": "15 9 * * *"
+			"path": "/api/content?type=videos",
+			"schedule": "15 12 * * *"
 		}
 	]
 }

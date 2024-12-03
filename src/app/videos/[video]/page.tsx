@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { extractUrlsFromText } from "@/lib/extract-urls";
+import { LinkPreviewList } from "@/components/LinkPreview";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 
 interface VideoPageProps {
@@ -42,6 +46,22 @@ export async function generateMetadata({
 	};
 }
 
+function convertUrlsToLinks(text: string): string {
+	// Escape HTML special characters first
+	const escaped = text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+
+	const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+	return escaped.replace(
+		urlRegex,
+		'<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 underline decoration-blue-600/30 dark:decoration-blue-400/30 hover:decoration-blue-600 dark:hover:decoration-blue-400 transition-colors">$1</a>',
+	);
+}
+
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
 
@@ -61,6 +81,14 @@ export default async function VideoPage({ params }: VideoPageProps) {
 		const comments = new Intl.NumberFormat().format(
 			Number(videoData.commentCount ?? 0),
 		);
+
+		// Extract URLs and convert them to links in the description
+		const urls = videoData.description
+			? extractUrlsFromText(videoData.description)
+			: [];
+		const descriptionWithLinks = videoData.description
+			? convertUrlsToLinks(videoData.description)
+			: "";
 
 		return (
 			<div className="container py-8">
@@ -122,12 +150,40 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						</div>
 					)}
 
-					{/* Description */}
-					<div className="mt-6 prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words">
-						{videoData.description?.split("\n").map((line, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: needed for react
-							<p key={i}>{line}</p>
-						))}
+					{/* Content */}
+					<div className="mt-6 max-w-3xl">
+						{urls.length > 0 ? (
+							<Tabs defaultValue="description">
+								<TabsList className="justify-start">
+									<TabsTrigger value="description">Description</TabsTrigger>
+									<TabsTrigger value="links">Links ({urls.length})</TabsTrigger>
+								</TabsList>
+								<TabsContent value="description">
+									<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+										<div
+											// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
+											dangerouslySetInnerHTML={{
+												__html: descriptionWithLinks,
+											}}
+										/>
+									</div>
+								</TabsContent>
+								<TabsContent value="links">
+									<div className="space-y-4">
+										<LinkPreviewList urls={urls} />
+									</div>
+								</TabsContent>
+							</Tabs>
+						) : (
+							<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+								<div
+									// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
+									dangerouslySetInnerHTML={{
+										__html: descriptionWithLinks,
+									}}
+								/>
+							</div>
+						)}
 					</div>
 				</div>
 			</div>

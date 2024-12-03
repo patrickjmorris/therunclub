@@ -10,8 +10,7 @@ import { EpisodePlayButton } from "@/components/EpisodePlayButton";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { extractUrlsFromHtml } from "@/lib/extract-urls";
 import { LinkPreviewList } from "@/components/LinkPreview";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { TabsWithState } from "@/components/TabsWithState";
 import Image from "next/image";
 
 interface EpisodePageProps {
@@ -171,28 +170,38 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 					</div>
 					<Separator />
 					{urls.length > 0 ? (
-						<Tabs defaultValue="description" className="max-w-3xl">
-							<TabsList className=" justify-start">
-								<TabsTrigger value="description">Description</TabsTrigger>
-								<TabsTrigger value="links">Links ({urls.length})</TabsTrigger>
-							</TabsList>
-							<TabsContent value="description">
-								<div className="prose dark:prose-invert max-w-none overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
-									<div
-										className="space-y-4 whitespace-pre-wrap break-words"
-										// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
-										dangerouslySetInnerHTML={{
-											__html: sanitizedContent,
-										}}
-									/>
-								</div>
-							</TabsContent>
-							<TabsContent value="links">
-								<div className="space-y-4">
-									<LinkPreviewList urls={urls} />
-								</div>
-							</TabsContent>
-						</Tabs>
+						<TabsWithState
+							className="max-w-3xl"
+							tabs={[
+								{
+									value: "description",
+									label: "Description",
+									content: (
+										<div className="prose dark:prose-invert max-w-none overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+											<div
+												className="space-y-4 whitespace-pre-wrap break-words"
+												// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
+												dangerouslySetInnerHTML={{
+													__html: sanitizedContent,
+												}}
+											/>
+										</div>
+									),
+								},
+								{
+									value: "links",
+									label: `Links (${urls.length})`,
+									content: (
+										<div className="space-y-4">
+											<LinkPreviewList
+												urls={urls}
+												podcastsLink={episode.link}
+											/>
+										</div>
+									),
+								},
+							]}
+						/>
 					) : (
 						<div className="prose dark:prose-invert max-w-3xl overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
 							<div

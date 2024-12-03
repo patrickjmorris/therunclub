@@ -2,6 +2,7 @@ import { getOpenGraphData } from "@/lib/og";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Suspense } from "react";
+import { Link2 } from "lucide-react";
 
 interface LinkPreviewProps {
 	url: string;
@@ -21,8 +22,8 @@ export async function LinkPreview({ url, className }: LinkPreviewProps) {
 				className,
 			)}
 		>
-			{ogData.image && (
-				<div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md">
+			<div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md">
+				{ogData.image ? (
 					<Image
 						src={ogData.image}
 						alt={ogData.title}
@@ -30,8 +31,12 @@ export async function LinkPreview({ url, className }: LinkPreviewProps) {
 						fill
 						sizes="96px"
 					/>
-				</div>
-			)}
+				) : (
+					<div className="flex h-full w-full items-center justify-center bg-neutral-100 dark:bg-neutral-800">
+						<Link2 className="h-8 w-8 text-neutral-400 dark:text-neutral-600 -rotate-45" />
+					</div>
+				)}
+			</div>
 			<div className="flex min-w-0 flex-col justify-center gap-1">
 				<p className="truncate font-medium text-neutral-900 group-hover:text-neutral-600 dark:text-neutral-100 dark:group-hover:text-neutral-400">
 					{ogData.title}
@@ -64,16 +69,20 @@ function LinkPreviewSkeleton() {
 
 export function LinkPreviewList({
 	urls,
+	podcastsLink,
 	className,
 }: {
 	urls: string[];
+	podcastsLink?: string | null;
 	className?: string;
 }) {
-	if (!urls.length) return null;
+	if (!urls.length && !podcastsLink) return null;
+
+	const allUrls = podcastsLink ? [podcastsLink, ...urls] : urls;
 
 	return (
 		<div className={cn("my-4 flex flex-col gap-4", className)}>
-			{urls.map((url) => (
+			{allUrls.map((url) => (
 				<Suspense key={url} fallback={<LinkPreviewSkeleton />}>
 					<LinkPreview url={url} />
 				</Suspense>

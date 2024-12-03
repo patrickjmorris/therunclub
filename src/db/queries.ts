@@ -257,6 +257,7 @@ export const getEpisode = unstable_cache(
 				image: episodes.image,
 				episodeSlug: episodes.episodeSlug,
 				podcastSlug: podcasts.podcastSlug,
+				link: podcasts.link,
 			})
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
@@ -388,7 +389,7 @@ export const searchEpisodesWithPodcasts = async (query: string) => {
 		.from(episodes)
 		.leftJoin(podcasts, eq(episodes.podcastId, podcasts.id))
 		.where(
-			sql`to_tsvector('english', ${episodes.title} || ' ' || ${episodes.content}) @@ to_tsquery('english', ${query})`
+			sql`to_tsvector('english', ${episodes.title} || ' ' || ${episodes.content}) @@ to_tsquery('english', ${query})`,
 		)
 		.orderBy(desc(episodes.pubDate));
 };

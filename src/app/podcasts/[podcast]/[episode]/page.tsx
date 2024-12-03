@@ -8,7 +8,11 @@ import { FormattedDate } from "@/components/FormattedDate";
 import { formatDuration } from "@/lib/formatDuration";
 import { EpisodePlayButton } from "@/components/EpisodePlayButton";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { extractUrlsFromHtml } from "@/lib/extract-urls";
+import { LinkPreviewList } from "@/components/LinkPreview";
+import { TabsWithState } from "@/components/TabsWithState";
 import Image from "next/image";
+
 interface EpisodePageProps {
 	params: Promise<{
 		podcast: string;
@@ -68,6 +72,14 @@ export async function generateMetadata({
 	};
 }
 
+// Update link styles function
+function addLinkStyles(html: string): string {
+	return html.replace(
+		/<a\s/g,
+		'<a class="text-blue-600 dark:text-blue-400 underline decoration-blue-600/30 dark:decoration-blue-400/30 hover:decoration-blue-600 dark:hover:decoration-blue-400 transition-colors" ',
+	);
+}
+
 export default async function EpisodePage({ params }: EpisodePageProps) {
 	const { episode: episodeSlug } = await params;
 	const episode = await getEpisode(episodeSlug);
@@ -79,6 +91,8 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 	const date = episode.pubDate ? new Date(episode.pubDate) : new Date();
 	const imageUrl = episode.image || episode.podcastImage;
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
+	const sanitizedContent = addLinkStyles(sanitizeHtml(episode.content ?? ""));
+	const urls = extractUrlsFromHtml(sanitizedContent);
 
 	const jsonLd = {
 		"@context": "https://schema.org",
@@ -105,7 +119,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		<div className="space-y-8">
 			<script
 				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
 			/>
 			<Card>
@@ -155,15 +169,50 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 						/>
 					</div>
 					<Separator />
-					<div className="prose dark:prose-invert max-w-none overflow-hidden">
-						<div
-							className="space-y-4 whitespace-pre-wrap break-words"
-							// biome-ignore lint/security/noDangerouslySetInnerHtml: Sanitized
-							dangerouslySetInnerHTML={{
-								__html: sanitizeHtml(episode.content ?? ""),
-							}}
+					{urls.length > 0 ? (
+						<TabsWithState
+							className="max-w-3xl"
+							tabs={[
+								{
+									value: "description",
+									label: "Description",
+									content: (
+										<div className="prose dark:prose-invert max-w-none overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+											<div
+												className="space-y-4 whitespace-pre-wrap break-words"
+												// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
+												dangerouslySetInnerHTML={{
+													__html: sanitizedContent,
+												}}
+											/>
+										</div>
+									),
+								},
+								{
+									value: "links",
+									label: `Links (${urls.length})`,
+									content: (
+										<div className="space-y-4">
+											<LinkPreviewList
+												urls={urls}
+												podcastsLink={episode.link}
+											/>
+										</div>
+									),
+								},
+							]}
 						/>
-					</div>
+					) : (
+						<div className="prose dark:prose-invert max-w-3xl overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+							<div
+								className="space-y-4 whitespace-pre-wrap break-words"
+								// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
+								dangerouslySetInnerHTML={{
+									__html: sanitizedContent,
+								}}
+							/>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 		</div>

@@ -13,7 +13,7 @@ export default async function PodcastLayout({
 }) {
 	const resolvedParams = await params;
 	const data = await getPodcastBySlug(resolvedParams.podcast);
-
+	console.log("layout data", data);
 	if (!data) {
 		notFound();
 	}

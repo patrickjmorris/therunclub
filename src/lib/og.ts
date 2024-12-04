@@ -8,7 +8,7 @@ const HEADERS = {
 	acceptLanguage: "en-US,en;q=0.5",
 } as const;
 
-interface OpenGraphData {
+export interface OpenGraphData {
 	title: string;
 	description: string;
 	image: string;

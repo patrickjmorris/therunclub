@@ -86,7 +86,7 @@
 		"react": "19.0.0-rc-02c0e824-20241028",
 		"react-aria": "^3.19.0",
 		"react-dom": "19.0.0-rc-02c0e824-20241028",
-		"react-hook-form": "^7.53.1",
+		"react-hook-form": "^7.53.2",
 		"react-stately": "^3.17.0",
 		"rss-parser": "^3.13.0",
 		"sharp": "^0.33.5",

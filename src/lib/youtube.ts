@@ -322,7 +322,6 @@ export const CHANNELS: string[] = [
 	"UC6ExRKJw1olM9Z_Vd0ceTbA",
 	"UCa2vGJcdOPwY0vIJR346eIw",
 	"UCbeZCF2JP03CT_24UtU0q0Q",
-	"UCc6gzn4es_HE0RgcHEcf63Q",
 	"UCcPagJur6wcbV5kej6mwG_A",
 	"UCFe2g1SrVD7OEzlsta23X7g",
 	"UCFjeE9rU50uZFJbfWxPKcGw",

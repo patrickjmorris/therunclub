@@ -1,4 +1,5 @@
 import { getOpenGraphData } from "@/lib/og";
+import type { OpenGraphData } from "@/lib/og";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -7,10 +8,15 @@ import { Link2 } from "lucide-react";
 interface LinkPreviewProps {
 	url: string;
 	className?: string;
+	ogData?: OpenGraphData;
 }
 
-export async function LinkPreview({ url, className }: LinkPreviewProps) {
-	const ogData = await getOpenGraphData(url);
+export async function LinkPreview({
+	url,
+	className,
+	ogData: preloadedData,
+}: LinkPreviewProps) {
+	const ogData = preloadedData || (await getOpenGraphData(url));
 
 	return (
 		<a
@@ -67,7 +73,7 @@ function LinkPreviewSkeleton() {
 	);
 }
 
-export function LinkPreviewList({
+export async function LinkPreviewList({
 	urls,
 	podcastsLink,
 	className,
@@ -80,11 +86,42 @@ export function LinkPreviewList({
 
 	const allUrls = podcastsLink ? [podcastsLink, ...urls] : urls;
 
+	// Fetch all OpenGraph data in parallel and filter out invalid responses
+	const previews = await Promise.all(
+		allUrls.map(async (url) => {
+			try {
+				const ogData = await getOpenGraphData(url);
+				// Only include previews that have at least a title and aren't error states
+				const isValid =
+					ogData.title &&
+					ogData.title !== url &&
+					ogData.title !== new URL(url).hostname &&
+					!ogData.title.includes("Request timeout") &&
+					!ogData.title.includes("Connection failed") &&
+					!ogData.title.includes("Page not found") &&
+					!ogData.title.includes("Access denied") &&
+					!ogData.title.includes("Too many requests");
+
+				return isValid ? { url, ogData } : null;
+			} catch {
+				return null;
+			}
+		}),
+	);
+
+	// Filter out null responses
+	const validPreviews = previews.filter(
+		(preview): preview is { url: string; ogData: OpenGraphData } =>
+			preview !== null,
+	);
+
+	if (!validPreviews.length) return null;
+
 	return (
 		<div className={cn("my-4 flex flex-col gap-4", className)}>
-			{allUrls.map((url) => (
+			{validPreviews.map(({ url, ogData }) => (
 				<Suspense key={url} fallback={<LinkPreviewSkeleton />}>
-					<LinkPreview url={url} />
+					<LinkPreview url={url} ogData={ogData} />
 				</Suspense>
 			))}
 		</div>

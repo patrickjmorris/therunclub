@@ -352,7 +352,7 @@ export const getLatestVideos = unstable_cache(
 			.limit(3);
 	},
 	["latest-videos"],
-	{ tags: ["videos"] },
+	{ tags: ["videos"], revalidate: 3600 }, // 60 minutes in seconds
 );
 
 export const getPopularRunClubs = unstable_cache(

@@ -1,6 +1,6 @@
-import { db, client } from "./client";
+import { db } from "./client";
 import { podcasts, episodes, Episode, Podcast } from "./schema";
-import { eq, sql, isNotNull, and, isNull } from "drizzle-orm";
+import { eq, sql, isNull } from "drizzle-orm";
 import Parser from "rss-parser";
 import { updatePodcastColors } from "@/lib/update-podcast-colors";
 import { createPodcastIndexClient } from "@/lib/podcast-index";
@@ -8,9 +8,6 @@ import type { iTunesSearchResponse } from "@/lib/itunes-types";
 import { decode } from "html-entities";
 import { config } from "dotenv";
 import { slugify } from "@/lib/utils";
-
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 
 config({ path: ".env" });
 
@@ -51,7 +48,76 @@ async function getITunesPodcastByID(iTunesId: string) {
 	}
 }
 
-async function processPodcast(podcast: Podcast, parser: Parser) {
+// Define types for RSS Parser output
+interface CustomFeed {
+	title?: string;
+	description?: string;
+	url?: string;
+	image?: {
+		url?: string;
+	};
+	itunes?: {
+		author?: string;
+		owner?: {
+			name?: string;
+			email?: string;
+		};
+		image?: string;
+		summary?: string;
+		explicit?: string;
+		id?: string;
+	};
+	link?: string;
+	language?: string;
+	lastBuildDate?: string;
+	items?: CustomItem[];
+}
+
+interface CustomItem {
+	title?: string;
+	pubDate?: string;
+	content?: string;
+	link?: string;
+	enclosure?: {
+		url?: string;
+	};
+	itunes?: {
+		duration?: string;
+		explicit?: string;
+		image?: string;
+	};
+}
+
+// Configure parser with custom types
+const parser: Parser<CustomFeed, CustomItem> = new Parser({
+	timeout: 5000,
+});
+
+/**
+ * Parses a date string into a Date object or returns null.
+ * @param dateString - The date string to parse, can be null or undefined
+ * @returns A valid Date object or null if the date is invalid or missing
+ */
+function parseDate(dateString: string | null | undefined): Date | null {
+	// Return null for any falsy values (null, undefined, empty string)
+	if (!dateString) return null;
+
+	try {
+		const date = new Date(dateString);
+		// Use Number.isNaN for strict NaN check without type coercion
+		if (Number.isNaN(date.getTime())) {
+			return null;
+		}
+		return date;
+	} catch {
+		return null;
+	}
+}
+
+async function processPodcast(
+	podcast: Podcast,
+	customParser: Parser<CustomFeed, CustomItem>,
+) {
 	console.log("\n--- Starting podcast processing ---");
 	console.log({
 		podcastId: podcast.id,
@@ -61,66 +127,77 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 	});
 
 	try {
-		// Get health check from Podcast Index
-		const healthCheck = await podcastIndex.getPodcastByFeedUrl(podcast.feedUrl);
-		console.log("Health check result:", {
-			isDead: healthCheck?.isDead,
-			episodeCount: healthCheck?.episodeCount,
-			hasParseErrors: healthCheck?.hasParseErrors,
-		});
-
-		if (!healthCheck) {
-			console.log(
-				`Podcast ${podcast.title} failed health check, skipping update`,
-			);
+		// Quick RSS feed check first
+		let data: CustomFeed;
+		try {
+			data = await customParser.parseURL(podcast.feedUrl);
+		} catch (error) {
+			console.error(`Failed to parse RSS feed for ${podcast.title}:`, error);
 			return {
 				success: false,
 				podcastId: podcast.id,
-				error: "Failed health check",
+				error: "Failed to parse RSS feed",
 			};
 		}
 
-		// Get iTunes data
-		const itunesData = await getITunesPodcastByID(podcast.iTunesId ?? "");
-		console.log("iTunes data status:", {
-			found: !!itunesData,
-			iTunesId: podcast.iTunesId,
-		});
+		// Parse and validate lastBuildDate
+		const lastBuildDate = parseDate(data.lastBuildDate);
 
-		// Parse RSS feed
-		const data = await parser.parseURL(podcast.feedUrl);
-		console.log("RSS feed parsed:", {
-			itemCount: data.items?.length ?? 0,
-			feedTitle: data.title,
-			lastBuildDate: data.lastBuildDate,
-		});
-
-		// Determine the lastBuildDate
-		let lastBuildDate: Date | null = null;
-		if (data.lastBuildDate) {
-			lastBuildDate = new Date(data.lastBuildDate);
-		} else if (itunesData?.releaseDate) {
-			lastBuildDate = new Date(itunesData.releaseDate);
+		// Check if feed has been updated since last check
+		if (
+			lastBuildDate &&
+			podcast.lastBuildDate &&
+			lastBuildDate <= podcast.lastBuildDate
+		) {
+			console.log(
+				`Skipping ${podcast.title} - no new content since last update`,
+			);
+			return {
+				success: true,
+				podcastId: podcast.id,
+				episodesUpdated: 0,
+				skippedReason: "No new content",
+			};
 		}
 
-		// Check if we need to update based on lastBuildDate
-		// if (
-		// 	lastBuildDate &&
-		// 	podcast.lastBuildDate &&
-		// 	lastBuildDate <= podcast.lastBuildDate
-		// ) {
-		// 	console.log(
-		// 		`Skipping episode updates for ${podcast.title} - no new content since last update`,
-		// 	);
-		// 	return {
-		// 		success: true,
-		// 		podcastId: podcast.id,
-		// 		episodesUpdated: 0,
-		// 		skippedReason: "No new content",
-		// 	};
-		// }
+		// Only check health and iTunes data if this is a new podcast or it's been more than 7 days
+		const shouldCheckExternalAPIs =
+			!podcast.lastBuildDate ||
+			(podcast.lastBuildDate &&
+				Date.now() - podcast.lastBuildDate.getTime() > 7 * 24 * 60 * 60 * 1000);
 
-		// Update podcast metadata first with decoded text
+		let healthCheck = null;
+		let itunesData = null;
+
+		if (shouldCheckExternalAPIs) {
+			// Get health check from Podcast Index
+			healthCheck = await podcastIndex.getPodcastByFeedUrl(podcast.feedUrl);
+			console.log("Health check result:", {
+				isDead: healthCheck?.isDead,
+				episodeCount: healthCheck?.episodeCount,
+				hasParseErrors: healthCheck?.hasParseErrors,
+			});
+
+			if (!healthCheck) {
+				console.log(
+					`Podcast ${podcast.title} failed health check, skipping update`,
+				);
+				return {
+					success: false,
+					podcastId: podcast.id,
+					error: "Failed health check",
+				};
+			}
+
+			// Get iTunes data
+			itunesData = await getITunesPodcastByID(podcast.iTunesId ?? "");
+			console.log("iTunes data status:", {
+				found: !!itunesData,
+				iTunesId: podcast.iTunesId,
+			});
+		}
+
+		// Update podcast metadata with what we have
 		const [updatedPodcast] = await db
 			.insert(podcasts)
 			.values({
@@ -129,7 +206,6 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 				feedUrl: podcast.feedUrl,
 				description:
 					data.description || itunesData?.description || podcast.description,
-
 				image:
 					data.image?.url ||
 					data.itunes?.image ||
@@ -154,10 +230,11 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 				),
 				itunesSummary: decode(data.itunes?.summary || podcast.itunesSummary),
 				itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
-				episodeCount: healthCheck.episodeCount,
-				isDead: healthCheck.isDead,
-				hasParseErrors: healthCheck.hasParseErrors,
-				iTunesId: itunesData?.collectionId?.toString() || "",
+				episodeCount: healthCheck?.episodeCount || podcast.episodeCount,
+				isDead: healthCheck?.isDead || podcast.isDead,
+				hasParseErrors: healthCheck?.hasParseErrors || podcast.hasParseErrors,
+				iTunesId:
+					itunesData?.collectionId?.toString() || podcast.iTunesId || "",
 			} satisfies Partial<Podcast>)
 			.onConflictDoUpdate({
 				target: podcasts.feedUrl,
@@ -201,7 +278,8 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 
 					// Filter out old episodes if we have a latest episode date
 					if (latestEpisode?.pubDate && item.pubDate) {
-						const episodeDate = new Date(item.pubDate);
+						const episodeDate = parseDate(item.pubDate);
+						if (!episodeDate) return true; // Include episodes with invalid dates
 						return episodeDate > latestEpisode.pubDate;
 					}
 
@@ -211,7 +289,7 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 					podcastId: podcast.id,
 					title: decode(item.title || ""),
 					episodeSlug: slugify(decode(item.title || "")),
-					pubDate: new Date(item.pubDate || ""),
+					pubDate: item.pubDate ? parseDate(item.pubDate) : null,
 					content: item.content || null,
 					link: item.link || null,
 					enclosureUrl: item.enclosure?.url || "",
@@ -223,35 +301,20 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 			if (episodeValues.length > 0) {
 				console.log(`Attempting to upsert ${episodeValues.length} episodes`);
 
-				// Check for duplicate enclosureUrls
-				// const enclosureUrls = episodeValues.map((ep) => ep.enclosureUrl);
-				// const duplicates = enclosureUrls.filter(
-				// 	(url, index) => enclosureUrls.indexOf(url) !== index,
-				// );
-				// New Logic to remove duplicates
-				const enclosureUrls = episodeValues.map((ep) => ep.enclosureUrl);
-				const duplicates = enclosureUrls.filter(
-					(url, index) => enclosureUrls.indexOf(url) !== index,
+				// Remove duplicates by keeping only the first occurrence
+				const uniqueEpisodes = episodeValues.filter(
+					(episode, index, self) =>
+						index ===
+						self.findIndex((e) => e.enclosureUrl === episode.enclosureUrl),
 				);
 
-				if (duplicates.length > 0) {
-					console.warn("Found duplicate enclosureUrls:", duplicates);
-					// Remove duplicates by keeping only the first occurrence
-					const uniqueEpisodes = episodeValues.filter(
-						(episode, index, self) =>
-							index ===
-							self.findIndex((e) => e.enclosureUrl === episode.enclosureUrl),
-					);
+				if (episodeValues.length !== uniqueEpisodes.length) {
 					console.log(
 						`Removed ${
 							episodeValues.length - uniqueEpisodes.length
 						} duplicate episodes`,
 					);
 					episodeValues = uniqueEpisodes;
-				}
-
-				if (duplicates.length > 0) {
-					console.warn("Found duplicate enclosureUrls:", duplicates);
 				}
 
 				try {
@@ -308,7 +371,6 @@ async function processPodcast(podcast: Podcast, parser: Parser) {
 
 export async function updatePodcastData() {
 	const allPodcasts = await db.select().from(podcasts);
-	const parser = new Parser();
 	const results = [];
 
 	// Process podcasts in batches
@@ -324,8 +386,6 @@ export async function updatePodcastData() {
 }
 
 export async function updatePodcastByFeedUrl(feedUrl: string) {
-	const parser = new Parser();
-
 	// Find the podcast with the given feed URL
 	const [podcast] = await db
 		.select()
@@ -429,7 +489,7 @@ export async function loadInitialData() {
 					podcastId: insertedPodcast.id,
 					title: item.title || "",
 					episodeSlug: slugify(item.title || ""),
-					pubDate: item.pubDate ? new Date(item.pubDate) : null,
+					pubDate: item.pubDate ? parseDate(item.pubDate) : null,
 					content: item.content ?? null,
 					link: item.link ?? null,
 					enclosureUrl: item.enclosure?.url ?? "",
@@ -493,5 +553,122 @@ export async function updateAllPodcastColors() {
 	} catch (error) {
 		console.error("Error updating podcast colors:", error);
 		process.exit(1);
+	}
+}
+
+export async function addNewPodcast(feedUrl: string) {
+	console.log("Adding new podcast:", feedUrl);
+
+	try {
+		// First check if podcast already exists
+		const [existingPodcast] = await db
+			.select()
+			.from(podcasts)
+			.where(eq(podcasts.feedUrl, feedUrl))
+			.limit(1);
+
+		if (existingPodcast) {
+			return {
+				success: false,
+				error: "Podcast already exists",
+				podcast: existingPodcast,
+			};
+		}
+
+		// Get health check first
+		const healthCheck = await podcastIndex.getPodcastByFeedUrl(feedUrl);
+		if (!healthCheck) {
+			return {
+				success: false,
+				error: "Failed health check - podcast may be dead or have parse errors",
+			};
+		}
+
+		// Parse the RSS feed
+		let data: CustomFeed;
+		try {
+			data = await parser.parseURL(feedUrl);
+		} catch (error) {
+			console.error("Failed to parse RSS feed:", error);
+			return {
+				success: false,
+				error: "Failed to parse RSS feed",
+			};
+		}
+
+		// Get iTunes data if available
+		let itunesData = null;
+		if (data.itunes?.id) {
+			itunesData = await getITunesPodcastByID(data.itunes.id);
+		}
+
+		// Insert the new podcast
+		const [insertedPodcast] = await db
+			.insert(podcasts)
+			.values({
+				title: decode(data.title || ""),
+				podcastSlug: slugify(decode(data.title || "")),
+				feedUrl: feedUrl,
+				description: decode(data.description || ""),
+				image: data.image?.url || data.itunes?.image || "",
+				author: decode(data.itunes?.author || ""),
+				link: data.link || "",
+				language: data.language || "",
+				lastBuildDate: data.lastBuildDate ? new Date(data.lastBuildDate) : null,
+				itunesOwnerName: decode(data.itunes?.owner?.name || ""),
+				itunesOwnerEmail: data.itunes?.owner?.email || "",
+				itunesImage: itunesData?.artworkUrl600 || data.itunes?.image || "",
+				itunesAuthor: decode(
+					itunesData?.artistName || data.itunes?.author || "",
+				),
+				itunesSummary: decode(data.itunes?.summary || ""),
+				itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
+				episodeCount: healthCheck.episodeCount,
+				isDead: healthCheck.isDead,
+				hasParseErrors: healthCheck.hasParseErrors,
+				iTunesId: itunesData?.collectionId?.toString() || "",
+			})
+			.returning();
+
+		if (!insertedPodcast) {
+			return {
+				success: false,
+				error: "Failed to insert podcast",
+			};
+		}
+
+		// Process initial episodes
+		const episodeValues = (data.items ?? [])
+			.filter(
+				(item): item is NonNullable<typeof item> => !!item?.enclosure?.url,
+			)
+			.map((item) => ({
+				podcastId: insertedPodcast.id,
+				title: decode(item.title || ""),
+				episodeSlug: slugify(decode(item.title || "")),
+				pubDate: item.pubDate ? parseDate(item.pubDate) : null,
+				content: item.content || null,
+				link: item.link || null,
+				enclosureUrl: item.enclosure?.url || "",
+				duration: item.itunes?.duration || "",
+				explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+				image: item.itunes?.image || null,
+			}));
+
+		if (episodeValues.length > 0) {
+			await db.insert(episodes).values(episodeValues as Episode[]);
+		}
+
+		return {
+			success: true,
+			podcast: insertedPodcast,
+			episodesAdded: episodeValues.length,
+		};
+	} catch (error) {
+		console.error("Error adding new podcast:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Unknown error occurred",
+		};
 	}
 }

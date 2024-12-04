@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { seedVideos } from "@/db/seed-videos";
-import { seedPodcasts } from "@/db/seed";
+import { updateVideos } from "@/lib/services/video-service";
+import { updatePodcastData } from "@/db";
 
 type ContentType = "videos" | "podcasts";
 
@@ -65,16 +65,56 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 
 		// Perform the update based on content type
 		if (type === "videos") {
-			await seedVideos({
+			const results = await updateVideos({
 				limit: 50,
 				videosPerChannel: 10,
-				forceUpdate: true,
+				forceUpdate: false,
 			});
-		} else if (type === "podcasts") {
-			await seedPodcasts();
+
+			return NextResponse.json({
+				message: "Videos updated successfully",
+				results: {
+					channels: {
+						total:
+							results.channels.updated +
+							results.channels.cached +
+							results.channels.failed,
+						updated: results.channels.updated,
+						cached: results.channels.cached,
+						failed: results.channels.failed,
+					},
+					videos: {
+						total:
+							results.videos.updated +
+							results.videos.cached +
+							results.videos.failed,
+						updated: results.videos.updated,
+						cached: results.videos.cached,
+						failed: results.videos.failed,
+					},
+				},
+			});
 		}
 
-		return NextResponse.json({ message: `${type} updated successfully` });
+		// Handle podcast updates
+		const results = await updatePodcastData();
+		const successfulUpdates = results.filter(
+			(r) => r.success && (r.episodesUpdated ?? 0) > 0,
+		).length;
+		const skippedUpdates = results.filter(
+			(r) => r.success && r.skippedReason,
+		).length;
+		const failedUpdates = results.filter((r) => !r.success).length;
+
+		return NextResponse.json({
+			message: "Podcasts updated successfully",
+			results: {
+				total: results.length,
+				updated: successfulUpdates,
+				skipped: skippedUpdates,
+				failed: failedUpdates,
+			},
+		});
 	} catch (error) {
 		console.error(`Error updating ${type}:`, error);
 		return NextResponse.json(

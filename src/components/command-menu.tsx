@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { type DialogProps } from "@radix-ui/react-dialog";
 import {
 	CircleIcon,
@@ -30,8 +30,13 @@ import {
 import { search } from "@/app/actions";
 import type { SearchResult } from "@/lib/services/search-service";
 
-export function CommandMenu({ ...props }: DialogProps) {
+interface CommandMenuProps extends DialogProps {
+	className?: string;
+}
+
+export function CommandMenu({ className, ...props }: CommandMenuProps) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const [open, setOpen] = React.useState(false);
 	const { setTheme } = useTheme();
 	const [searchQuery, setSearchQuery] = useState("");
@@ -99,12 +104,16 @@ export function CommandMenu({ ...props }: DialogProps) {
 		}
 	};
 
+	// Hide on home route
+	if (pathname === "/") return null;
+
 	return (
 		<>
 			<Button
 				variant="outline"
 				className={cn(
-					"relative h-8 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64",
+					"relative h-8 w-full justify-start rounded-[0.5rem] text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64",
+					className,
 				)}
 				onClick={() => setOpen(true)}
 				{...props}
@@ -162,7 +171,9 @@ export function CommandMenu({ ...props }: DialogProps) {
 													key={navItem.href}
 													value={navItem.title}
 													onSelect={() => {
-														runCommand(() => router.push(navItem.href as string));
+														runCommand(() =>
+															router.push(navItem.href as string),
+														);
 													}}
 												>
 													<FileIcon className="mr-2 h-4 w-4" />
@@ -173,15 +184,21 @@ export function CommandMenu({ ...props }: DialogProps) {
 
 									<CommandSeparator />
 									<CommandGroup heading="Theme">
-										<CommandItem onSelect={() => runCommand(() => setTheme("light"))}>
+										<CommandItem
+											onSelect={() => runCommand(() => setTheme("light"))}
+										>
 											<SunIcon className="mr-2 h-4 w-4" />
 											Light
 										</CommandItem>
-										<CommandItem onSelect={() => runCommand(() => setTheme("dark"))}>
+										<CommandItem
+											onSelect={() => runCommand(() => setTheme("dark"))}
+										>
 											<MoonIcon className="mr-2 h-4 w-4" />
 											Dark
 										</CommandItem>
-										<CommandItem onSelect={() => runCommand(() => setTheme("system"))}>
+										<CommandItem
+											onSelect={() => runCommand(() => setTheme("system"))}
+										>
 											<LaptopIcon className="mr-2 h-4 w-4" />
 											System
 										</CommandItem>

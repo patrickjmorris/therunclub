@@ -10,7 +10,6 @@ import { Analytics } from "@/components/analytics";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { MainNav } from "@/components/nav/main-nav";
 import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {

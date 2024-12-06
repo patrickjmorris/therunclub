@@ -7,6 +7,10 @@ export interface DocsConfig {
 export const docsConfig: DocsConfig = {
 	mainNav: [
 		{
+			title: "Find A Race",
+			href: "/races",
+		},
+		{
 			title: "Podcasts",
 			href: "/podcasts",
 		},

@@ -272,3 +272,60 @@ export const selectClubSchema = createSelectSchema(runningClubs);
 // Types
 export type RunningClub = typeof runningClubs.$inferSelect;
 export type NewRunningClub = typeof runningClubs.$inferInsert;
+
+export const races = pgTable("races", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	name: text("name").notNull(),
+	description: text("description"),
+	date: timestamp("date").notNull(),
+	registrationDeadline: timestamp("registration_deadline"),
+	location: text("location").notNull(),
+	distance: integer("distance").notNull(), // in meters
+	elevation: integer("elevation"), // in meters
+	price: integer("price"), // in cents
+	type: text("type", {
+		enum: ["road", "trail", "track", "cross_country"],
+	}).notNull(),
+	terrain: text("terrain", {
+		enum: ["road", "trail", "track", "mixed"],
+	}).notNull(),
+	website: text("website"),
+	organizerId: uuid("organizer_id").references(() => profiles.id),
+	maxParticipants: integer("max_participants"),
+	currentParticipants: integer("current_participants"),
+
+	// New fields from RunSignUp API
+	externalId: text("external_id").unique(), // RunSignUp race_id
+	registrationStatus: text("registration_status", {
+		enum: ["not_open", "open", "closed", "waitlist"],
+	}).default("not_open"),
+	isTimed: boolean("is_timed").default(true),
+	timingMethod: text("timing_method", {
+		enum: ["chip", "gun", "both"],
+	}),
+	isVirtual: boolean("is_virtual").default(false),
+	ageRestrictions: jsonb("age_restrictions").$type<{
+		minAge?: number;
+		maxAge?: number;
+	}>(),
+	images: jsonb("images").$type<{
+		logo?: string;
+		header?: string;
+	}>(),
+
+	// Metadata
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Add race relations
+export const racesRelations = relations(races, ({ one }) => ({
+	organizer: one(profiles, {
+		fields: [races.organizerId],
+		references: [profiles.id],
+	}),
+}));
+
+// Add types for races
+export type Race = typeof races.$inferSelect;
+export type NewRace = typeof races.$inferInsert;

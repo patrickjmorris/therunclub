@@ -9,7 +9,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 
 const connectionString = isDevelopment
 	? process.env.LOCAL_DB_URL ?? ""
-	: process.env.DIRECT_URL ?? "";
+	: process.env.DATABASE_URL ?? "";
 
 if (!connectionString) {
 	throw new Error("Database connection string is not defined");

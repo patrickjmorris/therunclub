@@ -394,18 +394,21 @@ export const searchEpisodesWithPodcasts = async (query: string) => {
 		.orderBy(desc(episodes.pubDate));
 };
 
-export async function getFeaturedPodcasts(limit = 4) {
-	return db
-		.select({
-			title: podcasts.title,
-			podcastId: podcasts.id,
-			image: podcasts.image,
-			podcastSlug: podcasts.podcastSlug,
-			count: sql<number>`count(${episodes.id})`.as("count"),
-		})
-		.from(podcasts)
-		.leftJoin(episodes, eq(podcasts.id, episodes.podcastId))
-		.groupBy(podcasts.id, podcasts.title, podcasts.image)
-		.orderBy(desc(sql<number>`count(${episodes.id})`))
-		.limit(limit);
-}
+export const getFeaturedPodcasts = unstable_cache(
+	async () => {
+		return db
+			.select({
+				id: podcasts.id,
+				title: podcasts.title,
+				image: podcasts.image,
+				podcastSlug: podcasts.podcastSlug,
+				vibrantColor: podcasts.vibrantColor,
+			})
+			.from(podcasts)
+			.where(isNotNull(podcasts.image))
+			.orderBy(desc(podcasts.lastBuildDate))
+			.limit(3);
+	},
+	["featured-podcasts"],
+	{ tags: ["podcasts"], revalidate: 3600 },
+);

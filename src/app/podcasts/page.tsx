@@ -68,7 +68,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 					{featuredPodcasts.map((podcast) => (
 						<Link
-							key={`featured-${podcast.podcastId}`}
+							key={`featured-${podcast.id}`}
 							href={`/podcasts/${podcast.podcastSlug}`}
 							className="transition-opacity hover:opacity-80"
 						>

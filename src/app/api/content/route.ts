@@ -1,20 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 import { updateVideos } from "@/lib/services/video-service";
 import { updatePodcastData } from "@/db";
 import { updateChannelColors } from "@/scripts/update-channel-colors";
 
-type ContentType = "videos" | "podcasts" | "channel-colors";
+type ContentType = "videos" | "podcasts" | "channel-colors" | "channel-videos";
 
 const isUpdating = {
 	videos: false,
 	podcasts: false,
 	"channel-colors": false,
+	"channel-videos": false,
 };
+
 const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 const lockTimeouts: { [key in ContentType]?: NodeJS.Timeout } = {};
 
-// Updated authorization check to handle both API key and cron secret
 async function isAuthorized(request: NextRequest): Promise<boolean> {
 	const headersList = await headers();
 	const apiKeyFromHeaders = headersList.get("x-api-key");
@@ -41,6 +42,10 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 }
 
 async function handleUpdate(request: NextRequest, type: ContentType) {
+	if (!(await isAuthorized(request))) {
+		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+	}
+
 	if (isUpdating[type]) {
 		return NextResponse.json(
 			{ message: `${type} update already in progress` },
@@ -48,43 +53,54 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 		);
 	}
 
-	if (!(await isAuthorized(request))) {
-		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
 		isUpdating[type] = true;
 
-		// Clear any existing timeout
-		if (lockTimeouts[type]) {
-			clearTimeout(lockTimeouts[type]);
-		}
-
-		// Set a new timeout
+		// Set a timeout to reset the lock
 		lockTimeouts[type] = setTimeout(() => {
 			isUpdating[type] = false;
 		}, LOCK_TIMEOUT);
 
-		// Perform the update based on content type
 		if (type === "videos") {
 			const results = await updateVideos({
-				limit: 50,
-				videosPerChannel: 10,
-				forceUpdate: false,
+				forceUpdate: true,
+				videosPerChannel: Infinity,
 			});
 
 			return NextResponse.json({
 				message: "Videos updated successfully",
 				results: {
-					channels: {
+					videos: {
 						total:
-							results.channels.updated +
-							results.channels.cached +
-							results.channels.failed,
-						updated: results.channels.updated,
-						cached: results.channels.cached,
-						failed: results.channels.failed,
+							results.videos.updated +
+							results.videos.cached +
+							results.videos.failed,
+						updated: results.videos.updated,
+						cached: results.videos.cached,
+						failed: results.videos.failed,
 					},
+				},
+			});
+		}
+
+		if (type === "channel-videos") {
+			const channelId = request.nextUrl.searchParams.get("channelId");
+			if (!channelId) {
+				return NextResponse.json(
+					{ message: "channelId parameter is required" },
+					{ status: 400 },
+				);
+			}
+
+			const results = await updateVideos({
+				youtubeChannelId: channelId,
+				forceUpdate: true,
+				videosPerChannel: Infinity,
+			});
+
+			return NextResponse.json({
+				message: "Channel videos updated successfully",
+				results: {
 					videos: {
 						total:
 							results.videos.updated +
@@ -106,35 +122,38 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 			});
 		}
 
-		// Handle podcast updates
-		const results = await updatePodcastData();
-		const successfulUpdates = results.filter(
-			(r) => r.success && (r.episodesUpdated ?? 0) > 0,
-		).length;
-		const skippedUpdates = results.filter(
-			(r) => r.success && r.skippedReason,
-		).length;
-		const failedUpdates = results.filter((r) => !r.success).length;
+		if (type === "podcasts") {
+			const results = await updatePodcastData();
+			const successfulUpdates = results.filter(
+				(result) => result.success,
+			).length;
+			const failedUpdates = results.filter((result) => !result.success).length;
 
-		return NextResponse.json({
-			message: "Podcasts updated successfully",
-			results: {
-				total: results.length,
-				updated: successfulUpdates,
-				skipped: skippedUpdates,
-				failed: failedUpdates,
-			},
-		});
+			return NextResponse.json({
+				message: "Podcasts updated successfully",
+				results: {
+					total: results.length,
+					successful: successfulUpdates,
+					failed: failedUpdates,
+				},
+			});
+		}
+
+		return NextResponse.json(
+			{ message: "Invalid content type" },
+			{ status: 400 },
+		);
 	} catch (error) {
 		console.error(`Error updating ${type}:`, error);
 		return NextResponse.json(
-			{ message: `Error updating ${type}` },
+			{ message: `Error updating ${type}`, error },
 			{ status: 500 },
 		);
 	} finally {
 		isUpdating[type] = false;
 		if (lockTimeouts[type]) {
 			clearTimeout(lockTimeouts[type]);
+			delete lockTimeouts[type];
 		}
 	}
 }
@@ -143,11 +162,14 @@ export async function GET(request: NextRequest) {
 	const searchParams = request.nextUrl.searchParams;
 	const type = searchParams.get("type") as ContentType;
 
-	if (!type || !["videos", "podcasts", "channel-colors"].includes(type)) {
+	if (
+		!type ||
+		!["videos", "podcasts", "channel-colors", "channel-videos"].includes(type)
+	) {
 		return NextResponse.json(
 			{
 				message:
-					"Invalid content type. Must be 'videos', 'podcasts', or 'channel-colors'",
+					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', or 'channel-videos'",
 			},
 			{ status: 400 },
 		);
@@ -156,19 +178,4 @@ export async function GET(request: NextRequest) {
 	return handleUpdate(request, type);
 }
 
-export async function POST(request: NextRequest) {
-	const searchParams = request.nextUrl.searchParams;
-	const type = searchParams.get("type") as ContentType;
-
-	if (!type || !["videos", "podcasts", "channel-colors"].includes(type)) {
-		return NextResponse.json(
-			{
-				message:
-					"Invalid content type. Must be 'videos', 'podcasts', or 'channel-colors'",
-			},
-			{ status: 400 },
-		);
-	}
-
-	return handleUpdate(request, type);
-}
+export { GET as POST };

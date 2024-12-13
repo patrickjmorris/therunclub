@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { updateVideos } from "@/lib/services/video-service";
 import { updatePodcastData } from "@/db";
+import { updateChannelColors } from "@/scripts/update-channel-colors";
 
-type ContentType = "videos" | "podcasts";
+type ContentType = "videos" | "podcasts" | "channel-colors";
 
 const isUpdating = {
 	videos: false,
 	podcasts: false,
+	"channel-colors": false,
 };
 const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 const lockTimeouts: { [key in ContentType]?: NodeJS.Timeout } = {};
@@ -96,6 +98,13 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 			});
 		}
 
+		if (type === "channel-colors") {
+			await updateChannelColors();
+			return NextResponse.json({
+				message: "Channel colors updated successfully",
+			});
+		}
+
 		// Handle podcast updates
 		const results = await updatePodcastData();
 		const successfulUpdates = results.filter(
@@ -133,9 +142,12 @@ export async function GET(request: NextRequest) {
 	const searchParams = request.nextUrl.searchParams;
 	const type = searchParams.get("type") as ContentType;
 
-	if (!type || !["videos", "podcasts"].includes(type)) {
+	if (!type || !["videos", "podcasts", "channel-colors"].includes(type)) {
 		return NextResponse.json(
-			{ message: "Invalid content type. Must be 'videos' or 'podcasts'" },
+			{
+				message:
+					"Invalid content type. Must be 'videos', 'podcasts', or 'channel-colors'",
+			},
 			{ status: 400 },
 		);
 	}
@@ -147,9 +159,12 @@ export async function POST(request: NextRequest) {
 	const searchParams = request.nextUrl.searchParams;
 	const type = searchParams.get("type") as ContentType;
 
-	if (!type || !["videos", "podcasts"].includes(type)) {
+	if (!type || !["videos", "podcasts", "channel-colors"].includes(type)) {
 		return NextResponse.json(
-			{ message: "Invalid content type. Must be 'videos' or 'podcasts'" },
+			{
+				message:
+					"Invalid content type. Must be 'videos', 'podcasts', or 'channel-colors'",
+			},
 			{ status: 400 },
 		);
 	}

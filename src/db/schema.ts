@@ -54,6 +54,7 @@ export const channels = pgTable(
 		customUrl: text("custom_url"),
 		publishedAt: timestamp("published_at"),
 		thumbnailUrl: text("thumbnail_url"),
+		vibrantColor: text("vibrant_color"),
 		country: text("country"),
 		viewCount: text("view_count"),
 		subscriberCount: text("subscriber_count"),

@@ -11,44 +11,40 @@ import {
 	Users,
 	Clock,
 	MapPin,
+	ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import {
 	getNewEpisodes,
 	getLatestVideos,
 	getPopularRunClubs,
+	getFeaturedPodcasts,
 } from "@/db/queries";
 import { GlobalSearch } from "@/components/search/global-search";
+import { getFeaturedChannels } from "@/lib/services/video-service";
+import {
+	FeaturedChannel,
+	FeaturedPodcast,
+} from "@/components/featured-channel/index";
+import { Suspense } from "react";
+import LoadingFeaturedChannel from "./examples/featured-channel/loading";
 
-export const revalidate = 3600; // 60 minutes in seconds
+export const revalidate = 3600;
 
 export default async function HomePage() {
-	const [podcasts, videos, runClubs] = await Promise.all([
-		getNewEpisodes(),
-		getLatestVideos(),
-		getPopularRunClubs(),
-	]);
+	const [podcasts, videos, runClubs, featuredPodcasts, featuredChannels] =
+		await Promise.all([
+			getNewEpisodes(),
+			getLatestVideos(),
+			getPopularRunClubs(),
+			getFeaturedPodcasts(),
+			getFeaturedChannels(),
+		]);
 
 	return (
 		<div className="flex flex-col min-h-screen">
 			{/* Hero Section */}
 			<PageHeader />
-			{/* <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-primary">
-				<div className="container px-4 md:px-6">
-					<div className="flex flex-col items-center space-y-4 text-center">
-						<h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none text-white">
-							Welcome to the Run Club
-						</h1>
-						<p className="mx-auto max-w-[700px] text-zinc-200 md:text-xl">
-							Discover amazing podcasts and stay tuned for exciting new features
-							coming soon!
-						</p>
-						<Button className="bg-white text-primary hover:bg-zinc-200">
-							<Link href="/podcasts">Explore Now</Link>
-						</Button>
-					</div>
-				</div>
-			</section> */}
 
 			{/* Global Search Section */}
 			<section className="w-full py-12 bg-background">
@@ -116,7 +112,7 @@ export default async function HomePage() {
 			<section className="w-full py-12 md:py-24">
 				<div className="container px-4 md:px-6">
 					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
-						Featured Podcasts
+						Latest Episodes
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{podcasts.map((podcast) => (
@@ -157,72 +153,68 @@ export default async function HomePage() {
 				</div>
 			</section>
 
-			{/* Run Clubs Section */}
-			<section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+			{/* Featured Channels Section */}
+			<section className="w-full py-12 md:py-24 bg-slate-50">
 				<div className="container px-4 md:px-6">
-					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
-						Popular Run Clubs
-					</h2>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{runClubs.map((club) => (
-							<Link
-								key={club.id}
-								href={`/clubs/${club.id}`}
-								className="block transition-transform hover:scale-[1.02]"
-							>
-								<Card>
-									<CardHeader>
-										<CardTitle>{club.clubName}</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<div className="relative h-48 mb-4">
-											{/* <Image
-												src={club.location.city}
-												alt={club.clubName}
-												fill
-												className="object-cover rounded-md"
-											/> */}
-										</div>
-										<p className="text-muted-foreground mb-4 line-clamp-2">
-											{club.description}
-										</p>
-										<div className="flex items-center justify-between text-sm text-muted-foreground">
-											<span className="flex items-center">
-												<MapPin className="w-4 h-4 mr-1" />
-												{club.location.city}, {club.location.state}
-											</span>
-										</div>
-									</CardContent>
-								</Card>
+					<div className="flex items-center justify-between mb-8">
+						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+							Featured Channels
+						</h2>
+						<Button variant="ghost" asChild>
+							<Link href="/videos/channels" className="group">
+								View All Channels
+								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 							</Link>
-						))}
+						</Button>
+					</div>
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+						{featuredChannels && featuredChannels.length > 0 ? (
+							featuredChannels.map((channel) => (
+								<Suspense
+									key={channel.id}
+									fallback={<LoadingFeaturedChannel />}
+								>
+									<FeaturedChannel channelId={channel.id} />
+								</Suspense>
+							))
+						) : (
+							<p className="text-muted-foreground">
+								No featured channels available.
+							</p>
+						)}
 					</div>
 				</div>
 			</section>
 
-			{/* Coming Soon Section */}
-			<section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+			{/* Featured Podcasts Section */}
+			<section className="w-full py-12 md:py-24">
 				<div className="container px-4 md:px-6">
-					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
-						Coming Soon
-					</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-						{[
-							{ name: "Video", icon: Video },
-							{ name: "Runners", icon: PersonStanding },
-							{ name: "Training", icon: Dumbbell },
-							{ name: "Clubs", icon: Users },
-						].map((item) => (
-							<Card key={item.name} className="text-center">
-								<CardContent className="pt-6">
-									<item.icon className="w-12 h-12 mx-auto mb-4 text-primary" />
-									<h3 className="text-lg font-semibold">{item.name}</h3>
-									<p className="text-sm text-muted-foreground mt-2">
-										Exciting features on the way!
-									</p>
-								</CardContent>
-							</Card>
-						))}
+					<div className="flex items-center justify-between mb-8">
+						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+							Featured Podcasts
+						</h2>
+						<Button variant="ghost" asChild>
+							<Link href="/podcasts" className="group">
+								View All Podcasts
+								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+							</Link>
+						</Button>
+					</div>
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+						{featuredPodcasts && featuredPodcasts.length > 0 ? (
+							featuredPodcasts.map((podcast) => (
+								<Suspense
+									key={podcast.id}
+									fallback={<LoadingFeaturedChannel />}
+								>
+									<FeaturedPodcast podcastId={podcast.id} />
+								</Suspense>
+							))
+						) : (
+							<p className="text-muted-foreground">
+								No featured podcasts available.
+							</p>
+						)}
 					</div>
 				</div>
 			</section>

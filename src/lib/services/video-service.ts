@@ -7,6 +7,8 @@ import {
 	getAllPlaylistItems,
 	getVideoInfo,
 } from "@/lib/youtube";
+import { unstable_cache } from "next/cache";
+import { isNotNull } from "drizzle-orm";
 
 // Get video by ID
 export async function getVideoById(videoId: string) {
@@ -75,13 +77,26 @@ export async function getAllChannels() {
 }
 
 // Get featured channels
-export async function getFeaturedChannels(limit = 4) {
-	return db
-		.select()
-		.from(channels)
-		.orderBy(desc(channels.subscriberCount))
-		.limit(limit);
-}
+export const getFeaturedChannels = unstable_cache(
+	async (limit = 4) => {
+		const subscriberCountCol = sql`CAST(${channels.subscriberCount} AS INTEGER)`;
+		return db
+			.select({
+				id: channels.id,
+				title: channels.title,
+				thumbnailUrl: channels.thumbnailUrl,
+				vibrantColor: channels.vibrantColor,
+				subscriberCount: channels.subscriberCount,
+				viewCount: channels.viewCount,
+			})
+			.from(channels)
+			.where(isNotNull(channels.thumbnailUrl))
+			.orderBy(desc(subscriberCountCol))
+			.limit(limit);
+	},
+	["featured-channels"],
+	{ tags: ["channels"], revalidate: 3600 },
+);
 
 // Get channel videos
 export async function getChannelVideos(channelId: string, limit = 10) {

@@ -99,9 +99,10 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 		}
 
 		if (type === "channel-colors") {
-			await updateChannelColors();
+			const results = await updateChannelColors();
 			return NextResponse.json({
 				message: "Channel colors updated successfully",
+				results,
 			});
 		}
 

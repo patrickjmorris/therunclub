@@ -320,8 +320,14 @@ export async function processChannel(
 
 		// Get channel's latest videos
 		console.log(`Fetching playlist items for channel ${channelId}...`);
-		const playlistId = channelData.contentDetails.relatedPlaylists.uploads;
-		const playlistItems = await getAllPlaylistItems(playlistId);
+		if (!channelData.contentDetails.relatedPlaylists.uploads) {
+			throw new Error(
+				`No uploads playlist found for channel: ${channelData.snippet.title}`,
+			);
+		}
+		const playlistItems = await getAllPlaylistItems(
+			channelData.contentDetails.relatedPlaylists.uploads,
+		);
 
 		if (!playlistItems) {
 			console.log(`No videos found for channel ${channelId}`);

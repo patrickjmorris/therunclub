@@ -79,7 +79,9 @@ export function FeaturedChannelClient({
 		<Card className="overflow-hidden">
 			{/* Hero Section */}
 			<Link
-				href={type === "channel" ? `/channels/${slug}` : `/podcasts/${slug}`}
+				href={
+					type === "channel" ? `videos/channels/${slug}` : `/podcasts/${slug}`
+				}
 			>
 				<div
 					className="relative h-[200px] w-full"

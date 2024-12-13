@@ -78,7 +78,7 @@ export async function getAllChannels() {
 
 // Get featured channels
 export const getFeaturedChannels = unstable_cache(
-	async (limit = 4) => {
+	async (limit = 3) => {
 		const subscriberCountCol = sql`CAST(${channels.subscriberCount} AS INTEGER)`;
 		return db
 			.select({

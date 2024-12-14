@@ -17,6 +17,7 @@ interface ContentItem {
 	type: "video" | "episode";
 	podcastTitle?: string;
 	podcastSlug?: string;
+	episodeSlug?: string;
 }
 
 interface FeaturedContentProps {
@@ -72,7 +73,7 @@ export function FeaturedChannelClient({
 
 	const getItemUrl = (item: ContentItem) => {
 		if (item.type === "video") return `/videos/${item.id}`;
-		return `/podcasts/${item.podcastSlug}/episodes/${item.id}`;
+		return `/podcasts/${item.podcastSlug}/${item.episodeSlug}`;
 	};
 
 	return (

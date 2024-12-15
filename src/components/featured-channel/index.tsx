@@ -134,6 +134,7 @@ export async function FeaturedPodcast({ podcastId }: FeaturedPodcastProps) {
 		type: "episode" as const,
 		podcastTitle: podcast.title,
 		podcastSlug: podcast.podcastSlug || "",
+		episodeSlug: episode.episodeSlug || "",
 	}));
 
 	return (

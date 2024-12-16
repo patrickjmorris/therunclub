@@ -62,60 +62,88 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 		}, LOCK_TIMEOUT);
 
 		if (type === "videos") {
-			const updateStrategy = request.nextUrl.searchParams.get("updateStrategy");
-			const minHoursSinceUpdate = parseInt(
-				request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
-				10,
-			);
-			const channelLimit = parseInt(
-				request.nextUrl.searchParams.get("channelLimit") || "50",
-				10,
-			);
-			const videosPerChannel = parseInt(
-				request.nextUrl.searchParams.get("videosPerChannel") || "10",
-				10,
-			);
-			const maxVideos = parseInt(
-				request.nextUrl.searchParams.get("maxVideos") ||
-					String(videosPerChannel),
-				10,
-			);
-			const randomSample =
-				request.nextUrl.searchParams.get("randomSample") === "true";
+			try {
+				const updateStrategy =
+					request.nextUrl.searchParams.get("updateStrategy");
+				const minHoursSinceUpdate = parseInt(
+					request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
+					10,
+				);
+				const channelLimit = parseInt(
+					request.nextUrl.searchParams.get("channelLimit") || "50",
+					10,
+				);
+				const videosPerChannel = parseInt(
+					request.nextUrl.searchParams.get("videosPerChannel") || "10",
+					10,
+				);
+				const maxVideos = parseInt(
+					request.nextUrl.searchParams.get("maxVideos") ||
+						String(videosPerChannel),
+					10,
+				);
+				const randomSample =
+					request.nextUrl.searchParams.get("randomSample") === "true";
 
-			const results = await updateVideos({
-				forceUpdate: true,
-				limit: channelLimit,
-				videosPerChannel,
-				maxVideos,
-				updateByLastUpdated: updateStrategy === "lastUpdated",
-				minHoursSinceUpdate,
-				randomSample,
-			});
+				console.log("API Request parameters:", {
+					updateStrategy,
+					minHoursSinceUpdate,
+					channelLimit,
+					videosPerChannel,
+					maxVideos,
+					randomSample,
+				});
 
-			return NextResponse.json({
-				message: "Videos updated successfully",
-				results: {
-					channels: {
-						limit: channelLimit,
-						processed:
-							results.channels.updated +
-							results.channels.cached +
-							results.channels.failed,
+				const results = await updateVideos({
+					forceUpdate: true,
+					limit: channelLimit,
+					videosPerChannel,
+					maxVideos,
+					updateByLastUpdated: updateStrategy === "lastUpdated",
+					minHoursSinceUpdate,
+					randomSample,
+				});
+
+				return NextResponse.json({
+					message: "Videos updated successfully",
+					results: {
+						channels: {
+							limit: channelLimit,
+							processed:
+								results.channels.updated +
+								results.channels.cached +
+								results.channels.failed,
+						},
+						videos: {
+							perChannel: videosPerChannel,
+							maxVideos,
+							total:
+								results.videos.updated +
+								results.videos.cached +
+								results.videos.failed,
+							updated: results.videos.updated,
+							cached: results.videos.cached,
+							failed: results.videos.failed,
+						},
 					},
-					videos: {
-						perChannel: videosPerChannel,
-						maxVideos,
-						total:
-							results.videos.updated +
-							results.videos.cached +
-							results.videos.failed,
-						updated: results.videos.updated,
-						cached: results.videos.cached,
-						failed: results.videos.failed,
+				});
+			} catch (error) {
+				console.error("Detailed error in video update:", error);
+
+				const errorResponse = {
+					message: "Error updating videos",
+					error: {
+						name: error instanceof Error ? error.name : "Unknown Error",
+						message: error instanceof Error ? error.message : String(error),
+						stack:
+							error instanceof Error && process.env.NODE_ENV === "development"
+								? error.stack
+								: undefined,
 					},
-				},
-			});
+				};
+
+				return NextResponse.json(errorResponse, { status: 500 });
+			}
 		}
 
 		if (type === "channel-videos") {

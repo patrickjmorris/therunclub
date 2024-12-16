@@ -236,16 +236,24 @@ export async function processChannel(
 		maxVideos?: number;
 	} = {},
 ) {
+	if (!channelId) {
+		console.error("Invalid channelId provided to processChannel");
+		return { status: "error" as const, error: new Error("Invalid channelId") };
+	}
+
 	const {
 		videosPerChannel = 10,
 		forceUpdate = false,
-		maxVideos = 10,
+		maxVideos = videosPerChannel,
 	} = options;
+
 	try {
 		console.log(`\nProcessing channel ${channelId}...`);
-		console.log(
-			`Options: videosPerChannel=${videosPerChannel}, forceUpdate=${forceUpdate}`,
-		);
+		console.log("Process channel options:", {
+			videosPerChannel,
+			forceUpdate,
+			maxVideos,
+		});
 
 		// Check if channel exists and was recently updated
 		const existingChannel = await db
@@ -335,8 +343,10 @@ export async function processChannel(
 
 		// Process only the specified number of videos
 		const videosToProcess = playlistItems
-			.slice(0, Math.min(maxVideos, videosPerChannel))
-			.filter(Boolean);
+			? playlistItems
+					.slice(0, Math.min(maxVideos || videosPerChannel, videosPerChannel))
+					.filter(Boolean)
+			: [];
 		console.log(
 			`Processing ${videosToProcess.length} videos for channel ${channelId}...`,
 		);
@@ -406,7 +416,7 @@ export async function getChannelsNeedingUpdate(
 
 	const minTimestamp = new Date(
 		Date.now() - minHoursSinceUpdate * 60 * 60 * 1000,
-	);
+	).toISOString();
 
 	const baseQuery = db
 		.select({
@@ -417,7 +427,7 @@ export async function getChannelsNeedingUpdate(
 		})
 		.from(channels)
 		.where(
-			sql`${channels.updatedAt} IS NULL OR ${channels.updatedAt} < ${minTimestamp}`,
+			sql`${channels.updatedAt} IS NULL OR ${channels.updatedAt} < ${minTimestamp}::timestamp`,
 		);
 
 	// Execute the query with appropriate ordering
@@ -452,9 +462,10 @@ export async function updateVideos(
 
 	try {
 		console.log("\n=== Starting Video Update Process ===");
-		console.log("Options:", {
+		console.log("Update options:", {
 			limit,
 			videosPerChannel,
+			maxVideos,
 			youtubeChannelId: youtubeChannelId || "all channels",
 			forceUpdate,
 			minHoursSinceUpdate,
@@ -495,8 +506,10 @@ export async function updateVideos(
 			);
 
 			const result = await processChannel(channelId, {
-				videosPerChannel: youtubeChannelId ? Infinity : videosPerChannel,
-				maxVideos: youtubeChannelId ? Infinity : maxVideos,
+				videosPerChannel: youtubeChannelId
+					? Infinity
+					: Number(videosPerChannel),
+				maxVideos: youtubeChannelId ? Infinity : Number(maxVideos),
 				forceUpdate,
 			});
 
@@ -552,7 +565,7 @@ export async function updateVideos(
 
 		return results;
 	} catch (error) {
-		console.error("\nFatal error during video update process:", error);
+		console.error("\nDetailed error in video update process:", error);
 		throw error;
 	}
 }

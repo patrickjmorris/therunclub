@@ -14,6 +14,7 @@ import {
 	searchVideosWithChannels,
 } from "@/lib/services/video-service";
 import { parseAsString } from "nuqs/server";
+import AddContentDialog from "@/components/content/AddContentDialog";
 
 export const metadata: Metadata = {
 	title: "Running Videos | The Run Club",
@@ -34,6 +35,8 @@ interface PageProps {
 	searchParams: Promise<{ q?: string }>;
 }
 
+export const revalidate = 3600;
+
 export default async function VideosPage({ searchParams }: PageProps) {
 	// Parse search params
 	const { q } = await searchParams;
@@ -49,6 +52,11 @@ export default async function VideosPage({ searchParams }: PageProps) {
 
 	return (
 		<div className="container py-8">
+			{/* Search Section */}
+			<div className="flex items-center justify-between mb-8">
+				<VideoFilter />
+				<AddContentDialog defaultTab="channel" />
+			</div>
 			{/* Featured Channels Section */}
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
@@ -73,7 +81,9 @@ export default async function VideosPage({ searchParams }: PageProps) {
 										<div className="relative w-20 h-20">
 											<div className="absolute inset-0">
 												<Image
-													src={channel.thumbnailUrl ?? ""}
+													src={
+														channel.thumbnailUrl || "/images/placeholder.png"
+													}
 													alt={channel.title}
 													width={80}
 													height={80}

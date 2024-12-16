@@ -7,7 +7,9 @@ import type { PodcastSearchResult } from "@/lib/podcast-index";
 import { searchPodcasts } from "@/app/search/actions";
 
 function convertToCSV(results: PodcastSearchResult[]): string {
-	const header = ["title", "url", "description", "author", "categories"].join(",");
+	const header = ["title", "url", "description", "author", "categories"].join(
+		",",
+	);
 
 	const rows = results.map((podcast) => {
 		const categories = podcast.categories
@@ -106,7 +108,9 @@ export function PodcastSearch() {
 							<div>
 								<h3 className="font-bold">{podcast.title}</h3>
 								{podcast.author && (
-									<p className="text-sm text-muted-foreground">{podcast.author}</p>
+									<p className="text-sm text-muted-foreground">
+										{podcast.author}
+									</p>
 								)}
 								{podcast.description && (
 									<p className="text-sm mt-2">{podcast.description}</p>
@@ -116,6 +120,9 @@ export function PodcastSearch() {
 										Categories: {Object.values(podcast.categories).join(", ")}
 									</p>
 								)}
+								<pre className="text-sm mt-2 text-muted-foreground">
+									{JSON.stringify(podcast, null, 2)}
+								</pre>
 								<a
 									href={podcast.url}
 									target="_blank"

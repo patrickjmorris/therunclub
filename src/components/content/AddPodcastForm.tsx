@@ -1,13 +1,16 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 import { addPodcast } from "@/app/actions/podcasts";
-import type { AddPodcastState } from "@/app/actions/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReloadIcon } from "@radix-ui/react-icons";
+import type { AddPodcastState } from "@/app/actions/types";
+import { useActionState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const initialState: AddPodcastState = {
 	errors: {},
@@ -32,10 +35,17 @@ function SubmitButton() {
 }
 
 export default function AddPodcastForm() {
-	const [state, formAction] = useFormState<AddPodcastState, FormData>(
+	const [state, formAction] = useActionState<AddPodcastState, FormData>(
 		addPodcast,
 		initialState,
 	);
+	const router = useRouter();
+
+	useEffect(() => {
+		if (state?.redirect) {
+			router.push(state.redirect);
+		}
+	}, [state?.redirect, router]);
 
 	return (
 		<form action={formAction} className="space-y-4">

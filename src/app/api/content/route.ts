@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { updateVideos } from "@/lib/services/video-service";
-import { updatePodcastData } from "@/db";
+import { updatePodcastData } from "@/lib/podcast-service";
 import { updateChannelColors } from "@/scripts/update-channel-colors";
 
 type ContentType = "videos" | "podcasts" | "channel-colors" | "channel-videos";

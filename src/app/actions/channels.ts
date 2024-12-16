@@ -1,57 +1,129 @@
+"use server";
+
 import { z } from "zod";
-import { processChannel } from "@/lib/services/video-service";
+import { addNewChannel } from "@/db";
 import { revalidatePath } from "next/cache";
+import type { AddChannelState } from "./types";
+import { addChannelSchema } from "./validation";
 
-const addChannelSchema = z.object({
-	youtubeChannelId: z.string().min(1, "Channel ID is required"),
-});
+// YouTube URL parsing patterns
+const YOUTUBE_URL_PATTERNS = {
+	CHANNEL_ID: /^UC[\w-]{21}[AQgw]$/,
+	CHANNEL_URL:
+		/(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:channel|c)\/([^\/\n\s]+)/,
+	CUSTOM_URL: /(?:https?:\/\/)?(?:www\.)?youtube\.com\/(@[^\/\n\s]+)/,
+	LEGACY_USER: /(?:https?:\/\/)?(?:www\.)?youtube\.com\/user\/([^\/\n\s]+)/,
+};
 
-export type AddChannelFormData = z.infer<typeof addChannelSchema>;
+async function getChannelId(url: string): Promise<string | null> {
+	// If it's already a channel ID, return it
+	if (YOUTUBE_URL_PATTERNS.CHANNEL_ID.test(url)) {
+		return url;
+	}
 
-export async function addChannel(formData: AddChannelFormData) {
+	// Extract channel identifier from URL
+	let channelIdentifier: string | null = null;
+	let apiEndpoint: string | null = null;
+
+	if (YOUTUBE_URL_PATTERNS.CHANNEL_URL.test(url)) {
+		channelIdentifier =
+			url.match(YOUTUBE_URL_PATTERNS.CHANNEL_URL)?.[1] ?? null;
+		if (channelIdentifier) return channelIdentifier;
+	}
+
+	if (YOUTUBE_URL_PATTERNS.CUSTOM_URL.test(url)) {
+		channelIdentifier = url.match(YOUTUBE_URL_PATTERNS.CUSTOM_URL)?.[1] ?? null;
+		if (channelIdentifier) {
+			apiEndpoint = `channels?part=id&forHandle=${channelIdentifier.substring(
+				1,
+			)}`;
+		}
+	}
+
+	if (YOUTUBE_URL_PATTERNS.LEGACY_USER.test(url)) {
+		channelIdentifier =
+			url.match(YOUTUBE_URL_PATTERNS.LEGACY_USER)?.[1] ?? null;
+		if (channelIdentifier) {
+			apiEndpoint = `channels?part=id&forUsername=${channelIdentifier}`;
+		}
+	}
+
+	if (!apiEndpoint) {
+		return null;
+	}
+
 	try {
-		// Validate form data
-		const validatedData = addChannelSchema.parse(formData);
+		const response = await fetch(
+			`https://www.googleapis.com/youtube/v3/${apiEndpoint}&key=${process.env.YOUTUBE_API_KEY}`,
+		);
+		const data = await response.json();
 
-		// Process the channel with unlimited videos for initial import
-		const result = await processChannel(validatedData.youtubeChannelId, {
-			videosPerChannel: Infinity,
-			forceUpdate: true,
-		});
-
-		if (result.status === "error") {
-			return {
-				success: false,
-				error: "Failed to add channel",
-			};
+		if (data.items && data.items.length > 0) {
+			return data.items[0].id;
 		}
+	} catch (error) {
+		console.error("Error fetching channel ID:", error);
+	}
 
-		if (result.status === "not_found") {
-			return {
-				success: false,
-				error: "Channel not found. Please check the channel ID and try again.",
-			};
-		}
+	return null;
+}
 
-		// Revalidate the videos and dashboard pages
-		revalidatePath("/videos");
-		revalidatePath("/dashboard");
+export async function addChannel(
+	prevState: AddChannelState,
+	formData: FormData,
+): Promise<AddChannelState> {
+	const validatedFields = addChannelSchema.safeParse({
+		url: formData.get("url"),
+	});
 
+	if (!validatedFields.success) {
 		return {
-			success: true,
-			data: result.data,
+			errors: validatedFields.error.flatten().fieldErrors,
+			message: "Invalid YouTube URL",
 		};
+	}
+
+	try {
+		// Get channel ID from URL
+		const channelId = await getChannelId(validatedFields.data.url);
+
+		if (!channelId) {
+			return {
+				errors: {
+					_form: ["Could not find YouTube channel. Please check the URL."],
+				},
+				message: "Invalid YouTube channel URL",
+			};
+		}
+
+		const result = await addNewChannel(channelId);
+
+		if (!result.success || !result.channel) {
+			return {
+				errors: {
+					_form: [result.error || "Failed to add channel"],
+				},
+				message: "Failed to add channel",
+			};
+		}
+
+		revalidatePath("/videos");
+
+		// Return success state with redirect
+		const successState: AddChannelState = {
+			message: "Channel added successfully!",
+			data: result.channel,
+			redirect: `/videos/channels/${result.channel.id}`,
+		};
+
+		return successState;
 	} catch (error) {
 		console.error("Error adding channel:", error);
-		if (error instanceof z.ZodError) {
-			return {
-				success: false,
-				error: error.errors[0].message,
-			};
-		}
 		return {
-			success: false,
-			error: "Failed to add channel. Please try again.",
+			errors: {
+				_form: ["An unexpected error occurred"],
+			},
+			message: "An unexpected error occurred",
 		};
 	}
 }

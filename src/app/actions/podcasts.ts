@@ -1,22 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import { addNewPodcast } from "@/db";
+import { addNewPodcast } from "@/lib/podcast-service";
 import { revalidatePath } from "next/cache";
-import type { Podcast } from "@/db/schema";
-
-export const addPodcastSchema = z.object({
-	feedUrl: z.string().url("Please enter a valid URL"),
-});
-
-export type AddPodcastState = {
-	errors?: {
-		feedUrl?: string[];
-		_form?: string[];
-	};
-	message: string | null;
-	data?: Podcast;
-};
+import { redirect } from "next/navigation";
+import type { AddPodcastState } from "./types";
+import { addPodcastSchema } from "./validation";
+import { updatePodcastColors } from "@/lib/update-podcast-colors";
 
 export async function addPodcast(
 	prevState: AddPodcastState,
@@ -36,7 +26,7 @@ export async function addPodcast(
 	try {
 		const result = await addNewPodcast(validatedFields.data.feedUrl);
 
-		if (!result.success) {
+		if (!result.success || !result.podcast) {
 			return {
 				errors: {
 					_form: [result.error || "Failed to add podcast"],
@@ -45,13 +35,38 @@ export async function addPodcast(
 			};
 		}
 
+		// Extract vibrant color if we have an image
+		if (result.podcast.image) {
+			try {
+				await updatePodcastColors(result.podcast.id, result.podcast.image);
+			} catch (colorError) {
+				console.error("Failed to extract vibrant color:", colorError);
+				// Continue even if color extraction fails
+			}
+		}
+
+		// Make sure we have a valid slug before redirecting
+		if (!result.podcast.podcastSlug) {
+			return {
+				errors: {
+					_form: ["Invalid podcast slug"],
+				},
+				message: "Failed to generate podcast URL",
+			};
+		}
+
 		revalidatePath("/podcasts");
 
-		return {
+		// Return success state before redirecting
+		const successState: AddPodcastState = {
+			message: "Podcast added successfully!",
 			data: result.podcast,
-			message: "Podcast added successfully",
+			redirect: `/podcasts/${result.podcast.podcastSlug}`,
 		};
+
+		return successState;
 	} catch (error) {
+		console.error("Error adding podcast:", error);
 		return {
 			errors: {
 				_form: ["An unexpected error occurred"],

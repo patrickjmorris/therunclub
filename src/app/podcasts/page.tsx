@@ -15,6 +15,7 @@ import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";
 import { PodcastFilter } from "@/components/podcasts/podcast-filter";
+import AddContentDialog from "@/components/content/AddContentDialog";
 
 export const metadata: Metadata = {
 	title: "Running Podcasts | The Run Club",
@@ -51,15 +52,16 @@ export default async function PodcastList({ searchParams }: PageProps) {
 	return (
 		<div className="container py-8 md:py-12">
 			{/* Search Section */}
-			<div className="mb-8">
+			<div className="flex items-center justify-between mb-8">
 				<PodcastFilter />
+				<AddContentDialog />
 			</div>
 			{/* Featured Channels Section */}
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
 					<h2 className="text-2xl font-bold">Featured Channels</h2>
 					<Button variant="ghost" asChild>
-						<Link href="/videos/channels" className="group">
+						<Link href="/podcasts" className="group">
 							View All Podcasts
 							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 						</Link>
@@ -77,15 +79,8 @@ export default async function PodcastList({ searchParams }: PageProps) {
 									<div className="flex flex-col items-center text-center gap-4">
 										<div className="relative w-20 h-20">
 											<div className="absolute inset-0">
-												{/* <Image
-													src={podcast.image ?? ""}
-													alt={podcast.title}
-													width={80}
-													height={80}
-													className="rounded-lg object-cover w-full h-full"
-												/> */}
-												<img
-													src={podcast.image ?? ""}
+												<Image
+													src={podcast.image || "/images/placeholder.png"}
 													alt={podcast.title}
 													width={80}
 													height={80}
@@ -124,13 +119,6 @@ export default async function PodcastList({ searchParams }: PageProps) {
 											src={podcast.podcastImage || podcast.itunesImage || ""}
 											width={400}
 										/>
-										{/* <img
-											alt={podcast.title ?? ""}
-											className="object-cover transition-transform group-hover:scale-105"
-											height={400}
-											src={podcast.image || podcast.itunesImage || ""}
-											width={400}
-										/> */}
 									</div>
 									<div className="space-y-2">
 										<CardTitle className="line-clamp-1">

@@ -1,15 +1,18 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
-import { addPodcast } from "@/app/actions/podcasts";
-import type { AddPodcastState } from "@/app/actions/types";
+import { useFormStatus } from "react-dom";
+import { addChannel } from "@/app/actions/channels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReloadIcon } from "@radix-ui/react-icons";
+import type { AddChannelState } from "@/app/actions/types";
+import { useActionState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-const initialState: AddPodcastState = {
+const initialState: AddChannelState = {
 	errors: {},
 	message: null,
 };
@@ -25,33 +28,40 @@ function SubmitButton() {
 					Adding...
 				</>
 			) : (
-				"Add Podcast"
+				"Add Channel"
 			)}
 		</Button>
 	);
 }
 
-export default function AddPodcastForm() {
-	const [state, formAction] = useFormState<AddPodcastState, FormData>(
-		addPodcast,
+export default function AddChannelForm() {
+	const [state, formAction] = useActionState<AddChannelState, FormData>(
+		addChannel,
 		initialState,
 	);
+	const router = useRouter();
+
+	useEffect(() => {
+		if (state?.redirect) {
+			router.push(state.redirect);
+		}
+	}, [state?.redirect, router]);
 
 	return (
 		<form action={formAction} className="space-y-4">
 			<div className="space-y-2">
-				<Label htmlFor="feedUrl">Podcast RSS Feed URL</Label>
+				<Label htmlFor="url">YouTube Channel URL</Label>
 				<Input
-					id="feedUrl"
-					name="feedUrl"
+					id="url"
+					name="url"
 					type="url"
-					placeholder="https://example.com/feed.xml"
+					placeholder="https://youtube.com/@channel"
 					required
-					aria-describedby="feedUrl-error"
+					aria-describedby="url-error"
 				/>
-				{state.errors?.feedUrl && (
-					<p className="text-sm text-red-500" id="feedUrl-error">
-						{state.errors.feedUrl}
+				{state.errors?.url && (
+					<p className="text-sm text-red-500" id="url-error">
+						{state.errors.url}
 					</p>
 				)}
 			</div>

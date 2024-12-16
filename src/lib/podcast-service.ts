@@ -533,3 +533,91 @@ export async function addNewPodcast(feedUrl: string) {
 		};
 	}
 }
+
+export async function loadInitialData() {
+	async function getITunesPodcasts() {
+		const response = await fetch(
+			"https://itunes.apple.com/search?term=podcast&genreId=1551&limit=200",
+			{ next: { revalidate: 3600 } },
+		);
+
+		if (!response.ok) {
+			throw new Error(`iTunes API error: ${response.statusText}`);
+		}
+
+		const data = (await response.json()) as iTunesSearchResponse;
+		return data.results;
+	}
+	const podcastsFeeds = await getITunesPodcasts();
+
+	const parser = new Parser();
+	const results = [];
+
+	for (const feed of podcastsFeeds) {
+		try {
+			const data = await parser.parseURL(feed.feedUrl);
+			// Get iTunes data if available
+			const itunesData = await getITunesPodcastByID(
+				feed.collectionId.toString(),
+			);
+
+			// Insert or update podcast
+			const [insertedPodcast] = await db
+				.insert(podcasts)
+				.values({
+					title: decode(data.title || ""),
+					podcastSlug: slugify(decode(data.title || "")),
+					feedUrl: feed.feedUrl,
+					description: decode(data.description || ""),
+					image: data.image?.url || data.itunes?.image || "",
+					author: decode(data.itunes?.author || ""),
+					link: data.link || "",
+					language: data.language || "",
+					lastBuildDate:
+						data.lastBuildDate ?? itunesData?.releaseDate
+							? new Date(data.lastBuildDate ?? itunesData?.releaseDate)
+							: null,
+					itunesOwnerName: decode(data.itunes?.owner?.name || ""),
+					itunesOwnerEmail: data.itunes?.owner?.email || "",
+					itunesImage: data.itunes?.image || "",
+					itunesAuthor: decode(data.itunes?.author || ""),
+					itunesSummary: decode(data.itunes?.summary || ""),
+					itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
+					iTunesId: itunesData?.collectionId?.toString() || "",
+					vibrantColor: null,
+				})
+				.returning();
+
+			if (insertedPodcast) {
+				// Process initial episodes
+				const episodeValues = (data.items ?? [])
+					.filter(
+						(item): item is NonNullable<typeof item> => !!item?.enclosure?.url,
+					)
+					.map((item) => ({
+						podcastId: insertedPodcast.id,
+						title: decode(item.title || ""),
+						episodeSlug: slugify(decode(item.title || "")),
+						pubDate: item.pubDate ? parseDate(item.pubDate) : null,
+						content: item.content || null,
+						link: item.link || null,
+						enclosureUrl: item.enclosure?.url || "",
+						duration: item.itunes?.duration || "",
+						explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+						image: item.itunes?.image || null,
+					}));
+
+				if (episodeValues.length > 0) {
+					await db.insert(episodes).values(episodeValues as Episode[]);
+				}
+			}
+
+			results.push({ success: true, feedUrl: feed.feedUrl });
+		} catch (error) {
+			console.error(`Error loading feed ${feed.feedUrl}:`, error);
+			results.push({ success: false, feedUrl: feed.feedUrl, error });
+		}
+	}
+
+	return results;
+}

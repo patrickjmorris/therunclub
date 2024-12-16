@@ -62,9 +62,17 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 		}, LOCK_TIMEOUT);
 
 		if (type === "videos") {
+			const updateStrategy = request.nextUrl.searchParams.get("updateStrategy");
+			const minHoursSinceUpdate = parseInt(
+				request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
+				10,
+			);
+
 			const results = await updateVideos({
 				forceUpdate: true,
 				videosPerChannel: Infinity,
+				updateByLastUpdated: updateStrategy === "lastUpdated",
+				minHoursSinceUpdate,
 			});
 
 			return NextResponse.json({

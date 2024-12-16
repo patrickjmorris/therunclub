@@ -320,14 +320,8 @@ export async function processChannel(
 
 		// Get channel's latest videos
 		console.log(`Fetching playlist items for channel ${channelId}...`);
-		if (!channelData.contentDetails.relatedPlaylists.uploads) {
-			throw new Error(
-				`No uploads playlist found for channel: ${channelData.snippet.title}`,
-			);
-		}
-		const playlistItems = await getAllPlaylistItems(
-			channelData.contentDetails.relatedPlaylists.uploads,
-		);
+		const playlistId = channelData.contentDetails.relatedPlaylists.uploads;
+		const playlistItems = await getAllPlaylistItems(playlistId);
 
 		if (!playlistItems) {
 			console.log(`No videos found for channel ${channelId}`);
@@ -389,13 +383,43 @@ export async function processChannel(
 	}
 }
 
-// Update videos efficiently
+// Add this new function to get channels that need updating
+export async function getChannelsNeedingUpdate(
+	options: {
+		minHoursSinceUpdate?: number;
+		limit?: number;
+	} = {},
+) {
+	const { minHoursSinceUpdate = 24, limit = 50 } = options;
+
+	const minTimestamp = new Date(
+		Date.now() - minHoursSinceUpdate * 60 * 60 * 1000,
+	);
+
+	return db
+		.select({
+			id: channels.id,
+			youtubeChannelId: channels.youtubeChannelId,
+			title: channels.title,
+			updatedAt: channels.updatedAt,
+		})
+		.from(channels)
+		.where(
+			sql`${channels.updatedAt} IS NULL OR ${channels.updatedAt} < ${minTimestamp}`,
+		)
+		.orderBy(channels.updatedAt)
+		.limit(limit);
+}
+
+// Modify the updateVideos function to accept a new option
 export async function updateVideos(
 	options: {
 		limit?: number;
 		videosPerChannel?: number;
 		youtubeChannelId?: string;
 		forceUpdate?: boolean;
+		minHoursSinceUpdate?: number;
+		updateByLastUpdated?: boolean;
 	} = {},
 ) {
 	const {
@@ -403,6 +427,8 @@ export async function updateVideos(
 		videosPerChannel = 10,
 		youtubeChannelId,
 		forceUpdate = false,
+		minHoursSinceUpdate = 24,
+		updateByLastUpdated = false,
 	} = options;
 
 	try {
@@ -412,6 +438,8 @@ export async function updateVideos(
 			videosPerChannel,
 			youtubeChannelId: youtubeChannelId || "all channels",
 			forceUpdate,
+			minHoursSinceUpdate,
+			updateByLastUpdated,
 		});
 
 		const results = {
@@ -419,10 +447,21 @@ export async function updateVideos(
 			videos: { updated: 0, cached: 0, failed: 0 },
 		};
 
-		// Use single channel or process multiple channels
-		const channelsToProcess = youtubeChannelId
-			? [youtubeChannelId]
-			: CHANNELS.slice(0, limit);
+		// Determine which channels to process
+		let channelsToProcess: string[] = [];
+
+		if (youtubeChannelId) {
+			channelsToProcess = [youtubeChannelId];
+		} else if (updateByLastUpdated) {
+			const outdatedChannels = await getChannelsNeedingUpdate({
+				minHoursSinceUpdate,
+				limit,
+			});
+			channelsToProcess = outdatedChannels.map((c) => c.youtubeChannelId);
+			console.log(`Found ${channelsToProcess.length} channels needing update`);
+		} else {
+			channelsToProcess = CHANNELS.slice(0, limit);
+		}
 
 		console.log(`\nProcessing ${channelsToProcess.length} channels...`);
 		let processedChannels = 0;

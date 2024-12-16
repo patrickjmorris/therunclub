@@ -426,11 +426,12 @@ export async function getChannelsNeedingUpdate(
 		: baseQuery.orderBy(channels.updatedAt).limit(limit);
 }
 
-// Update the updateVideos interface to include randomSample
+// Update the updateVideos interface to include maxVideos
 export async function updateVideos(
 	options: {
 		limit?: number;
 		videosPerChannel?: number;
+		maxVideos?: number;
 		youtubeChannelId?: string;
 		forceUpdate?: boolean;
 		minHoursSinceUpdate?: number;
@@ -441,6 +442,7 @@ export async function updateVideos(
 	const {
 		limit = 50,
 		videosPerChannel = 10,
+		maxVideos = videosPerChannel,
 		youtubeChannelId,
 		forceUpdate = false,
 		minHoursSinceUpdate = 24,
@@ -494,6 +496,7 @@ export async function updateVideos(
 
 			const result = await processChannel(channelId, {
 				videosPerChannel: youtubeChannelId ? Infinity : videosPerChannel,
+				maxVideos: youtubeChannelId ? Infinity : maxVideos,
 				forceUpdate,
 			});
 

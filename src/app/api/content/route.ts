@@ -75,6 +75,11 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				request.nextUrl.searchParams.get("videosPerChannel") || "10",
 				10,
 			);
+			const maxVideos = parseInt(
+				request.nextUrl.searchParams.get("maxVideos") ||
+					String(videosPerChannel),
+				10,
+			);
 			const randomSample =
 				request.nextUrl.searchParams.get("randomSample") === "true";
 
@@ -82,6 +87,7 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				forceUpdate: true,
 				limit: channelLimit,
 				videosPerChannel,
+				maxVideos,
 				updateByLastUpdated: updateStrategy === "lastUpdated",
 				minHoursSinceUpdate,
 				randomSample,
@@ -98,7 +104,8 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 							results.channels.failed,
 					},
 					videos: {
-						limit: videosPerChannel,
+						perChannel: videosPerChannel,
+						maxVideos,
 						total:
 							results.videos.updated +
 							results.videos.cached +

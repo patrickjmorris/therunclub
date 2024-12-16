@@ -381,9 +381,6 @@ export async function processChannel(
 			console.log(
 				`Stats so far: ${stats.updated} updated, ${stats.cached} cached, ${stats.failed} failed`,
 			);
-
-			// Small delay between video processing
-			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
 
 		console.log(`\nFinished processing channel ${channelId}`);
@@ -540,12 +537,6 @@ export async function updateVideos(
 				channels: results.channels,
 				videos: results.videos,
 			});
-
-			// Add delay between channel processing
-			if (processedChannels < channelsToProcess.length) {
-				console.log("Waiting 1 second before processing next channel...");
-				await new Promise((resolve) => setTimeout(resolve, 1000));
-			}
 		}
 
 		console.log("\n=== Video Update Process Completed ===");

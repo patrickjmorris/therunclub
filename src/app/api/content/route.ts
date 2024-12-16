@@ -67,18 +67,38 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
 				10,
 			);
+			const channelLimit = parseInt(
+				request.nextUrl.searchParams.get("channelLimit") || "50",
+				10,
+			);
+			const videosPerChannel = parseInt(
+				request.nextUrl.searchParams.get("videosPerChannel") || "10",
+				10,
+			);
+			const randomSample =
+				request.nextUrl.searchParams.get("randomSample") === "true";
 
 			const results = await updateVideos({
 				forceUpdate: true,
-				videosPerChannel: Infinity,
+				limit: channelLimit,
+				videosPerChannel,
 				updateByLastUpdated: updateStrategy === "lastUpdated",
 				minHoursSinceUpdate,
+				randomSample,
 			});
 
 			return NextResponse.json({
 				message: "Videos updated successfully",
 				results: {
+					channels: {
+						limit: channelLimit,
+						processed:
+							results.channels.updated +
+							results.channels.cached +
+							results.channels.failed,
+					},
 					videos: {
+						limit: videosPerChannel,
 						total:
 							results.videos.updated +
 							results.videos.cached +

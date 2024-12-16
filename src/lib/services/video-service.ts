@@ -233,10 +233,15 @@ export async function processChannel(
 	options: {
 		videosPerChannel?: number;
 		forceUpdate?: boolean;
+		maxVideos?: number;
 	} = {},
 ) {
+	const {
+		videosPerChannel = 10,
+		forceUpdate = false,
+		maxVideos = 10,
+	} = options;
 	try {
-		const { videosPerChannel = 10, forceUpdate = false } = options;
 		console.log(`\nProcessing channel ${channelId}...`);
 		console.log(
 			`Options: videosPerChannel=${videosPerChannel}, forceUpdate=${forceUpdate}`,
@@ -329,7 +334,9 @@ export async function processChannel(
 		}
 
 		// Process only the specified number of videos
-		const videosToProcess = playlistItems.slice(0, videosPerChannel);
+		const videosToProcess = playlistItems
+			.slice(0, Math.min(maxVideos, videosPerChannel))
+			.filter(Boolean);
 		console.log(
 			`Processing ${videosToProcess.length} videos for channel ${channelId}...`,
 		);
@@ -383,20 +390,25 @@ export async function processChannel(
 	}
 }
 
-// Add this new function to get channels that need updating
+// Modify getChannelsNeedingUpdate to handle query typing correctly
 export async function getChannelsNeedingUpdate(
 	options: {
 		minHoursSinceUpdate?: number;
 		limit?: number;
+		randomSample?: boolean;
 	} = {},
 ) {
-	const { minHoursSinceUpdate = 24, limit = 50 } = options;
+	const {
+		minHoursSinceUpdate = 24,
+		limit = 50,
+		randomSample = false,
+	} = options;
 
 	const minTimestamp = new Date(
 		Date.now() - minHoursSinceUpdate * 60 * 60 * 1000,
 	);
 
-	return db
+	const baseQuery = db
 		.select({
 			id: channels.id,
 			youtubeChannelId: channels.youtubeChannelId,
@@ -406,12 +418,15 @@ export async function getChannelsNeedingUpdate(
 		.from(channels)
 		.where(
 			sql`${channels.updatedAt} IS NULL OR ${channels.updatedAt} < ${minTimestamp}`,
-		)
-		.orderBy(channels.updatedAt)
-		.limit(limit);
+		);
+
+	// Execute the query with appropriate ordering
+	return randomSample
+		? baseQuery.orderBy(sql`RANDOM()`).limit(limit)
+		: baseQuery.orderBy(channels.updatedAt).limit(limit);
 }
 
-// Modify the updateVideos function to accept a new option
+// Update the updateVideos interface to include randomSample
 export async function updateVideos(
 	options: {
 		limit?: number;
@@ -420,6 +435,7 @@ export async function updateVideos(
 		forceUpdate?: boolean;
 		minHoursSinceUpdate?: number;
 		updateByLastUpdated?: boolean;
+		randomSample?: boolean;
 	} = {},
 ) {
 	const {
@@ -429,6 +445,7 @@ export async function updateVideos(
 		forceUpdate = false,
 		minHoursSinceUpdate = 24,
 		updateByLastUpdated = false,
+		randomSample = false,
 	} = options;
 
 	try {
@@ -440,6 +457,7 @@ export async function updateVideos(
 			forceUpdate,
 			minHoursSinceUpdate,
 			updateByLastUpdated,
+			randomSample,
 		});
 
 		const results = {
@@ -456,6 +474,7 @@ export async function updateVideos(
 			const outdatedChannels = await getChannelsNeedingUpdate({
 				minHoursSinceUpdate,
 				limit,
+				randomSample,
 			});
 			channelsToProcess = outdatedChannels.map((c) => c.youtubeChannelId);
 			console.log(`Found ${channelsToProcess.length} channels needing update`);

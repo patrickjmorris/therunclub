@@ -123,7 +123,7 @@ export const podcasts = pgTable(
 		episodeCount: integer("episode_count"),
 		isDead: integer("is_dead").default(0),
 		hasParseErrors: integer("has_parse_errors").default(0),
-		iTunesId: text("itunes_id").notNull().unique(),
+		iTunesId: text("itunes_id").unique(),
 	},
 	(table) => ({
 		feedUrlIdx: uniqueIndex("feed_url_idx").on(table.feedUrl),

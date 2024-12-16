@@ -1,7 +1,8 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { addPodcast, type AddPodcastState } from "@/app/actions/podcasts";
+import { addPodcast } from "@/app/actions/podcasts";
+import type { AddPodcastState } from "@/app/actions/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

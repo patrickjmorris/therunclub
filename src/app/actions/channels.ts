@@ -111,7 +111,10 @@ export const addChannel = requireRole(["admin", "editor"])(
 			}
 
 			revalidatePath("/videos");
-			redirect(`/videos/channels/${result.channel.id}`);
+			return {
+				message: "Channel added successfully!",
+				redirect: `/videos/channels/${result.channel.id}`,
+			};
 		} catch (error) {
 			console.error("Error adding channel:", error);
 			if (error instanceof AuthError) {

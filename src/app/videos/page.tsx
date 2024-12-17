@@ -14,7 +14,7 @@ import {
 	searchVideosWithChannels,
 } from "@/lib/services/video-service";
 import { parseAsString } from "nuqs/server";
-import AddContentDialog from "@/components/content/AddContentDialog";
+import AddContentWrapper from "@/components/content/AddContentWrapper";
 
 export const metadata: Metadata = {
 	title: "Running Videos | The Run Club",
@@ -55,7 +55,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 			{/* Search Section */}
 			<div className="flex items-center justify-between mb-8">
 				<VideoFilter />
-				<AddContentDialog defaultTab="channel" />
+				<AddContentWrapper defaultTab="channel" />
 			</div>
 			{/* Featured Channels Section */}
 			<div className="mb-12">

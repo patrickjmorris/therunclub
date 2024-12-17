@@ -273,3 +273,24 @@ export const selectClubSchema = createSelectSchema(runningClubs);
 // Types
 export type RunningClub = typeof runningClubs.$inferSelect;
 export type NewRunningClub = typeof runningClubs.$inferInsert;
+
+export const userRoles = pgTable("user_roles", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	userId: uuid("user_id")
+		.notNull()
+		.references(() => profiles.id, { onDelete: "cascade" }),
+	role: text("role", { enum: ["admin", "editor", "user"] })
+		.notNull()
+		.default("user"),
+	createdAt: timestamp("created_at").notNull().defaultNow(),
+	updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Zod schemas for user roles
+export const insertUserRoleSchema = createInsertSchema(userRoles);
+export const selectUserRoleSchema = createSelectSchema(userRoles);
+
+// Types
+export type UserRole = typeof userRoles.$inferSelect;
+export type NewUserRole = typeof userRoles.$inferInsert;
+export type UserRoleType = "admin" | "editor" | "user";

@@ -15,7 +15,7 @@ import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";
 import { PodcastFilter } from "@/components/podcasts/podcast-filter";
-import AddContentDialog from "@/components/content/AddContentDialog";
+import AddContentWrapper from "@/components/content/AddContentWrapper";
 
 export const metadata: Metadata = {
 	title: "Running Podcasts | The Run Club",
@@ -54,7 +54,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 			{/* Search Section */}
 			<div className="flex items-center justify-between mb-8">
 				<PodcastFilter />
-				<AddContentDialog />
+				<AddContentWrapper defaultTab="podcast" />
 			</div>
 			{/* Featured Channels Section */}
 			<div className="mb-12">

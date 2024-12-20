@@ -10,6 +10,8 @@ import {
 	foreignKey,
 	pgPolicy,
 	jsonb,
+	date,
+	numeric,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -294,3 +296,36 @@ export const selectUserRoleSchema = createSelectSchema(userRoles);
 export type UserRole = typeof userRoles.$inferSelect;
 export type NewUserRole = typeof userRoles.$inferInsert;
 export type UserRoleType = "admin" | "editor" | "user";
+
+export const athletes = pgTable("athletes", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	countryCode: text("country_code"),
+	countryName: text("country_name"),
+	dateOfBirth: date("date_of_birth"),
+	updatedAt: timestamp("updated_at").defaultNow(),
+	createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const athleteResults = pgTable("athlete_results", {
+	id: text("id").primaryKey(),
+	athleteId: text("athlete_id").references(() => athletes.id),
+	competitionName: text("competition_name"),
+	date: date("date").notNull(),
+	discipline: text("discipline").notNull(),
+	performance: text("performance").notNull(),
+	place: text("place"),
+	wind: text("wind"),
+});
+
+// Add relations
+export const athleteRelations = relations(athletes, ({ many }) => ({
+	results: many(athleteResults),
+}));
+
+export const athleteResultsRelations = relations(athleteResults, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteResults.athleteId],
+		references: [athletes.id],
+	}),
+}));

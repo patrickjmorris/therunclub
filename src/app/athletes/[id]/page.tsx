@@ -6,9 +6,9 @@ import { eq, desc } from "drizzle-orm";
 import { AthleteProfile } from "./athlete-profile";
 
 interface AthletePageProps {
-	params: {
+	params: Promise<{
 		id: string;
-	};
+	}>;
 }
 
 async function getAthleteData(id: string) {
@@ -18,6 +18,7 @@ async function getAthleteData(id: string) {
 			results: {
 				orderBy: (fields) => [desc(fields.date)],
 			},
+			honors: true,
 		},
 	});
 
@@ -35,11 +36,20 @@ async function getAthleteData(id: string) {
 			place: r.place,
 			wind: r.wind,
 		})),
+		honors: result.honors.map((h) => ({
+			id: h.id,
+			categoryName: h.categoryName,
+			competition: h.competition,
+			discipline: h.discipline,
+			mark: h.mark,
+			place: h.place,
+		})),
 	};
 }
 
 export default async function AthletePage({ params }: AthletePageProps) {
-	const athlete = await getAthleteData(params.id);
+	const { id } = await params;
+	const athlete = await getAthleteData(id);
 
 	if (!athlete) return notFound();
 

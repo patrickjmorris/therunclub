@@ -40,7 +40,18 @@ interface CompetitorResponse {
 			results: PersonalBest[];
 			withRecords: boolean;
 		};
+		honours: Honor[];
 	} | null;
+}
+
+interface Honor {
+	categoryName: string;
+	results: Array<{
+		competition: string;
+		mark: string;
+		place: string;
+		discipline: string;
+	}>;
 }
 
 interface Athlete {
@@ -50,6 +61,7 @@ interface Athlete {
 	countryName?: string;
 	dateOfBirth?: string;
 	personalBests?: PersonalBest[];
+	honours?: Honor[];
 }
 
 export const worldAthleticsClient = new GraphQLClient(WORLD_ATHLETICS_API, {
@@ -98,7 +110,15 @@ export async function getAthleteById(id: string): Promise<Athlete | null> {
           familyName
           givenName
         }
-        
+        honours {
+          categoryName
+          results {
+            competition
+            mark
+            place
+            discipline
+          }
+        }
         personalBests {
           results {
             date
@@ -110,7 +130,6 @@ export async function getAthleteById(id: string): Promise<Athlete | null> {
           }
           withRecords
         }
-        
       }
     }
   `;
@@ -127,7 +146,8 @@ export async function getAthleteById(id: string): Promise<Athlete | null> {
 
 			if (!response.getSingleCompetitor) return null;
 
-			const { basicData, personalBests } = response.getSingleCompetitor;
+			const { basicData, personalBests, honours } =
+				response.getSingleCompetitor;
 
 			return {
 				id: response.getSingleCompetitor._id,
@@ -136,6 +156,7 @@ export async function getAthleteById(id: string): Promise<Athlete | null> {
 				countryName: basicData.countryFullName,
 				dateOfBirth: basicData.birthDate,
 				personalBests: personalBests.results,
+				honours: honours,
 			};
 		} catch (error) {
 			retries++;

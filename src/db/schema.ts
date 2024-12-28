@@ -303,7 +303,28 @@ export const athletes = pgTable("athletes", {
 	countryCode: text("country_code"),
 	countryName: text("country_name"),
 	dateOfBirth: date("date_of_birth"),
+	bio: text("bio"),
+	socialMedia: jsonb("social_media").$type<{
+		twitter?: string;
+		instagram?: string;
+		facebook?: string;
+		website?: string;
+	}>(),
+	verified: boolean("verified").default(false),
 	updatedAt: timestamp("updated_at").defaultNow(),
+	createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const athleteHonors = pgTable("athlete_honors", {
+	id: text("id").primaryKey(),
+	athleteId: text("athlete_id")
+		.notNull()
+		.references(() => athletes.id),
+	categoryName: text("category_name").notNull(),
+	competition: text("competition").notNull(),
+	discipline: text("discipline").notNull(),
+	mark: text("mark"),
+	place: text("place"),
 	createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -318,14 +339,22 @@ export const athleteResults = pgTable("athlete_results", {
 	wind: text("wind"),
 });
 
-// Add relations
+// Update relations
 export const athleteRelations = relations(athletes, ({ many }) => ({
 	results: many(athleteResults),
+	honors: many(athleteHonors),
 }));
 
 export const athleteResultsRelations = relations(athleteResults, ({ one }) => ({
 	athlete: one(athletes, {
 		fields: [athleteResults.athleteId],
+		references: [athletes.id],
+	}),
+}));
+
+export const athleteHonorsRelations = relations(athleteHonors, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteHonors.athleteId],
 		references: [athletes.id],
 	}),
 }));

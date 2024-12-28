@@ -1,8 +1,59 @@
 import { db } from "../src/db/client";
-import { athletes, athleteResults } from "@/db/schema";
+import { athletes, athleteResults, athleteHonors } from "@/db/schema";
 import { getAthleteById, worldAthleticsClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
 import { sql } from "drizzle-orm";
+import { openai } from "../src/lib/openai";
+import { eq } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
+
+interface AthleteInfo {
+	bio: string;
+	socialMedia: {
+		twitter?: string;
+		instagram?: string;
+		facebook?: string;
+		website?: string;
+	};
+}
+
+interface CompetitorBasicData {
+	birthDate: string;
+	countryCode: string;
+	countryFullName: string;
+	familyName: string;
+	givenName: string;
+}
+
+interface PersonalBest {
+	date: string;
+	discipline: string;
+	eventName: string;
+	records: string[];
+	mark: string;
+	venue: string;
+}
+
+interface Honor {
+	categoryName: string;
+	results: Array<{
+		competition: string;
+		mark: string;
+		place: string;
+		discipline: string;
+	}>;
+}
+
+interface Athlete {
+	id: string;
+	name: string;
+	countryCode?: string;
+	countryName?: string;
+	dateOfBirth?: string;
+	personalBests?: PersonalBest[];
+	honours?: Honor[];
+}
 
 interface AthleteSearchResponse {
 	getAthleteRepresentativeAthleteSearch: {
@@ -24,6 +75,31 @@ interface LeadingAthletesResponse {
 			}>;
 		}>;
 	};
+}
+
+interface AthleteData {
+	athlete: {
+		id: string;
+		name: string;
+		countryName: string | null;
+		dateOfBirth: string | null;
+	};
+	personalBests: Array<{
+		discipline: string;
+		mark: string;
+	}>;
+}
+
+interface CompetitorResponse {
+	getSingleCompetitor: {
+		_id: string;
+		basicData: CompetitorBasicData;
+		personalBests: {
+			results: PersonalBest[];
+			withRecords: boolean;
+		};
+		honours: Honor[];
+	} | null;
 }
 
 function parseBirthDate(dateStr: string | undefined | null): string | null {
@@ -100,7 +176,7 @@ async function getAthleteIdsByCountry(countryCode: string): Promise<string[]> {
 	}
 }
 
-async function importAthletes() {
+async function importAthleteData() {
 	// Get athletes from the first method
 	const athleteIds = await getAthleteIds();
 	console.log(`Found ${athleteIds.length} athletes from representative search`);
@@ -146,6 +222,7 @@ async function importAthletes() {
 				countryCode: athleteData.countryCode ?? null,
 				countryName: athleteData.countryName ?? null,
 				dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
+				verified: false,
 			})
 			.onConflictDoUpdate({
 				target: athletes.id,
@@ -179,17 +256,387 @@ async function importAthletes() {
 			}
 		}
 
+		// Insert honors
+		if (athleteData.honours) {
+			for (const honor of athleteData.honours) {
+				for (const result of honor.results) {
+					const honorId = `${athleteData.id}-${honor.categoryName}-${result.competition}-${result.discipline}`;
+
+					await db
+						.insert(athleteHonors)
+						.values({
+							id: honorId,
+							athleteId: athleteData.id,
+							categoryName: honor.categoryName,
+							competition: result.competition,
+							discipline: result.discipline,
+							mark: result.mark,
+							place: result.place,
+						})
+						.onConflictDoNothing();
+				}
+			}
+		}
+
 		console.log(`Successfully imported athlete ${athleteData.name}`);
 	}
 }
 
-// Execute the script
-importAthletes()
-	.then(() => {
-		console.log("✅ Import completed successfully");
-		process.exit(0);
-	})
-	.catch((error) => {
-		console.error("❌ Import failed:", error);
-		process.exit(1);
+async function generateBatchFile(athletesData: AthleteData[]) {
+	// Delete existing batch file if it exists
+	const batchFilePath = path.join(process.cwd(), "scripts/athlete_bios.jsonl");
+	if (fs.existsSync(batchFilePath)) {
+		fs.unlinkSync(batchFilePath);
+	}
+
+	const system = `You are a sports journalist who specializes in track and field athletics. Your task is to generate accurate social media handles for athletes:
+
+Only include social media links that would likely exist based on the athlete's profile and achievements.
+For less prominent athletes, include fewer social media links.
+For athletes from non-English speaking countries, they may not have social media handles and you should omit them.`;
+
+	for (const { athlete, personalBests } of athletesData) {
+		// Generate a unique custom_id using athlete ID and timestamp
+		const timestamp = Date.now();
+		const custom_id = `${athlete.id}_${timestamp}`;
+		const method = "POST";
+		const url = "/v1/chat/completions";
+
+		const prompt = `Generate a JSON response with a bio and likely social media links for the track and field athlete ${
+			athlete.name
+		}
+${athlete.countryName ? `from ${athlete.countryName}` : ""}
+
+
+
+The response should be in this format:
+{
+  "bio": "A short biography of ${athlete.name} that highlights their main events and achievements",
+  "socialMedia": {
+    "twitter": "handle for track and field athlete ${athlete.name} ${
+			athlete.countryName ? `from ${athlete.countryName}` : ""
+		}",
+    "instagram": "handle for track and field athlete ${athlete.name} ${
+			athlete.countryName ? `from ${athlete.countryName}` : ""
+		}",
+    "facebook": "URL for track and field athlete ${athlete.name} ${
+			athlete.countryName ? `from ${athlete.countryName}` : ""
+		}",
+    "website": "likely domain for track and field athlete ${athlete.name} ${
+			athlete.countryName ? `from ${athlete.countryName}` : ""
+		}"
+  }
+}
+
+Important:
+- Do not include the notation of "json" in the response
+- Only include social media handles that would realistically exist
+- Base handle complexity on athlete's prominence (more prominent = simpler handles)
+- Use their actual name structure (if they go by a shortened version, use that)
+- Consider their nationality for handle patterns
+- Omit any social media link if you're not confident it would exist`;
+
+		const body = {
+			model: "gpt-4o",
+			messages: [
+				{ role: "system", content: system },
+				{ role: "user", content: prompt },
+			],
+			temperature: 0.7,
+		};
+
+		const line = `{"custom_id": "${custom_id}", "method": "${method}", "url": "${url}", "body": ${JSON.stringify(
+			body,
+		)}}`;
+
+		fs.appendFileSync(batchFilePath, `${line}\n`);
+	}
+}
+
+interface BatchResponse {
+	id: string;
+	custom_id: string;
+	response: {
+		status_code: number;
+		request_id: string;
+		body: {
+			choices: Array<{
+				message: {
+					content: string;
+				};
+			}>;
+		};
+	};
+	error: string | null;
+}
+
+async function processBatchResults(filePath: string) {
+	console.log("Reading results file...");
+	if (!fs.existsSync(filePath)) {
+		throw new Error(`Results file not found at path: ${filePath}`);
+	}
+
+	const fileContents = fs.readFileSync(filePath, "utf-8");
+	const lines = fileContents.trim().split("\n");
+	console.log("Found", lines.length, "results to process");
+
+	let successCount = 0;
+	let errorCount = 0;
+
+	for (const [index, line] of lines.entries()) {
+		console.log(`\nProcessing result ${index + 1}/${lines.length}`);
+
+		try {
+			let result: BatchResponse;
+			try {
+				result = JSON.parse(line);
+				console.log("Result structure:", JSON.stringify(result, null, 2));
+			} catch (parseError) {
+				console.error("Failed to parse JSON for line:", line);
+				console.error("Parse error:", parseError);
+				errorCount++;
+				continue;
+			}
+
+			// Extract the athlete ID from the custom_id by removing the timestamp
+			const athleteId = result.custom_id.split("_")[0];
+			if (!athleteId) {
+				console.error("Invalid custom_id format:", result.custom_id);
+				errorCount++;
+				continue;
+			}
+
+			console.log("Processing athlete ID:", athleteId);
+
+			// Check if there was an error in the response
+			if (result.error) {
+				console.error(
+					`Error in response for athlete ${athleteId}:`,
+					result.error,
+				);
+				errorCount++;
+				continue;
+			}
+
+			// Check if we have a valid response structure
+			if (!result.response?.body?.choices?.[0]?.message?.content) {
+				console.error(`Invalid response structure for athlete ${athleteId}`);
+				console.error("Response:", result.response);
+				errorCount++;
+				continue;
+			}
+
+			// Parse the content as AthleteInfo
+			let content: AthleteInfo;
+			try {
+				content = JSON.parse(
+					result.response.body.choices[0].message.content,
+				) as AthleteInfo;
+				console.log(`Parsed content for ${athleteId}:`, content);
+			} catch (contentParseError) {
+				console.error(
+					`Failed to parse content as JSON for athlete ${athleteId}`,
+				);
+				console.error(
+					"Content:",
+					result.response.body.choices[0].message.content,
+				);
+				console.error("Parse error:", contentParseError);
+				errorCount++;
+				continue;
+			}
+
+			// Validate content structure
+			if (!content.bio || typeof content.bio !== "string") {
+				console.error(`Invalid bio format for athlete ${athleteId}`);
+				errorCount++;
+				continue;
+			}
+
+			if (!content.socialMedia || typeof content.socialMedia !== "object") {
+				console.error(`Invalid socialMedia format for athlete ${athleteId}`);
+				errorCount++;
+				continue;
+			}
+
+			// Update the database
+			try {
+				await db
+					.update(athletes)
+					.set({
+						bio: content.bio,
+						socialMedia: content.socialMedia,
+						updatedAt: sql`CURRENT_TIMESTAMP`,
+					})
+					.where(eq(athletes.id, athleteId));
+
+				console.log(`Successfully updated bio for athlete ${athleteId}`);
+				successCount++;
+			} catch (dbError) {
+				console.error(`Database error for athlete ${athleteId}:`, dbError);
+				errorCount++;
+			}
+		} catch (error) {
+			console.error("Unexpected error processing line:", line);
+			console.error("Error:", error);
+			errorCount++;
+		}
+	}
+
+	console.log("\nProcessing complete:");
+	console.log("- Total results:", lines.length);
+	console.log("- Successful updates:", successCount);
+	console.log("- Failed updates:", errorCount);
+
+	if (errorCount > 0) {
+		console.warn("\nWarning:", errorCount, "results failed to process");
+	}
+}
+
+async function generateAthleteBios(limit?: number) {
+	// Get all athletes without bios
+	const athletesWithoutBios = await db
+		.select()
+		.from(athletes)
+		.where(sql`bio IS NULL`)
+		.limit(limit || Number.MAX_SAFE_INTEGER);
+
+	console.log(
+		`Found ${athletesWithoutBios.length} athletes${
+			limit ? ` (limited to ${limit})` : ""
+		}`,
+	);
+
+	// Prepare athlete data
+	const athleteDataPromises = athletesWithoutBios.map(async (athlete) => {
+		const results = await db
+			.select()
+			.from(athleteResults)
+			.where(eq(athleteResults.athleteId, athlete.id));
+
+		const personalBests = results.map((r) => ({
+			discipline: r.discipline,
+			mark: r.performance,
+		}));
+
+		return {
+			athlete,
+			personalBests,
+		};
 	});
+
+	const athleteData = await Promise.all(athleteDataPromises);
+
+	// Generate batch file
+	console.log("Generating batch file...");
+	await generateBatchFile(athleteData);
+
+	// Upload batch file
+	console.log("Uploading batch file...");
+	const file = await openai.files.create({
+		file: fs.createReadStream(
+			path.join(process.cwd(), "scripts/athlete_bios.jsonl"),
+		),
+		purpose: "batch",
+	});
+
+	// Create batch job
+	console.log("Creating batch job...");
+	const batch = await openai.batches.create({
+		input_file_id: file.id,
+		endpoint: "/v1/chat/completions",
+		completion_window: "24h",
+	});
+
+	console.log(`Batch job created with ID: ${batch.id}`);
+	console.log("Waiting for batch completion...");
+
+	// Poll for completion
+	let status = await openai.batches.retrieve(batch.id);
+	while (status.status !== "completed") {
+		await new Promise((resolve) => setTimeout(resolve, 30000)); // Wait 30 seconds
+		status = await openai.batches.retrieve(batch.id);
+		console.log(`Current status: ${status.status}`);
+	}
+
+	// Download results
+	console.log("Downloading results...");
+	const outputFile = status.output_file_id;
+	if (!outputFile) {
+		throw new Error("No output file ID provided in batch status");
+	}
+	const fileResponse = await openai.files.content(outputFile);
+	const outputPath = path.join(
+		process.cwd(),
+		"scripts/athlete_bios_results.jsonl",
+	);
+	fs.writeFileSync(outputPath, await fileResponse.text());
+
+	// Process results
+	console.log("Processing results...");
+	await processBatchResults(outputPath);
+
+	// Cleanup
+	try {
+		fs.unlinkSync(path.join(process.cwd(), "scripts/athlete_bios.jsonl"));
+		fs.unlinkSync(outputPath);
+	} catch (error) {
+		console.error("Error cleaning up files:", error);
+	}
+}
+
+// Choose which operation to run based on command line argument
+const operation = process.argv[2];
+const resultsFile = process.argv[3]; // Optional file path argument
+
+if (operation === "import") {
+	importAthleteData()
+		.then(() => {
+			console.log("✅ Import completed successfully");
+			process.exit(0);
+		})
+		.catch((error) => {
+			console.error("❌ Import failed:", error);
+			process.exit(1);
+		});
+} else if (operation === "generate-bios") {
+	generateAthleteBios()
+		.then(() => {
+			console.log("✅ Bio generation completed successfully");
+			process.exit(0);
+		})
+		.catch((error) => {
+			console.error("❌ Bio generation failed:", error);
+			process.exit(1);
+		});
+} else if (operation === "test-bios") {
+	generateAthleteBios(20)
+		.then(() => {
+			console.log("✅ Test bio generation completed successfully");
+			process.exit(0);
+		})
+		.catch((error) => {
+			console.error("❌ Test bio generation failed:", error);
+			process.exit(1);
+		});
+} else if (operation === "process-results") {
+	if (!resultsFile) {
+		console.error("Please provide the path to the results file");
+		process.exit(1);
+	}
+
+	processBatchResults(resultsFile)
+		.then(() => {
+			console.log("✅ Results processing completed successfully");
+			process.exit(0);
+		})
+		.catch((error) => {
+			console.error("❌ Results processing failed:", error);
+			process.exit(1);
+		});
+} else {
+	console.log(
+		"Please specify an operation: 'import', 'generate-bios', 'test-bios', or 'process-results <file>'",
+	);
+	process.exit(1);
+}

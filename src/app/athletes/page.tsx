@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { db } from "@/db/client";
-import { athletes, athleteHonors } from "@/db/schema";
+import { athletes, athleteHonors, athleteResults } from "@/db/schema";
 import { desc, eq, and, ilike, sql } from "drizzle-orm";
 import { format } from "date-fns";
 import { convertToAlpha2 } from "@/lib/utils/country-codes";
@@ -15,7 +15,7 @@ interface AthletesListProps {
 		name: string;
 		countryName: string | null;
 		countryCode: string | null;
-		dateOfBirth: Date | null;
+		disciplines: string[];
 		isOlympicGoldMedalist: boolean;
 	}[];
 	hasMore: boolean;
@@ -57,9 +57,9 @@ async function AthletesList({ athletes, hasMore, page }: AthletesListProps) {
 									<span>{athlete.countryName}</span>
 								</p>
 							)}
-							{athlete.dateOfBirth && (
+							{athlete.disciplines.length > 0 && (
 								<p className="text-sm text-gray-500">
-									Born: {format(new Date(athlete.dateOfBirth), "MMMM d, yyyy")}
+									{athlete.disciplines.join(", ")}
 								</p>
 							)}
 						</div>
@@ -78,7 +78,9 @@ async function AthletesList({ athletes, hasMore, page }: AthletesListProps) {
 }
 
 async function getAthletes(page = 1) {
-	// First, get athletes with Olympic gold medals
+	console.log(`Getting athletes for page ${page}`);
+
+	// First, get athletes with Olympic gold medals (excluding youth olympics)
 	const olympicGoldMedalists = await db
 		.select({
 			id: athletes.id,
@@ -89,41 +91,64 @@ async function getAthletes(page = 1) {
 			and(
 				eq(athletes.id, athleteHonors.athleteId),
 				ilike(athleteHonors.categoryName, "%olympic%"),
-				eq(athleteHonors.place, "1"),
+				sql`${athleteHonors.categoryName} NOT ILIKE '%youth%'`,
+				eq(athleteHonors.place, "1."),
 			),
 		)
 		.orderBy(desc(athletes.name));
 
-	const goldMedalistIds = new Set(olympicGoldMedalists.map((a) => a.id));
+	console.log(
+		"Found Olympic gold medalists:",
+		olympicGoldMedalists.slice(0, 5),
+	);
+	const goldMedalistIds = olympicGoldMedalists.map((a) => a.id);
+	console.log("Total Olympic gold medalists:", goldMedalistIds.length);
 
 	// Then get all athletes with pagination
 	const offset = (page - 1) * ATHLETES_PER_PAGE;
-	const allAthletes = await db.query.athletes.findMany({
-		orderBy: [
-			// Olympic gold medalists first
-			sql`CASE WHEN id = ANY(${
-				goldMedalistIds.size > 0 ? Array.from(goldMedalistIds) : [null]
-			}) THEN 0 ELSE 1 END`,
+
+	const quotedIds = goldMedalistIds.map((id) => `'${id}'`).join(",");
+
+	// Get athletes with their disciplines
+	const allAthletes = await db
+		.select({
+			athlete: athletes,
+			disciplines: sql<string[]>`
+				array_agg(DISTINCT ${athleteResults.discipline})
+				FILTER (
+					WHERE ${athleteResults.discipline} NOT ILIKE '%short track%'
+					AND ${athleteResults.discipline} NOT ILIKE '%relay%'
+				)
+			`,
+		})
+		.from(athletes)
+		.leftJoin(athleteResults, eq(athletes.id, athleteResults.athleteId))
+		.groupBy(athletes.id)
+		.orderBy(
+			sql`CASE WHEN ${athletes.id} IN (${sql.raw(
+				quotedIds,
+			)}) THEN 0 ELSE 1 END`,
 			desc(athletes.name),
-		],
-		limit: ATHLETES_PER_PAGE,
-		offset,
-	});
+		)
+		.limit(ATHLETES_PER_PAGE)
+		.offset(offset);
 
 	// Get total count for pagination
 	const [{ count }] = await db
 		.select({ count: sql<number>`count(*)` })
 		.from(athletes);
 
-	return {
-		athletes: allAthletes.map((athlete) => ({
+	const result = {
+		athletes: allAthletes.map(({ athlete, disciplines }) => ({
 			...athlete,
-			dateOfBirth: athlete.dateOfBirth ? new Date(athlete.dateOfBirth) : null,
-			isOlympicGoldMedalist: goldMedalistIds.has(athlete.id),
+			disciplines: disciplines?.filter(Boolean) || [],
+			isOlympicGoldMedalist: goldMedalistIds.includes(athlete.id),
 		})),
 		hasMore: offset + ATHLETES_PER_PAGE < count,
 		page,
 	};
+
+	return result;
 }
 
 export default async function AthletesPage({

@@ -2,7 +2,7 @@ import { db } from "../src/db/client";
 import { athletes, athleteResults, athleteHonors } from "@/db/schema";
 import { getAthleteById, worldAthleticsClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
-import { sql } from "drizzle-orm";
+import { like, or, sql, and } from "drizzle-orm";
 import { openai } from "../src/lib/openai";
 import { eq } from "drizzle-orm";
 import fs from "fs";
@@ -295,20 +295,23 @@ Only include social media links that would likely exist based on the athlete's p
 For less prominent athletes, include fewer social media links.
 For athletes from non-English speaking countries, they may not have social media handles and you should omit them.`;
 
-	for (const { athlete, personalBests } of athletesData) {
+	for (const { athlete } of athletesData) {
 		// Generate a unique custom_id using athlete ID and timestamp
 		const timestamp = Date.now();
 		const custom_id = `${athlete.id}_${timestamp}`;
 		const method = "POST";
 		const url = "/v1/chat/completions";
 
-		const prompt = `Generate a JSON response with a bio and likely social media links for the track and field athlete ${
+		const prompt = `Generate a JSON response with a bio and known social media links for the track and field athlete ${
 			athlete.name
 		}
 ${athlete.countryName ? `from ${athlete.countryName}` : ""}
 
-
-
+Important:
+- Do not include the notation of "json" in the response
+- Only include social media handles that would exist
+- Omit any social media link if you're not confident it would exist
+- If you're not sure about the social media link, omit it
 The response should be in this format:
 {
   "bio": "A short biography of ${athlete.name} that highlights their main events and achievements",
@@ -322,19 +325,11 @@ The response should be in this format:
     "facebook": "URL for track and field athlete ${athlete.name} ${
 			athlete.countryName ? `from ${athlete.countryName}` : ""
 		}",
-    "website": "likely domain for track and field athlete ${athlete.name} ${
+    "website": "URL for track and field athlete ${athlete.name} ${
 			athlete.countryName ? `from ${athlete.countryName}` : ""
 		}"
   }
-}
-
-Important:
-- Do not include the notation of "json" in the response
-- Only include social media handles that would realistically exist
-- Base handle complexity on athlete's prominence (more prominent = simpler handles)
-- Use their actual name structure (if they go by a shortened version, use that)
-- Consider their nationality for handle patterns
-- Omit any social media link if you're not confident it would exist`;
+}`;
 
 		const body = {
 			model: "gpt-4o",
@@ -342,7 +337,7 @@ Important:
 				{ role: "system", content: system },
 				{ role: "user", content: prompt },
 			],
-			temperature: 0.7,
+			temperature: 0.85,
 		};
 
 		const line = `{"custom_id": "${custom_id}", "method": "${method}", "url": "${url}", "body": ${JSON.stringify(
@@ -495,10 +490,31 @@ async function processBatchResults(filePath: string) {
 
 async function generateAthleteBios(limit?: number) {
 	// Get all athletes without bios
+	// const athletesWithoutBios = await db
+	// 	.select()
+	// 	.from(athletes)
+	// 	.where(sql`bio IS NULL`)
+	// 	.limit(limit || Number.MAX_SAFE_INTEGER);
+
 	const athletesWithoutBios = await db
-		.select()
+		.select({
+			id: athletes.id,
+			name: athletes.name,
+			countryName: athletes.countryName,
+			dateOfBirth: athletes.dateOfBirth,
+		})
 		.from(athletes)
-		.where(sql`bio IS NULL`)
+		.innerJoin(athleteHonors, eq(athletes.id, athleteHonors.athleteId))
+		.where(
+			and(
+				sql`bio IS NULL`,
+				or(
+					like(athleteHonors.competition, "%World Championships%"),
+					like(athleteHonors.competition, "%Olympic%"),
+				),
+			),
+		)
+		.groupBy(athletes.id)
 		.limit(limit || Number.MAX_SAFE_INTEGER);
 
 	console.log(
@@ -610,7 +626,7 @@ if (operation === "import") {
 			process.exit(1);
 		});
 } else if (operation === "test-bios") {
-	generateAthleteBios(20)
+	generateAthleteBios(98)
 		.then(() => {
 			console.log("✅ Test bio generation completed successfully");
 			process.exit(0);

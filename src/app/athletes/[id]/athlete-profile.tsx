@@ -352,6 +352,19 @@ function HonorsSection({ honors }: { honors: Honor[] }) {
 }
 
 export function AthleteProfile({ athlete }: { athlete: AthleteWithResults }) {
+	// Get unique disciplines excluding short track and relay events
+	const disciplines = [
+		...new Set(
+			athlete.results
+				.map((r) => r.discipline)
+				.filter(
+					(d) =>
+						!d.toLowerCase().includes("short track") &&
+						!d.toLowerCase().includes("relay"),
+				),
+		),
+	];
+
 	return (
 		<div className="container mx-auto py-8">
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -366,10 +379,8 @@ export function AthleteProfile({ athlete }: { athlete: AthleteWithResults }) {
 								<span>{athlete.countryName}</span>
 							</p>
 						)}
-						{athlete.dateOfBirth && (
-							<p className="text-gray-600">
-								Born: {format(new Date(athlete.dateOfBirth), "MMMM d, yyyy")}
-							</p>
+						{disciplines.length > 0 && (
+							<p className="text-gray-600">Events: {disciplines.join(", ")}</p>
 						)}
 						{athlete.bio && (
 							<div className="prose prose-sm max-w-none">
@@ -393,7 +404,13 @@ export function AthleteProfile({ athlete }: { athlete: AthleteWithResults }) {
 
 					<div className="mt-8">
 						<h2 className="text-xl font-semibold mb-4">Personal Bests</h2>
-						<ResultsTable results={athlete.results} />
+						<ResultsTable
+							results={athlete.results.filter(
+								(r) =>
+									!r.discipline.toLowerCase().includes("short track") &&
+									!r.discipline.toLowerCase().includes("relay"),
+							)}
+						/>
 					</div>
 				</div>
 			</div>

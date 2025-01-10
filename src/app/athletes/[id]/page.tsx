@@ -1,61 +1,99 @@
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
 import { db } from "@/db/client";
-import { athletes } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import {
+	athletes,
+	athleteHonors,
+	athleteResults,
+	athleteSponsors,
+	athleteGear,
+	athleteEvents,
+} from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { getUserRole } from "@/lib/auth-utils";
+import { ProfileSection } from "./components/profile-section";
+import { SponsorsSection } from "./components/sponsors-section";
+import { GearSection } from "./components/gear-section";
+import { EventsSection } from "./components/events-section";
 import { AthleteProfile } from "./athlete-profile";
 
-interface AthletePageProps {
-	params: Promise<{
-		id: string;
-	}>;
-}
-
 async function getAthleteData(id: string) {
-	const result = await db.query.athletes.findFirst({
+	const athlete = await db.query.athletes.findFirst({
 		where: eq(athletes.id, id),
 		with: {
-			results: {
-				orderBy: (fields) => [desc(fields.date)],
-			},
 			honors: true,
+			results: true,
+			sponsors: true,
+			gear: true,
+			events: true,
 		},
 	});
 
-	if (!result) return null;
-
-	return {
-		...result,
-		dateOfBirth: result.dateOfBirth ? new Date(result.dateOfBirth) : null,
-		results: result.results.map((r) => ({
-			id: r.id,
-			date: new Date(r.date),
-			competitionName: r.competitionName,
-			discipline: r.discipline,
-			performance: r.performance,
-			place: r.place,
-			wind: r.wind,
-		})),
-		honors: result.honors.map((h) => ({
-			id: h.id,
-			categoryName: h.categoryName,
-			competition: h.competition,
-			discipline: h.discipline,
-			mark: h.mark,
-			place: h.place,
-		})),
-	};
+	if (!athlete) return null;
+	return athlete;
 }
 
-export default async function AthletePage({ params }: AthletePageProps) {
+export default async function AthletePage({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}) {
 	const { id } = await params;
 	const athlete = await getAthleteData(id);
+	if (!athlete) notFound();
 
-	if (!athlete) return notFound();
+	const userRole = await getUserRole();
+	const isAdmin = userRole === "admin";
 
 	return (
-		<Suspense fallback={<div>Loading...</div>}>
-			<AthleteProfile athlete={athlete} />
-		</Suspense>
+		<main className="container mx-auto py-8 px-4">
+			<div className="max-w-7xl mx-auto">
+				{/* Profile Information */}
+				<ProfileSection
+					athleteId={athlete.id}
+					name={athlete.name}
+					bio={athlete.bio}
+					socialMedia={athlete.socialMedia}
+					verified={athlete.verified ?? false}
+					imageUrl={athlete.imageUrl}
+					isAdmin={isAdmin}
+				/>
+
+				{/* Two column layout */}
+				<div className="mt-8 lg:grid lg:grid-cols-12 lg:gap-8">
+					{/* Left column - Stats and Honors */}
+					<div className="lg:col-span-4">
+						<AthleteProfile athlete={athlete} isAdmin={isAdmin} />
+					</div>
+
+					{/* Right column - Sponsors, Gear, Events */}
+					<div className="mt-8 lg:mt-0 lg:col-span-8">
+						{/* Sponsors Section */}
+						<SponsorsSection
+							athleteId={athlete.id}
+							sponsors={athlete.sponsors}
+							isAdmin={isAdmin}
+						/>
+
+						{/* Gear Section */}
+						<div className="mt-8">
+							<GearSection
+								athleteId={athlete.id}
+								gear={athlete.gear}
+								isAdmin={isAdmin}
+							/>
+						</div>
+
+						{/* Events Section */}
+						<div className="mt-8">
+							<EventsSection
+								athleteId={athlete.id}
+								events={athlete.events}
+								isAdmin={isAdmin}
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+		</main>
 	);
 }

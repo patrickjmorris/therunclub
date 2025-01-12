@@ -37,3 +37,4 @@ next-env.d.ts
 
 # scripts
 scripts/athletes-with-bios.json
+scripts/transfer-athletes.load

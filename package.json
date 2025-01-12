@@ -59,6 +59,7 @@
 		"cmdk": "1.0.0",
 		"colorthief": "^2.6.0",
 		"csv-parse": "^5.5.5",
+		"csv-writer": "^1.6.0",
 		"date-fns": "^4.1.0",
 		"dotenv": "^16.4.5",
 		"drizzle-orm": "^0.36.0",

@@ -19,8 +19,8 @@ export const docsConfig: DocsConfig = {
 			href: "/videos",
 		},
 		{
-			title: "Runners",
-			href: "/runners",
+			title: "Athletes",
+			href: "/athletes",
 		},
 		{
 			title: "Training Plans",

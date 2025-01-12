@@ -10,6 +10,8 @@ import {
 	foreignKey,
 	pgPolicy,
 	jsonb,
+	date,
+	numeric,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -294,3 +296,158 @@ export const selectUserRoleSchema = createSelectSchema(userRoles);
 export type UserRole = typeof userRoles.$inferSelect;
 export type NewUserRole = typeof userRoles.$inferInsert;
 export type UserRoleType = "admin" | "editor" | "user";
+
+export const athletes = pgTable("athletes", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	countryCode: text("country_code"),
+	countryName: text("country_name"),
+	dateOfBirth: date("date_of_birth"),
+	bio: text("bio"),
+	imageUrl: text("image_url"),
+	socialMedia: jsonb("social_media").$type<{
+		twitter?: string;
+		instagram?: string;
+		facebook?: string;
+		website?: string;
+	}>(),
+	verified: boolean("verified").default(false),
+	updatedAt: timestamp("updated_at").defaultNow(),
+	createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const athleteHonors = pgTable("athlete_honors", {
+	id: text("id").primaryKey(),
+	athleteId: text("athlete_id")
+		.notNull()
+		.references(() => athletes.id),
+	categoryName: text("category_name").notNull(),
+	competition: text("competition").notNull(),
+	discipline: text("discipline").notNull(),
+	mark: text("mark"),
+	place: text("place"),
+	createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const athleteResults = pgTable("athlete_results", {
+	id: text("id").primaryKey(),
+	athleteId: text("athlete_id").references(() => athletes.id),
+	competitionName: text("competition_name"),
+	date: date("date").notNull(),
+	discipline: text("discipline").notNull(),
+	performance: text("performance").notNull(),
+	place: text("place"),
+	wind: text("wind"),
+});
+
+// Update relations
+export const athleteRelations = relations(athletes, ({ many }) => ({
+	results: many(athleteResults),
+	honors: many(athleteHonors),
+	sponsors: many(athleteSponsors),
+	gear: many(athleteGear),
+	events: many(athleteEvents),
+}));
+
+export const athleteResultsRelations = relations(athleteResults, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteResults.athleteId],
+		references: [athletes.id],
+	}),
+}));
+
+export const athleteHonorsRelations = relations(athleteHonors, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteHonors.athleteId],
+		references: [athletes.id],
+	}),
+}));
+
+export const athleteSponsors = pgTable("athlete_sponsors", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	athleteId: text("athlete_id")
+		.notNull()
+		.references(() => athletes.id),
+	name: text("name").notNull(),
+	website: text("website"),
+	logo: text("logo"),
+	startDate: date("start_date"),
+	endDate: date("end_date"),
+	isPrimary: boolean("is_primary").default(false),
+	createdAt: timestamp("created_at").defaultNow(),
+	updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const athleteGear = pgTable("athlete_gear", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	athleteId: text("athlete_id")
+		.notNull()
+		.references(() => athletes.id),
+	name: text("name").notNull(),
+	brand: text("brand").notNull(),
+	category: text("category", {
+		enum: [
+			"racing_shoes",
+			"training_shoes",
+			"shirts",
+			"shorts",
+			"tights",
+			"recovery",
+			"other",
+		],
+	}).notNull(),
+	model: text("model"),
+	description: text("description"),
+	purchaseUrl: text("purchase_url"),
+	imageUrl: text("image_url"),
+	isCurrent: boolean("is_current").default(true),
+	createdAt: timestamp("created_at").defaultNow(),
+	updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const athleteEvents = pgTable("athlete_events", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	athleteId: text("athlete_id")
+		.notNull()
+		.references(() => athletes.id, { onDelete: "cascade" }),
+	name: text("name").notNull(),
+	date: date("date").notNull(),
+	location: text("location"),
+	discipline: text("discipline"),
+	description: text("description"),
+	website: text("website"),
+	status: text("status", {
+		enum: ["upcoming", "completed", "cancelled"],
+	}).notNull(),
+	result: jsonb("result").$type<{
+		place?: number;
+		time?: string;
+		notes?: string;
+	}>(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const athleteSponsorsRelations = relations(
+	athleteSponsors,
+	({ one }) => ({
+		athlete: one(athletes, {
+			fields: [athleteSponsors.athleteId],
+			references: [athletes.id],
+		}),
+	}),
+);
+
+export const athleteGearRelations = relations(athleteGear, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteGear.athleteId],
+		references: [athletes.id],
+	}),
+}));
+
+export const athleteEventsRelations = relations(athleteEvents, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteEvents.athleteId],
+		references: [athletes.id],
+	}),
+}));

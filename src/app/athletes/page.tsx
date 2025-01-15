@@ -40,25 +40,33 @@ async function AthletesList({ athletes, hasMore, page }: AthletesListProps) {
 					<Link
 						key={athlete.id}
 						href={`/athletes/${athlete.id}`}
-						className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors relative"
+						className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors relative flex items-start gap-4"
 					>
 						{athlete.isOlympicGoldMedalist && (
 							<div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-100 border border-yellow-300 rounded-full flex items-center justify-center">
 								🥇
 							</div>
 						)}
-						<div className="space-y-2">
-							<h2 className="text-xl font-semibold">{athlete.name}</h2>
+						<div className="flex-shrink-0">
+							<img
+								src={`https://storage.googleapis.com/trc-athlete-images/${athlete.id}.webp`}
+								alt={athlete.name}
+								className="w-16 h-16 object-cover rounded-full"
+								loading="lazy"
+							/>
+						</div>
+						<div className="space-y-1.5 min-w-0">
+							<h2 className="text-lg font-semibold truncate">{athlete.name}</h2>
 							{athlete.countryName && athlete.countryCode && (
-								<p className="text-gray-600 flex items-center gap-2">
-									<span className="text-xl" aria-hidden="true">
+								<p className="text-gray-600 flex items-center gap-2 text-sm">
+									<span className="text-base" aria-hidden="true">
 										{getCountryFlag(athlete.countryCode)}
 									</span>
 									<span>{athlete.countryName}</span>
 								</p>
 							)}
 							{athlete.disciplines.length > 0 && (
-								<p className="text-sm text-gray-500">
+								<p className="text-sm text-gray-500 line-clamp-1">
 									{athlete.disciplines.join(", ")}
 								</p>
 							)}

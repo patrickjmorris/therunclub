@@ -24,16 +24,6 @@ async function getAthleteData(slug: string) {
 		},
 	});
 
-	console.log(
-		"Query result:",
-		athlete
-			? {
-					name: athlete.name,
-					slug: athlete.slug,
-			  }
-			: null,
-	);
-
 	if (!athlete) return null;
 	return athlete;
 }
@@ -41,9 +31,10 @@ async function getAthleteData(slug: string) {
 export async function generateMetadata({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-	const athlete = await getAthleteData(params.slug);
+	const resolvedParams = await params;
+	const athlete = await getAthleteData(resolvedParams.slug);
 
 	if (!athlete) {
 		return {
@@ -93,9 +84,7 @@ export default async function AthletePage(props: {
 	params: Promise<{ slug: string }>;
 }) {
 	const params = await props.params;
-	console.log("Page params:", params);
 	const athlete = await getAthleteData(params.slug);
-	console.log("Athlete found:", athlete ? true : false);
 
 	if (!athlete) notFound();
 

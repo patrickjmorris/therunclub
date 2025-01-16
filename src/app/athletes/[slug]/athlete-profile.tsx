@@ -58,10 +58,10 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 	const worldBronzes = worldMedals.filter((m) => m.place === "3.").length;
 
 	// Get personal bests
-	console.log("Debugging personal bests:");
-	console.log("Total results:", athlete.results.length);
-	console.log("Raw results data:", JSON.stringify(athlete.results, null, 2));
-	console.log("World Championships:", worldMedals);
+	// console.log("Debugging personal bests:");
+	// console.log("Total results:", athlete.results.length);
+	// console.log("Raw results data:", JSON.stringify(athlete.results, null, 2));
+	// console.log("World Championships:", worldMedals);
 
 	const personalBests = athlete.results
 		.filter((result) => {

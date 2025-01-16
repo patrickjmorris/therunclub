@@ -51,33 +51,48 @@ export async function generateMetadata({
 		};
 	}
 
+	const description =
+		athlete.bio ||
+		`Profile page for ${athlete.name}${
+			athlete.countryName ? ` from ${athlete.countryName}` : ""
+		}`;
+	const imageUrl = athlete.imageUrl || "";
+
 	return {
 		title: athlete.name,
-		description: athlete.bio || `Profile page for ${athlete.name}`,
+		description: description,
 		openGraph: {
+			type: "profile",
 			title: athlete.name,
-			description: athlete.bio || `Profile page for ${athlete.name}`,
-			images: athlete.imageUrl ? [athlete.imageUrl] : [],
+			description: description,
+			siteName: "The Run Club",
+			images: athlete.imageUrl
+				? [
+						{
+							url: imageUrl,
+							width: 350,
+							height: 350,
+							alt: athlete.name,
+						},
+				  ]
+				: [],
+		},
+		twitter: {
+			card: "summary_large_image",
+			title: athlete.name,
+			description: description,
+			images: athlete.imageUrl ? [imageUrl] : [],
+		},
+		alternates: {
+			canonical: `/athletes/${athlete.slug}`,
 		},
 	};
 }
 
-export async function generateStaticParams() {
-	const allAthletes = await db
-		.select({ slug: athletes.slug })
-		.from(athletes)
-		.where(sql`${athletes.slug} IS NOT NULL`);
-
-	return allAthletes.map((athlete) => ({
-		slug: athlete.slug,
-	}));
-}
-
-export default async function AthletePage({
-	params,
-}: {
-	params: { slug: string };
+export default async function AthletePage(props: {
+	params: Promise<{ slug: string }>;
 }) {
+	const params = await props.params;
 	console.log("Page params:", params);
 	const athlete = await getAthleteData(params.slug);
 	console.log("Athlete found:", athlete ? true : false);
@@ -87,62 +102,93 @@ export default async function AthletePage({
 	const userRole = await getUserRole();
 	const isAdmin = userRole === "admin";
 
+	// Prepare JSON-LD structured data
+	const jsonLd = {
+		"@context": "https://schema.org",
+		"@type": "Person",
+		name: athlete.name,
+		description: athlete.bio,
+		nationality: athlete.countryName,
+		image: athlete.imageUrl,
+		url: `https://therunclub.xyz/athletes/${athlete.slug}`,
+		sameAs: [
+			athlete.socialMedia?.twitter &&
+				`https://x.com/${athlete.socialMedia.twitter}`,
+			athlete.socialMedia?.instagram &&
+				`https://instagram.com/${athlete.socialMedia.instagram}`,
+			athlete.socialMedia?.facebook,
+			athlete.socialMedia?.website,
+		].filter(Boolean),
+		award: athlete.honors.map((honor) => ({
+			"@type": "Award",
+			name: `${honor.place} place in ${honor.competition}`,
+			description: `${honor.discipline} - ${honor.mark}`,
+		})),
+	};
+
 	return (
-		<main className="min-h-screen bg-gray-50 dark:bg-gray-900/50">
-			<div className="container mx-auto py-8 px-4">
-				<div className="max-w-7xl mx-auto">
-					{/* Profile Information */}
-					<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
-						<ProfileSection
-							athleteId={athlete.id}
-							name={athlete.name}
-							bio={athlete.bio}
-							socialMedia={athlete.socialMedia}
-							verified={athlete.verified ?? false}
-							imageUrl={athlete.imageUrl}
-							countryName={athlete.countryName}
-							countryCode={athlete.countryCode}
-							isAdmin={isAdmin}
-						/>
-					</div>
-
-					{/* Two column layout */}
-					<div className="mt-8 lg:grid lg:grid-cols-12 lg:gap-8">
-						{/* Left column - Stats and Honors */}
-						<div className="lg:col-span-4">
-							<AthleteProfile athlete={athlete} isAdmin={isAdmin} />
-						</div>
-
-						{/* Right column - Sponsors, Gear, Events */}
-						<div className="mt-8 lg:mt-0 lg:col-span-8">
-							{/* Sponsors Section */}
-							<SponsorsSection
+		<>
+			<script
+				type="application/ld+json"
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
+				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			/>
+			<main className="min-h-screen bg-gray-50 dark:bg-gray-900/50">
+				<div className="container mx-auto py-8 px-4">
+					<div className="max-w-7xl mx-auto">
+						{/* Profile Information */}
+						<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
+							<ProfileSection
 								athleteId={athlete.id}
-								sponsors={athlete.sponsors}
+								name={athlete.name}
+								bio={athlete.bio}
+								socialMedia={athlete.socialMedia}
+								verified={athlete.verified ?? false}
+								imageUrl={athlete.imageUrl}
+								countryName={athlete.countryName}
+								countryCode={athlete.countryCode}
 								isAdmin={isAdmin}
 							/>
+						</div>
 
-							{/* Gear Section */}
-							<div className="mt-8">
-								<GearSection
-									athleteId={athlete.id}
-									gear={athlete.gear}
-									isAdmin={isAdmin}
-								/>
+						{/* Two column layout */}
+						<div className="mt-8 lg:grid lg:grid-cols-12 lg:gap-8">
+							{/* Left column - Stats and Honors */}
+							<div className="lg:col-span-4">
+								<AthleteProfile athlete={athlete} isAdmin={isAdmin} />
 							</div>
 
-							{/* Events Section */}
-							<div className="mt-8">
-								<EventsSection
+							{/* Right column - Sponsors, Gear, Events */}
+							<div className="mt-8 lg:mt-0 lg:col-span-8">
+								{/* Sponsors Section */}
+								<SponsorsSection
 									athleteId={athlete.id}
-									events={athlete.events}
+									sponsors={athlete.sponsors}
 									isAdmin={isAdmin}
 								/>
+
+								{/* Gear Section */}
+								<div className="mt-8">
+									<GearSection
+										athleteId={athlete.id}
+										gear={athlete.gear}
+										isAdmin={isAdmin}
+									/>
+								</div>
+
+								{/* Events Section */}
+								<div className="mt-8">
+									<EventsSection
+										athleteId={athlete.id}
+										events={athlete.events}
+										isAdmin={isAdmin}
+									/>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
-			</div>
-		</main>
+			</main>
+		</>
 	);
 }

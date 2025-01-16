@@ -28,14 +28,18 @@ interface ProfileData {
 }
 
 export const updateProfile = requireRole(["admin", "editor"])(
-	async (athleteId: string, data: ProfileData) => {
+	async (slug: string, data: ProfileData) => {
 		const { imageUrl, ...otherData } = data;
 		let processedImageUrl = null;
 
 		// Get the current athlete data to check for existing image
 		const currentAthlete = await db.query.athletes.findFirst({
-			where: eq(athletes.id, athleteId),
+			where: eq(athletes.slug, slug),
 		});
+
+		if (!currentAthlete) {
+			throw new Error("Athlete not found");
+		}
 
 		if (imageUrl) {
 			try {
@@ -72,9 +76,9 @@ export const updateProfile = requireRole(["admin", "editor"])(
 				imageUrl: processedImageUrl || undefined,
 				updatedAt: sql`CURRENT_TIMESTAMP`,
 			})
-			.where(eq(athletes.id, athleteId));
+			.where(eq(athletes.slug, slug));
 
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
@@ -94,9 +98,17 @@ interface EventData {
 }
 
 export const addEvent = requireRole(["admin", "editor"])(
-	async (athleteId: string, data: EventData) => {
+	async (slug: string, data: EventData) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		await db.insert(athleteEvents).values({
-			athleteId,
+			athleteId: athlete.id,
 			name: data.name,
 			date: sql`${data.date}::date`,
 			location: data.location || null,
@@ -107,12 +119,20 @@ export const addEvent = requireRole(["admin", "editor"])(
 			result: data.result || null,
 		});
 
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
 export const updateEvent = requireRole(["admin", "editor"])(
-	async (eventId: string, athleteId: string, data: EventData) => {
+	async (eventId: string, slug: string, data: EventData) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		await db
 			.update(athleteEvents)
 			.set({
@@ -128,14 +148,22 @@ export const updateEvent = requireRole(["admin", "editor"])(
 			})
 			.where(eq(athleteEvents.id, eventId));
 
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
 export const deleteEvent = requireRole(["admin", "editor"])(
-	async (eventId: string, athleteId: string) => {
+	async (eventId: string, slug: string) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		await db.delete(athleteEvents).where(eq(athleteEvents.id, eventId));
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
@@ -149,20 +177,36 @@ interface SponsorData {
 }
 
 export const addSponsor = requireRole(["admin", "editor"])(
-	async (athleteId: string, data: SponsorData) => {
+	async (slug: string, data: SponsorData) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		const { startDate, endDate, ...rest } = data;
 		await db.insert(athleteSponsors).values({
-			athleteId,
+			athleteId: athlete.id,
 			...rest,
 			startDate: startDate ? sql`${startDate}::date` : null,
 			endDate: endDate ? sql`${endDate}::date` : null,
 		});
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
 export const updateSponsor = requireRole(["admin", "editor"])(
-	async (sponsorId: string, athleteId: string, data: Partial<SponsorData>) => {
+	async (sponsorId: string, slug: string, data: Partial<SponsorData>) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		const { startDate, endDate, ...rest } = data;
 		await db
 			.update(athleteSponsors)
@@ -173,14 +217,22 @@ export const updateSponsor = requireRole(["admin", "editor"])(
 				updatedAt: sql`CURRENT_TIMESTAMP`,
 			})
 			.where(eq(athleteSponsors.id, sponsorId));
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
 export const deleteSponsor = requireRole(["admin", "editor"])(
-	async (sponsorId: string, athleteId: string) => {
+	async (sponsorId: string, slug: string) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		await db.delete(athleteSponsors).where(eq(athleteSponsors.id, sponsorId));
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
@@ -203,17 +255,33 @@ interface GearData {
 }
 
 export const addGear = requireRole(["admin", "editor"])(
-	async (athleteId: string, data: GearData) => {
+	async (slug: string, data: GearData) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		await db.insert(athleteGear).values({
-			athleteId,
+			athleteId: athlete.id,
 			...data,
 		});
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
 export const updateGear = requireRole(["admin", "editor"])(
-	async (gearId: string, athleteId: string, data: Partial<GearData>) => {
+	async (gearId: string, slug: string, data: Partial<GearData>) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		await db
 			.update(athleteGear)
 			.set({
@@ -221,21 +289,29 @@ export const updateGear = requireRole(["admin", "editor"])(
 				updatedAt: sql`CURRENT_TIMESTAMP`,
 			})
 			.where(eq(athleteGear.id, gearId));
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
 export const deleteGear = requireRole(["admin", "editor"])(
-	async (gearId: string, athleteId: string) => {
+	async (gearId: string, slug: string) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+		});
+
+		if (!athlete) {
+			throw new Error("Athlete not found");
+		}
+
 		await db.delete(athleteGear).where(eq(athleteGear.id, gearId));
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
 export const updateAthleteImage = requireRole(["admin", "editor"])(
-	async (athleteId: string) => {
+	async (slug: string) => {
 		const athlete = await db.query.athletes.findFirst({
-			where: eq(athletes.id, athleteId),
+			where: eq(athletes.slug, slug),
 		});
 
 		if (!athlete) {
@@ -275,9 +351,9 @@ export const updateAthleteImage = requireRole(["admin", "editor"])(
 				imageUrl: processedImageUrl,
 				updatedAt: sql`CURRENT_TIMESTAMP`,
 			})
-			.where(eq(athletes.id, athleteId));
+			.where(eq(athletes.slug, slug));
 
-		revalidatePath(`/athletes/${athleteId}`);
+		revalidatePath(`/athletes/${slug}`);
 		return processedImageUrl;
 	},
 );

@@ -20,12 +20,16 @@ interface Sponsor {
 }
 
 interface SponsorsSectionProps {
-	athleteId: string;
+	athleteSlug: string;
 	sponsors: Sponsor[];
 	isAdmin: boolean;
 }
 
-export function SponsorsSection({ athleteId, sponsors, isAdmin }: SponsorsSectionProps) {
+export function SponsorsSection({
+	athleteSlug,
+	sponsors,
+	isAdmin,
+}: SponsorsSectionProps) {
 	const [isAdding, setIsAdding] = useState(false);
 	const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
 
@@ -42,28 +46,23 @@ export function SponsorsSection({ athleteId, sponsors, isAdmin }: SponsorsSectio
 		};
 
 		if (editingSponsorId) {
-			await updateSponsor(editingSponsorId, athleteId, data);
+			await updateSponsor(editingSponsorId, athleteSlug, data);
 			setEditingSponsorId(null);
 		} else {
-			await addSponsor(athleteId, data);
+			await addSponsor(athleteSlug, data);
 			setIsAdding(false);
 		}
 	};
 
 	const handleDelete = async (sponsorId: string) => {
 		if (confirm("Are you sure you want to delete this sponsor?")) {
-			await deleteSponsor(sponsorId, athleteId);
+			await deleteSponsor(sponsorId, athleteSlug);
 		}
 	};
 
 	return (
-		<div>
-			<div className="flex justify-between items-center">
-				<h2 className="text-xl font-semibold">Sponsors</h2>
-				{!isAdding && !editingSponsorId && isAdmin && (
-					<Button onClick={() => setIsAdding(true)}>Add Sponsor</Button>
-				)}
-			</div>
+		<div className="space-y-4">
+			<h2 className="text-2xl font-semibold dark:text-gray-100">Sponsors</h2>
 
 			{(isAdding || editingSponsorId) && isAdmin && (
 				<Card className="p-4">
@@ -171,65 +170,77 @@ export function SponsorsSection({ athleteId, sponsors, isAdmin }: SponsorsSectio
 				</Card>
 			)}
 
-			<div className="grid gap-4">
-				{sponsors.map((sponsor) => (
-					<Card key={sponsor.id} className="p-4">
-						<div className="flex justify-between items-start">
-							<div className="space-y-1">
-								<div className="flex items-center gap-2">
-									<h3 className="font-medium">{sponsor.name}</h3>
-									{sponsor.isPrimary && (
-										<span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-											Primary
-										</span>
+			<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+				<div className="flex justify-between items-center">
+					{!isAdding && !editingSponsorId && isAdmin && (
+						<Button onClick={() => setIsAdding(true)}>Add Sponsor</Button>
+					)}
+				</div>
+				{sponsors.length > 0 && (
+					<div className="space-y-4">
+						{sponsors.map((sponsor) => (
+							<div
+								key={sponsor.id}
+								className="border-b last:border-0 border-gray-200 dark:border-gray-700 pb-4 last:pb-0"
+							>
+								<div className="flex justify-between items-start">
+									<div className="space-y-1">
+										<div className="flex items-center gap-2">
+											<h3 className="font-medium dark:text-gray-200">
+												{sponsor.name}
+											</h3>
+											{sponsor.isPrimary && (
+												<span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded">
+													Primary
+												</span>
+											)}
+										</div>
+										{sponsor.website && (
+											<a
+												href={sponsor.website}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+											>
+												{sponsor.website}
+											</a>
+										)}
+										{(sponsor.startDate || sponsor.endDate) && (
+											<p className="text-sm text-gray-500 dark:text-gray-400">
+												{sponsor.startDate &&
+													`From ${format(
+														new Date(sponsor.startDate),
+														"MMM d, yyyy",
+													)}`}
+												{sponsor.startDate && sponsor.endDate && " to "}
+												{sponsor.endDate &&
+													format(new Date(sponsor.endDate), "MMM d, yyyy")}
+											</p>
+										)}
+									</div>
+									{isAdmin && (
+										<div className="flex space-x-2">
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => setEditingSponsorId(sponsor.id)}
+											>
+												Edit
+											</Button>
+											<Button
+												variant="destructive"
+												size="sm"
+												onClick={() => handleDelete(sponsor.id)}
+											>
+												Delete
+											</Button>
+										</div>
 									)}
 								</div>
-								{sponsor.website && (
-									<a
-										href={sponsor.website}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="text-sm text-blue-600 hover:underline"
-									>
-										{sponsor.website}
-									</a>
-								)}
-								{(sponsor.startDate || sponsor.endDate) && (
-									<p className="text-sm text-gray-500">
-										{sponsor.startDate &&
-											`From ${format(
-												new Date(sponsor.startDate),
-												"MMM d, yyyy",
-											)}`}
-										{sponsor.startDate && sponsor.endDate && " to "}
-										{sponsor.endDate &&
-											format(new Date(sponsor.endDate), "MMM d, yyyy")}
-									</p>
-								)}
 							</div>
-							<div className="flex space-x-2">
-								{isAdmin && (
-									<>
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => setEditingSponsorId(sponsor.id)}
-										>
-											Edit
-										</Button>
-										<Button
-											variant="destructive"
-											size="sm"
-											onClick={() => handleDelete(sponsor.id)}
-										>
-											Delete
-										</Button>
-									</>
-								)}
-							</div>
-						</div>
-					</Card>
-				))}
+						))}
+					</div>
+				)}
 			</div>
 		</div>
 	);

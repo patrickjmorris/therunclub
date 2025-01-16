@@ -35,12 +35,16 @@ interface Event {
 }
 
 interface EventsSectionProps {
-	athleteId: string;
+	athleteSlug: string;
 	events: Event[];
 	isAdmin: boolean;
 }
 
-export function EventsSection({ athleteId, events, isAdmin }: EventsSectionProps) {
+export function EventsSection({
+	athleteSlug,
+	events,
+	isAdmin,
+}: EventsSectionProps) {
 	const [isAdding, setIsAdding] = useState(false);
 	const [editingEventId, setEditingEventId] = useState<string | null>(null);
 	const [selectedStatus, setSelectedStatus] = useState<EventStatus>("upcoming");
@@ -69,17 +73,17 @@ export function EventsSection({ athleteId, events, isAdmin }: EventsSectionProps
 		};
 
 		if (editingEventId) {
-			await updateEvent(editingEventId, athleteId, data);
+			await updateEvent(editingEventId, athleteSlug, data);
 			setEditingEventId(null);
 		} else {
-			await addEvent(athleteId, data);
+			await addEvent(athleteSlug, data);
 			setIsAdding(false);
 		}
 	};
 
 	const handleDelete = async (eventId: string) => {
 		if (confirm("Are you sure you want to delete this event?")) {
-			await deleteEvent(eventId, athleteId);
+			await deleteEvent(eventId, athleteSlug);
 		}
 	};
 
@@ -96,13 +100,10 @@ export function EventsSection({ athleteId, events, isAdmin }: EventsSectionProps
 		.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 	return (
-		<div className="space-y-6">
-			<div className="flex justify-between items-center">
-				<h2 className="text-xl font-semibold">Events</h2>
-				{!isAdding && !editingEventId && isAdmin && (
-					<Button onClick={() => setIsAdding(true)}>Add Event</Button>
-				)}
-			</div>
+		<div className="space-y-4">
+			<h2 className="text-2xl font-semibold dark:text-gray-100">
+				Upcoming Events
+			</h2>
 
 			{(isAdding || editingEventId) && isAdmin && (
 				<Card className="p-4">
@@ -270,19 +271,78 @@ export function EventsSection({ athleteId, events, isAdmin }: EventsSectionProps
 				</Card>
 			)}
 
-			<div className="space-y-6">
+			<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-6">
+				<div className="flex justify-between items-center">
+					{!isAdding && !editingEventId && isAdmin && (
+						<Button onClick={() => setIsAdding(true)}>Add Event</Button>
+					)}
+				</div>
+
 				{upcomingEvents.length > 0 && (
 					<div className="space-y-4">
-						<h3 className="text-lg font-medium">Upcoming Events</h3>
-						<div className="grid gap-4">
+						<h3 className="text-lg font-medium dark:text-gray-100">
+							Upcoming Events
+						</h3>
+						<div className="space-y-4">
 							{upcomingEvents.map((event) => (
-								<EventCard
+								<div
 									key={event.id}
-									event={event}
-									onEdit={() => setEditingEventId(event.id)}
-									onDelete={() => handleDelete(event.id)}
-									isAdmin={isAdmin}
-								/>
+									className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+								>
+									<div className="flex justify-between items-start">
+										<div className="space-y-1">
+											<h4 className="font-medium dark:text-gray-200">
+												{event.name}
+											</h4>
+											<p className="text-sm text-gray-600 dark:text-gray-400">
+												{format(new Date(event.date), "MMMM d, yyyy")}
+											</p>
+											{event.location && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.location}
+												</p>
+											)}
+											{event.discipline && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.discipline}
+												</p>
+											)}
+											{event.description && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.description}
+												</p>
+											)}
+											{event.website && (
+												<a
+													href={event.website}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+												>
+													Event Website
+												</a>
+											)}
+										</div>
+										{isAdmin && (
+											<div className="flex space-x-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => setEditingEventId(event.id)}
+												>
+													Edit
+												</Button>
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() => handleDelete(event.id)}
+												>
+													Delete
+												</Button>
+											</div>
+										)}
+									</div>
+								</div>
 							))}
 						</div>
 					</div>
@@ -290,16 +350,83 @@ export function EventsSection({ athleteId, events, isAdmin }: EventsSectionProps
 
 				{completedEvents.length > 0 && (
 					<div className="space-y-4">
-						<h3 className="text-lg font-medium">Completed Events</h3>
-						<div className="grid gap-4">
+						<h3 className="text-lg font-medium dark:text-gray-100">
+							Past Events
+						</h3>
+						<div className="space-y-4">
 							{completedEvents.map((event) => (
-								<EventCard
+								<div
 									key={event.id}
-									event={event}
-									onEdit={() => setEditingEventId(event.id)}
-									onDelete={() => handleDelete(event.id)}
-									isAdmin={isAdmin}
-								/>
+									className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+								>
+									<div className="flex justify-between items-start">
+										<div className="space-y-1">
+											<h4 className="font-medium dark:text-gray-200">
+												{event.name}
+											</h4>
+											<p className="text-sm text-gray-600 dark:text-gray-400">
+												{format(new Date(event.date), "MMMM d, yyyy")}
+											</p>
+											{event.location && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.location}
+												</p>
+											)}
+											{event.discipline && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.discipline}
+												</p>
+											)}
+											{event.result && (
+												<div className="mt-2 space-y-1">
+													{event.result.place && (
+														<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+															Place: {event.result.place}
+														</p>
+													)}
+													{event.result.time && (
+														<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+															Time: {event.result.time}
+														</p>
+													)}
+													{event.result.notes && (
+														<p className="text-sm text-gray-500 dark:text-gray-400">
+															{event.result.notes}
+														</p>
+													)}
+												</div>
+											)}
+											{event.website && (
+												<a
+													href={event.website}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+												>
+													Event Website
+												</a>
+											)}
+										</div>
+										{isAdmin && (
+											<div className="flex space-x-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => setEditingEventId(event.id)}
+												>
+													Edit
+												</Button>
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() => handleDelete(event.id)}
+												>
+													Delete
+												</Button>
+											</div>
+										)}
+									</div>
+								</div>
 							))}
 						</div>
 					</div>
@@ -307,105 +434,74 @@ export function EventsSection({ athleteId, events, isAdmin }: EventsSectionProps
 
 				{cancelledEvents.length > 0 && (
 					<div className="space-y-4">
-						<h3 className="text-lg font-medium">Cancelled Events</h3>
-						<div className="grid gap-4">
+						<h3 className="text-lg font-medium dark:text-gray-100">
+							Cancelled Events
+						</h3>
+						<div className="space-y-4">
 							{cancelledEvents.map((event) => (
-								<EventCard
+								<div
 									key={event.id}
-									event={event}
-									onEdit={() => setEditingEventId(event.id)}
-									onDelete={() => handleDelete(event.id)}
-									isAdmin={isAdmin}
-								/>
+									className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+								>
+									<div className="flex justify-between items-start">
+										<div className="space-y-1">
+											<h4 className="font-medium dark:text-gray-200">
+												{event.name}
+											</h4>
+											<p className="text-sm text-gray-600 dark:text-gray-400">
+												{format(new Date(event.date), "MMMM d, yyyy")}
+											</p>
+											{event.location && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.location}
+												</p>
+											)}
+											{event.discipline && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.discipline}
+												</p>
+											)}
+											{event.description && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{event.description}
+												</p>
+											)}
+											{event.website && (
+												<a
+													href={event.website}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+												>
+													Event Website
+												</a>
+											)}
+										</div>
+										{isAdmin && (
+											<div className="flex space-x-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => setEditingEventId(event.id)}
+												>
+													Edit
+												</Button>
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() => handleDelete(event.id)}
+												>
+													Delete
+												</Button>
+											</div>
+										)}
+									</div>
+								</div>
 							))}
 						</div>
 					</div>
 				)}
 			</div>
 		</div>
-	);
-}
-
-function EventCard({
-	event,
-	onEdit,
-	onDelete,
-	isAdmin,
-}: {
-	event: Event;
-	onEdit: () => void;
-	onDelete: () => void;
-	isAdmin: boolean;
-}) {
-	return (
-		<Card className="p-4">
-			<div className="space-y-4">
-				<div className="flex justify-between items-start">
-					<div className="space-y-1">
-						<h4 className="font-medium">{event.name}</h4>
-						<p className="text-sm text-gray-500">
-							{format(new Date(event.date), "MMMM d, yyyy")}
-						</p>
-						{event.location && (
-							<p className="text-sm text-gray-500">
-								Location: {event.location}
-							</p>
-						)}
-						{event.discipline && (
-							<p className="text-sm text-gray-500">
-								Discipline: {event.discipline}
-							</p>
-						)}
-					</div>
-					<div className="flex space-x-2">
-						{isAdmin && (
-							<>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => onEdit()}
-								>
-									Edit
-								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => onDelete()}
-								>
-									Delete
-								</Button>
-							</>
-						)}
-					</div>
-				</div>
-				{event.description && (
-					<p className="text-sm text-gray-600">{event.description}</p>
-				)}
-				{event.website && (
-					<a
-						href={event.website}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="text-sm text-blue-600 hover:underline block"
-					>
-						Event Website
-					</a>
-				)}
-				{event.status === "completed" && event.result && (
-					<div className="mt-2 space-y-1">
-						<h5 className="text-sm font-medium">Results</h5>
-						{event.result.place && (
-							<p className="text-sm">Place: {event.result.place}</p>
-						)}
-						{event.result.time && (
-							<p className="text-sm">Time: {event.result.time}</p>
-						)}
-						{event.result.notes && (
-							<p className="text-sm text-gray-600">{event.result.notes}</p>
-						)}
-					</div>
-				)}
-			</div>
-		</Card>
 	);
 }

@@ -38,7 +38,7 @@ interface Gear {
 }
 
 interface GearSectionProps {
-	athleteId: string;
+	athleteSlug: string;
 	gear: Gear[];
 	isAdmin: boolean;
 }
@@ -53,7 +53,7 @@ const CATEGORIES = [
 	{ value: "other", label: "Other" },
 ];
 
-export function GearSection({ athleteId, gear, isAdmin }: GearSectionProps) {
+export function GearSection({ athleteSlug, gear, isAdmin }: GearSectionProps) {
 	const [isAdding, setIsAdding] = useState(false);
 	const [editingGearId, setEditingGearId] = useState<string | null>(null);
 	const [selectedCategory, setSelectedCategory] =
@@ -74,17 +74,17 @@ export function GearSection({ athleteId, gear, isAdmin }: GearSectionProps) {
 		};
 
 		if (editingGearId) {
-			await updateGear(editingGearId, athleteId, data);
+			await updateGear(editingGearId, athleteSlug, data);
 			setEditingGearId(null);
 		} else {
-			await addGear(athleteId, data);
+			await addGear(athleteSlug, data);
 			setIsAdding(false);
 		}
 	};
 
 	const handleDelete = async (gearId: string) => {
 		if (confirm("Are you sure you want to delete this gear?")) {
-			await deleteGear(gearId, athleteId);
+			await deleteGear(gearId, athleteSlug);
 		}
 	};
 
@@ -92,13 +92,8 @@ export function GearSection({ athleteId, gear, isAdmin }: GearSectionProps) {
 	const retiredGear = gear.filter((g) => !g.isCurrent);
 
 	return (
-		<div className="space-y-6">
-			<div className="flex justify-between items-center">
-				<h2 className="text-xl font-semibold">Gear</h2>
-				{!isAdding && !editingGearId && isAdmin && (
-					<Button onClick={() => setIsAdding(true)}>Add Gear</Button>
-				)}
-			</div>
+		<div className="space-y-4">
+			<h2 className="text-2xl font-semibold dark:text-gray-100">Gear</h2>
 
 			{(isAdding || editingGearId) && isAdmin && (
 				<Card className="p-4">
@@ -235,19 +230,68 @@ export function GearSection({ athleteId, gear, isAdmin }: GearSectionProps) {
 				</Card>
 			)}
 
-			<div className="space-y-6">
+			<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-6">
+				<div className="flex justify-between items-center">
+					{!isAdding && !editingGearId && isAdmin && (
+						<Button onClick={() => setIsAdding(true)}>Add Gear</Button>
+					)}
+				</div>
+
 				{currentGear.length > 0 && (
 					<div className="space-y-4">
-						<h3 className="text-lg font-medium">Current Gear</h3>
+						<h3 className="text-lg font-medium dark:text-gray-100">
+							Current Gear
+						</h3>
 						<div className="grid gap-4 md:grid-cols-2">
 							{currentGear.map((item) => (
-								<GearCard
+								<div
 									key={item.id}
-									gear={item}
-									onEdit={() => setEditingGearId(item.id)}
-									onDelete={() => handleDelete(item.id)}
-									isAdmin={isAdmin}
-								/>
+									className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+								>
+									<div className="flex justify-between items-start">
+										<div className="space-y-1">
+											<h4 className="font-medium dark:text-gray-200">
+												{item.name}
+											</h4>
+											<p className="text-sm text-gray-600 dark:text-gray-400">
+												{item.brand} {item.model}
+											</p>
+											{item.description && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{item.description}
+												</p>
+											)}
+											{item.purchaseUrl && (
+												<a
+													href={item.purchaseUrl}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+												>
+													Buy Now
+												</a>
+											)}
+										</div>
+										{isAdmin && (
+											<div className="flex space-x-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => setEditingGearId(item.id)}
+												>
+													Edit
+												</Button>
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() => handleDelete(item.id)}
+												>
+													Delete
+												</Button>
+											</div>
+										)}
+									</div>
+								</div>
 							))}
 						</div>
 					</div>
@@ -255,92 +299,64 @@ export function GearSection({ athleteId, gear, isAdmin }: GearSectionProps) {
 
 				{retiredGear.length > 0 && (
 					<div className="space-y-4">
-						<h3 className="text-lg font-medium">Retired Gear</h3>
+						<h3 className="text-lg font-medium dark:text-gray-100">
+							Past Gear
+						</h3>
 						<div className="grid gap-4 md:grid-cols-2">
 							{retiredGear.map((item) => (
-								<GearCard
+								<div
 									key={item.id}
-									gear={item}
-									onEdit={() => setEditingGearId(item.id)}
-									onDelete={() => handleDelete(item.id)}
-									isAdmin={isAdmin}
-								/>
+									className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+								>
+									<div className="flex justify-between items-start">
+										<div className="space-y-1">
+											<h4 className="font-medium dark:text-gray-200">
+												{item.name}
+											</h4>
+											<p className="text-sm text-gray-600 dark:text-gray-400">
+												{item.brand} {item.model}
+											</p>
+											{item.description && (
+												<p className="text-sm text-gray-500 dark:text-gray-400">
+													{item.description}
+												</p>
+											)}
+											{item.purchaseUrl && (
+												<a
+													href={item.purchaseUrl}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+												>
+													Buy Now
+												</a>
+											)}
+										</div>
+										{isAdmin && (
+											<div className="flex space-x-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => setEditingGearId(item.id)}
+												>
+													Edit
+												</Button>
+												<Button
+													variant="destructive"
+													size="sm"
+													onClick={() => handleDelete(item.id)}
+												>
+													Delete
+												</Button>
+											</div>
+										)}
+									</div>
+								</div>
 							))}
 						</div>
 					</div>
 				)}
 			</div>
 		</div>
-	);
-}
-
-function GearCard({
-	gear,
-	onEdit,
-	onDelete,
-	isAdmin,
-}: {
-	gear: Gear;
-	onEdit: () => void;
-	onDelete: () => void;
-	isAdmin: boolean;
-}) {
-	const category = CATEGORIES.find((c) => c.value === gear.category)?.label;
-
-	return (
-		<Card className="p-4">
-			<div className="space-y-4">
-				<div className="flex justify-between items-start">
-					<div className="space-y-1">
-						<h4 className="font-medium">{gear.name}</h4>
-						<p className="text-sm text-gray-500">{gear.brand}</p>
-						{gear.model && (
-							<p className="text-sm text-gray-500">Model: {gear.model}</p>
-						)}
-						<p className="text-sm text-gray-500">Category: {category}</p>
-					</div>
-					<div className="flex space-x-2">
-						{isAdmin && (
-							<>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => onEdit()}
-								>
-									Edit
-								</Button>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => onDelete()}
-								>
-									Delete
-								</Button>
-							</>
-						)}
-					</div>
-				</div>
-				{gear.description && (
-					<p className="text-sm text-gray-600">{gear.description}</p>
-				)}
-				{gear.purchaseUrl && (
-					<a
-						href={gear.purchaseUrl}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="text-sm text-blue-600 hover:underline block"
-					>
-						Purchase Link
-					</a>
-				)}
-				{gear.imageUrl && (
-					<img
-						src={gear.imageUrl}
-						alt={gear.name}
-						className="w-full h-48 object-cover rounded-md"
-					/>
-				)}
-			</div>
-		</Card>
 	);
 }

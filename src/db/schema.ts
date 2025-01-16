@@ -300,6 +300,7 @@ export type UserRoleType = "admin" | "editor" | "user";
 export const athletes = pgTable("athletes", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
+	slug: text("slug").notNull().unique(),
 	countryCode: text("country_code"),
 	countryName: text("country_name"),
 	dateOfBirth: date("date_of_birth"),

@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { db } from "@/db/client";
 import { athletes, athleteHonors, athleteResults } from "@/db/schema";
-import { desc, eq, and, ilike, sql } from "drizzle-orm";
-import { format } from "date-fns";
+import { desc, eq, and, ilike, sql, gt } from "drizzle-orm";
+import { format, subYears } from "date-fns";
 import { convertToAlpha2 } from "@/lib/utils/country-codes";
 import { Button } from "@/components/ui/button";
 
@@ -13,10 +14,12 @@ interface AthletesListProps {
 	athletes: {
 		id: string;
 		name: string;
+		slug: string;
 		countryName: string | null;
 		countryCode: string | null;
 		disciplines: string[];
 		isOlympicGoldMedalist: boolean;
+		imageUrl: string | null;
 	}[];
 	hasMore: boolean;
 	page: number;
@@ -34,51 +37,62 @@ function getCountryFlag(countryCode: string | null) {
 
 async function AthletesList({ athletes, hasMore, page }: AthletesListProps) {
 	return (
-		<div className="space-y-6">
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{athletes.map((athlete) => (
-					<Link
-						key={athlete.id}
-						href={`/athletes/${athlete.id}`}
-						className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors relative"
-					>
-						{athlete.isOlympicGoldMedalist && (
-							<div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-100 border border-yellow-300 rounded-full flex items-center justify-center">
-								🥇
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+			{athletes.map((athlete) => (
+				<Link
+					key={athlete.id}
+					href={`/athletes/${athlete.slug}`}
+					className="block p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
+				>
+					<div className="flex gap-4">
+						{athlete.imageUrl && (
+							<div className="relative w-16 h-16 flex-shrink-0">
+								<Image
+									src={athlete.imageUrl}
+									alt={athlete.name}
+									fill
+									className="object-cover rounded-full"
+									sizes="64px"
+								/>
 							</div>
 						)}
-						<div className="space-y-2">
-							<h2 className="text-xl font-semibold">{athlete.name}</h2>
-							{athlete.countryName && athlete.countryCode && (
-								<p className="text-gray-600 flex items-center gap-2">
+						<div className="flex-1">
+							<div className="flex items-center gap-2">
+								{athlete.countryCode && (
 									<span className="text-xl" aria-hidden="true">
 										{getCountryFlag(athlete.countryCode)}
 									</span>
-									<span>{athlete.countryName}</span>
-								</p>
-							)}
+								)}
+								<h2 className="font-semibold dark:text-gray-100">
+									{athlete.name}
+								</h2>
+								{athlete.isOlympicGoldMedalist && (
+									<span
+										className="text-yellow-500 dark:text-yellow-400"
+										title="Olympic Gold Medalist"
+									>
+										🥇
+									</span>
+								)}
+							</div>
 							{athlete.disciplines.length > 0 && (
-								<p className="text-sm text-gray-500">
+								<p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
 									{athlete.disciplines.join(", ")}
 								</p>
 							)}
 						</div>
-					</Link>
-				))}
-			</div>
-			{hasMore && (
-				<div className="flex justify-center mt-8">
-					<Link href={`/athletes?page=${page + 1}`}>
-						<Button variant="outline">Load More Athletes</Button>
-					</Link>
-				</div>
-			)}
+					</div>
+				</Link>
+			))}
 		</div>
 	);
 }
 
 async function getAthletes(page = 1) {
 	console.log(`Getting athletes for page ${page}`);
+
+	// Calculate date 5 years ago and format it to YYYY-MM-DD
+	const fiveYearsAgo = format(subYears(new Date(), 5), "yyyy-MM-dd");
 
 	// First, get athletes with Olympic gold medals (excluding youth olympics)
 	const olympicGoldMedalists = await db
@@ -109,7 +123,7 @@ async function getAthletes(page = 1) {
 
 	const quotedIds = goldMedalistIds.map((id) => `'${id}'`).join(",");
 
-	// Get athletes with their disciplines
+	// Get athletes with their disciplines from recent results
 	const allAthletes = await db
 		.select({
 			athlete: athletes,
@@ -118,6 +132,7 @@ async function getAthletes(page = 1) {
 				FILTER (
 					WHERE ${athleteResults.discipline} NOT ILIKE '%short track%'
 					AND ${athleteResults.discipline} NOT ILIKE '%relay%'
+					AND ${athleteResults.date} >= ${fiveYearsAgo}::date
 				)
 			`,
 		})
@@ -140,7 +155,12 @@ async function getAthletes(page = 1) {
 
 	const result = {
 		athletes: allAthletes.map(({ athlete, disciplines }) => ({
-			...athlete,
+			id: athlete.id,
+			name: athlete.name,
+			slug: athlete.slug,
+			countryName: athlete.countryName,
+			countryCode: athlete.countryCode,
+			imageUrl: athlete.imageUrl,
 			disciplines: disciplines?.filter(Boolean) || [],
 			isOlympicGoldMedalist: goldMedalistIds.includes(athlete.id),
 		})),

@@ -7,6 +7,7 @@ import { openai } from "../src/lib/openai";
 import { eq } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
+import { slugify } from "@/lib/utils";
 
 interface AthleteInfo {
 	bio: string;
@@ -176,7 +177,7 @@ async function getAthleteIdsByCountry(countryCode: string): Promise<string[]> {
 	}
 }
 
-async function importAthleteData() {
+async function importAthleteData(limit?: number) {
 	// Get athletes from the first method
 	const athleteIds = await getAthleteIds();
 	console.log(`Found ${athleteIds.length} athletes from representative search`);
@@ -201,7 +202,17 @@ async function importAthleteData() {
 	const allAthleteIds = [...new Set([...athleteIds, ...countryAthleteIds])];
 	console.log(`Total unique athletes to process: ${allAthleteIds.length}`);
 
-	for (const id of allAthleteIds) {
+	// Apply limit if specified
+	const athletesToProcess = limit
+		? allAthleteIds.slice(0, limit)
+		: allAthleteIds;
+	console.log(
+		`Processing ${athletesToProcess.length} athletes${
+			limit ? ` (limited to ${limit})` : ""
+		}`,
+	);
+
+	for (const id of athletesToProcess) {
 		console.log(`Importing athlete ${id}...`);
 		const athleteData = await getAthleteById(id);
 
@@ -213,12 +224,17 @@ async function importAthleteData() {
 			continue;
 		}
 
+		// Create unique slug by combining name and ID
+		const nameSlug = slugify(athleteData.name);
+		const uniqueSlug = `${nameSlug}-${athleteData.id}`;
+
 		// Insert or update athlete
 		await db
 			.insert(athletes)
 			.values({
 				id: athleteData.id,
 				name: athleteData.name,
+				slug: uniqueSlug,
 				countryCode: athleteData.countryCode ?? null,
 				countryName: athleteData.countryName ?? null,
 				dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
@@ -228,6 +244,7 @@ async function importAthleteData() {
 				target: athletes.id,
 				set: {
 					name: athleteData.name,
+					slug: uniqueSlug,
 					countryCode: athleteData.countryCode ?? null,
 					countryName: athleteData.countryName ?? null,
 					dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
@@ -604,9 +621,10 @@ async function generateAthleteBios(limit?: number) {
 // Choose which operation to run based on command line argument
 const operation = process.argv[2];
 const resultsFile = process.argv[3]; // Optional file path argument
+const limit = process.argv[4] ? parseInt(process.argv[4]) : undefined; // Optional limit argument
 
 if (operation === "import") {
-	importAthleteData()
+	importAthleteData(limit)
 		.then(() => {
 			console.log("✅ Import completed successfully");
 			process.exit(0);
@@ -616,7 +634,7 @@ if (operation === "import") {
 			process.exit(1);
 		});
 } else if (operation === "generate-bios") {
-	generateAthleteBios()
+	generateAthleteBios(limit)
 		.then(() => {
 			console.log("✅ Bio generation completed successfully");
 			process.exit(0);
@@ -652,7 +670,7 @@ if (operation === "import") {
 		});
 } else {
 	console.log(
-		"Please specify an operation: 'import', 'generate-bios', 'test-bios', or 'process-results <file>'",
+		"Please specify an operation: 'import [limit]', 'generate-bios [limit]', 'test-bios', or 'process-results <file>'",
 	);
 	process.exit(1);
 }

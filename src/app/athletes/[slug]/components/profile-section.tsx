@@ -32,7 +32,7 @@ interface SocialMedia {
 }
 
 interface ProfileSectionProps {
-	athleteId: string;
+	athleteSlug: string;
 	name: string;
 	bio?: string | null;
 	socialMedia?: SocialMedia | null;
@@ -44,7 +44,7 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({
-	athleteId,
+	athleteSlug,
 	name,
 	bio,
 	socialMedia,
@@ -75,7 +75,7 @@ export function ProfileSection({
 		};
 
 		try {
-			await updateProfile(athleteId, data);
+			await updateProfile(athleteSlug, data);
 			setIsEditing(false);
 		} catch (error) {
 			console.error("Error updating profile:", error);
@@ -86,7 +86,7 @@ export function ProfileSection({
 	const handleFetchImage = async () => {
 		try {
 			setIsLoadingImage(true);
-			await updateAthleteImage(athleteId);
+			await updateAthleteImage(athleteSlug);
 		} catch (error) {
 			console.error("Error fetching image:", error);
 			alert("Failed to find a suitable image. Please try again later.");

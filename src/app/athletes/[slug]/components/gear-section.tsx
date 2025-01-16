@@ -38,7 +38,7 @@ interface Gear {
 }
 
 interface GearSectionProps {
-	athleteId: string;
+	athleteSlug: string;
 	gear: Gear[];
 	isAdmin: boolean;
 }
@@ -53,7 +53,7 @@ const CATEGORIES = [
 	{ value: "other", label: "Other" },
 ];
 
-export function GearSection({ athleteId, gear, isAdmin }: GearSectionProps) {
+export function GearSection({ athleteSlug, gear, isAdmin }: GearSectionProps) {
 	const [isAdding, setIsAdding] = useState(false);
 	const [editingGearId, setEditingGearId] = useState<string | null>(null);
 	const [selectedCategory, setSelectedCategory] =
@@ -74,17 +74,17 @@ export function GearSection({ athleteId, gear, isAdmin }: GearSectionProps) {
 		};
 
 		if (editingGearId) {
-			await updateGear(editingGearId, athleteId, data);
+			await updateGear(editingGearId, athleteSlug, data);
 			setEditingGearId(null);
 		} else {
-			await addGear(athleteId, data);
+			await addGear(athleteSlug, data);
 			setIsAdding(false);
 		}
 	};
 
 	const handleDelete = async (gearId: string) => {
 		if (confirm("Are you sure you want to delete this gear?")) {
-			await deleteGear(gearId, athleteId);
+			await deleteGear(gearId, athleteSlug);
 		}
 	};
 

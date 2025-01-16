@@ -35,13 +35,13 @@ interface Event {
 }
 
 interface EventsSectionProps {
-	athleteId: string;
+	athleteSlug: string;
 	events: Event[];
 	isAdmin: boolean;
 }
 
 export function EventsSection({
-	athleteId,
+	athleteSlug,
 	events,
 	isAdmin,
 }: EventsSectionProps) {
@@ -73,17 +73,17 @@ export function EventsSection({
 		};
 
 		if (editingEventId) {
-			await updateEvent(editingEventId, athleteId, data);
+			await updateEvent(editingEventId, athleteSlug, data);
 			setEditingEventId(null);
 		} else {
-			await addEvent(athleteId, data);
+			await addEvent(athleteSlug, data);
 			setIsAdding(false);
 		}
 	};
 
 	const handleDelete = async (eventId: string) => {
 		if (confirm("Are you sure you want to delete this event?")) {
-			await deleteEvent(eventId, athleteId);
+			await deleteEvent(eventId, athleteSlug);
 		}
 	};
 

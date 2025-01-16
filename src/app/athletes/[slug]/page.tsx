@@ -128,7 +128,7 @@ export default async function AthletePage(props: {
 						{/* Profile Information */}
 						<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
 							<ProfileSection
-								athleteId={athlete.id}
+								athleteSlug={athlete.slug}
 								name={athlete.name}
 								bio={athlete.bio}
 								socialMedia={athlete.socialMedia}
@@ -151,7 +151,7 @@ export default async function AthletePage(props: {
 							<div className="mt-8 lg:mt-0 lg:col-span-8">
 								{/* Sponsors Section */}
 								<SponsorsSection
-									athleteId={athlete.id}
+									athleteSlug={athlete.slug}
 									sponsors={athlete.sponsors}
 									isAdmin={isAdmin}
 								/>
@@ -159,7 +159,7 @@ export default async function AthletePage(props: {
 								{/* Gear Section */}
 								<div className="mt-8">
 									<GearSection
-										athleteId={athlete.id}
+										athleteSlug={athlete.slug}
 										gear={athlete.gear}
 										isAdmin={isAdmin}
 									/>
@@ -168,7 +168,7 @@ export default async function AthletePage(props: {
 								{/* Events Section */}
 								<div className="mt-8">
 									<EventsSection
-										athleteId={athlete.id}
+										athleteSlug={athlete.slug}
 										events={athlete.events}
 										isAdmin={isAdmin}
 									/>

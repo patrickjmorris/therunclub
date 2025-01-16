@@ -20,13 +20,13 @@ interface Sponsor {
 }
 
 interface SponsorsSectionProps {
-	athleteId: string;
+	athleteSlug: string;
 	sponsors: Sponsor[];
 	isAdmin: boolean;
 }
 
 export function SponsorsSection({
-	athleteId,
+	athleteSlug,
 	sponsors,
 	isAdmin,
 }: SponsorsSectionProps) {
@@ -46,17 +46,17 @@ export function SponsorsSection({
 		};
 
 		if (editingSponsorId) {
-			await updateSponsor(editingSponsorId, athleteId, data);
+			await updateSponsor(editingSponsorId, athleteSlug, data);
 			setEditingSponsorId(null);
 		} else {
-			await addSponsor(athleteId, data);
+			await addSponsor(athleteSlug, data);
 			setIsAdding(false);
 		}
 	};
 
 	const handleDelete = async (sponsorId: string) => {
 		if (confirm("Are you sure you want to delete this sponsor?")) {
-			await deleteSponsor(sponsorId, athleteId);
+			await deleteSponsor(sponsorId, athleteSlug);
 		}
 	};
 

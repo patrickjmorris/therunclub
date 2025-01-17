@@ -21,7 +21,9 @@
 		"db:seed-clubs": "bun scripts/seed-clubs.ts",
 		"db:load-clubs": "bun scripts/load-clubs-csv.ts",
 		"db:load-clubs:prod": "NODE_ENV=production bun scripts/load-clubs-csv.ts",
-		"update-colors": "bunx tsx src/scripts/update-podcast-colors.ts"
+		"update-colors": "bunx tsx src/scripts/update-podcast-colors.ts",
+		"worker": "bun run src/scripts/worker.ts",
+		"queue": "bun run src/scripts/queue-episodes.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {
@@ -46,12 +48,14 @@
 		"@supabase/ssr": "^0.5.1",
 		"@supabase/supabase-js": "^2.46.1",
 		"@tailwindcss/typography": "^0.5.7",
+		"@types/bull": "^4.10.4",
 		"@types/node": "^20.10.8",
 		"@types/react": "npm:types-react@19.0.0-rc.1",
 		"@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
 		"@vercel/analytics": "^1.3.1",
 		"@vercel/speed-insights": "^1.0.14",
 		"autoprefixer": "^10.4.12",
+		"bull": "^4.16.5",
 		"caniuse-lite": "^1.0.30001692",
 		"canvas": "^2.11.2",
 		"class-variance-authority": "^0.7.0",

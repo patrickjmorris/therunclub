@@ -1,6 +1,7 @@
 import { db } from "@/db/client";
+import { Suspense } from "react";
 import { athletes } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getUserRole } from "@/lib/auth-utils";
 import { ProfileSection } from "./components/profile-section";
@@ -9,6 +10,10 @@ import { GearSection } from "./components/gear-section";
 import { EventsSection } from "./components/events-section";
 import { AthleteProfile } from "./athlete-profile";
 import { Metadata } from "next";
+import { AthleteMentions } from "@/components/athlete-mentions";
+import { MentionLoading } from "@/components/mention-loading";
+import { MentionError } from "@/components/mention-error";
+import { getAthleteRecentMentions } from "@/lib/queries/athlete-mentions";
 
 async function getAthleteData(slug: string) {
 	console.log("Attempting to fetch athlete with slug:", slug);
@@ -26,6 +31,21 @@ async function getAthleteData(slug: string) {
 
 	if (!athlete) return null;
 	return athlete;
+}
+
+async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
+	try {
+		const mentions = await getAthleteRecentMentions(athleteId);
+		return <AthleteMentions mentions={mentions} />;
+	} catch (error) {
+		console.error("Error loading athlete mentions:", error);
+		return (
+			<MentionError
+				title="Error Loading Mentions"
+				message="Unable to load recent mentions for this athlete."
+			/>
+		);
+	}
 }
 
 export async function generateMetadata({
@@ -172,6 +192,14 @@ export default async function AthletePage(props: {
 										events={athlete.events}
 										isAdmin={isAdmin}
 									/>
+								</div>
+								{/* Recent Mentions Section */}
+								<div className="mt-8">
+									<Suspense
+										fallback={<MentionLoading title="Recent Mentions" />}
+									>
+										<AthleteMentionsSection athleteId={athlete.id} />
+									</Suspense>
 								</div>
 							</div>
 						</div>

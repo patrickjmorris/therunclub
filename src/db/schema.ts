@@ -12,6 +12,7 @@ import {
 	jsonb,
 	date,
 	numeric,
+	index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -146,6 +147,9 @@ export const episodes = pgTable("episodes", {
 	duration: text("duration").notNull(),
 	explicit: text("explicit", { enum: ["yes", "no"] }).default("no"),
 	image: text("image"),
+	athleteMentionsProcessed: boolean("athlete_mentions_processed").default(
+		false,
+	),
 });
 
 export const userPodcastPreferences = pgTable("user_podcast_preferences", {
@@ -166,11 +170,12 @@ export const podcastsRelations = relations(podcasts, ({ many }) => ({
 	preferences: many(userPodcastPreferences),
 }));
 
-export const episodesRelations = relations(episodes, ({ one }) => ({
+export const episodesRelations = relations(episodes, ({ one, many }) => ({
 	podcast: one(podcasts, {
 		fields: [episodes.podcastId],
 		references: [podcasts.id],
 	}),
+	athleteMentions: many(athleteMentions),
 }));
 
 export const userPodcastPreferencesRelations = relations(
@@ -452,3 +457,54 @@ export const athleteEventsRelations = relations(athleteEvents, ({ one }) => ({
 		references: [athletes.id],
 	}),
 }));
+
+export const athleteMentions = pgTable(
+	"athlete_mentions",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		athleteId: text("athlete_id")
+			.notNull()
+			.references(() => athletes.id, { onDelete: "cascade" }),
+		episodeId: uuid("episode_id")
+			.notNull()
+			.references(() => episodes.id, { onDelete: "cascade" }),
+		source: text("source", { enum: ["title", "description"] }).notNull(),
+		confidence: numeric("confidence").notNull(),
+		context: text("context").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+	},
+	(table) => ({
+		// Compound indexes for efficient querying
+		athleteEpisodeIdx: index("idx_athlete_mentions_athlete_episode").on(
+			table.athleteId,
+			table.episodeId,
+			table.confidence,
+		),
+		episodeAthleteIdx: index("idx_athlete_mentions_episode_athlete").on(
+			table.episodeId,
+			table.athleteId,
+			table.confidence,
+		),
+		// Unique constraint to prevent duplicate mentions
+		uniqueMentionIdx: uniqueIndex("athlete_mentions_unique_idx").on(
+			table.athleteId,
+			table.episodeId,
+			table.source,
+		),
+	}),
+);
+
+// Add relations for athlete mentions
+export const athleteMentionsRelations = relations(
+	athleteMentions,
+	({ one }) => ({
+		athlete: one(athletes, {
+			fields: [athleteMentions.athleteId],
+			references: [athletes.id],
+		}),
+		episode: one(episodes, {
+			fields: [athleteMentions.episodeId],
+			references: [episodes.id],
+		}),
+	}),
+);

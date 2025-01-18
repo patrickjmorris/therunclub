@@ -40,6 +40,8 @@
     - Favor server components and Next.js SSR.
     - Use only for Web API access in small components.
     - Avoid for data fetching or state management.
-  
-  Follow Next.js 15 docs for Data Fetching, Rendering, and Routing.
-  
+
+# Important: always remember to:
+- Do not remove commented out code.
+- Be careful removing code or files that are not used or that could be part of another functionality.
+- Follow Next.js 15 docs for Data Fetching, Rendering, and Routing.

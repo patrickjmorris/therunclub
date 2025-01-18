@@ -22,8 +22,11 @@
 		"db:load-clubs": "bun scripts/load-clubs-csv.ts",
 		"db:load-clubs:prod": "NODE_ENV=production bun scripts/load-clubs-csv.ts",
 		"update-colors": "bunx tsx src/scripts/update-podcast-colors.ts",
-		"worker": "bun run src/scripts/worker.ts",
-		"queue": "bun run src/scripts/queue-episodes.ts"
+		"worker": "bun run scripts/worker.ts",
+		"queue": "bun run scripts/queue-episodes.ts",
+		"sync:mentions": "bun run scripts/sync-athlete-mentions.ts",
+		"check:supabase": "bun run scripts/check-supabase-config.ts",
+		"process:episode": "NODE_ENV=production bun run scripts/process-episode.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {

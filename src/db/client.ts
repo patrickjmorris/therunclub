@@ -16,8 +16,8 @@ if (!connectionString) {
 	throw new Error("Database connection string is not defined");
 }
 
-console.log("Environment:", isDevelopment ? "development" : "production");
-console.log("Using connection:", connectionString.split("@")[1]); // Log only host part for security
+// console.log("Environment:", isDevelopment ? "development" : "production");
+// console.log("Using connection:", connectionString.split("@")[1]); // Log only host part for security
 
 export const client = postgres(connectionString, { prepare: false });
 export const db = drizzle(client, { schema });

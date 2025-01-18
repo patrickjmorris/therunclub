@@ -1,4 +1,3 @@
-import Queue from "bull";
 import { db } from "@/db/client";
 import { episodes, athleteMentions } from "@/db/schema";
 import { createFuzzyMatcher } from "@/lib/fuzzy-matcher";
@@ -9,12 +8,6 @@ interface DetectedAthlete {
 	confidence: number;
 	context: string;
 }
-
-// Create a new queue instance
-const athleteDetectionQueue = new Queue(
-	"athlete-detection",
-	process.env.REDIS_URL || "redis://localhost:6379",
-);
 
 async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	console.time("detectAthletes");
@@ -98,9 +91,8 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	return Array.from(uniqueAthletes.values());
 }
 
-// Process jobs one at a time
-athleteDetectionQueue.process(async (job) => {
-	const { episodeId } = job.data;
+async function processEpisode(episodeId: string) {
+	console.log(`Processing athlete mentions for episode: ${episodeId}`);
 	console.time(`processEpisode:${episodeId}`);
 
 	try {
@@ -117,6 +109,8 @@ athleteDetectionQueue.process(async (job) => {
 		if (!episode) {
 			throw new Error(`Episode not found: ${episodeId}`);
 		}
+
+		console.log(`Episode title: ${episode.title}`);
 
 		// Process title
 		const titleAthletes = await detectAthletes(episode.title);
@@ -186,6 +180,10 @@ athleteDetectionQueue.process(async (job) => {
 			.where(eq(episodes.id, episodeId));
 
 		console.timeEnd(`processEpisode:${episodeId}`);
+		console.log("\nProcessing complete!");
+		console.log(`- Title matches: ${titleAthletes.length}`);
+		console.log(`- Content matches: ${contentAthletes.length}`);
+
 		return {
 			success: true,
 			titleMatches: titleAthletes.length,
@@ -198,16 +196,19 @@ athleteDetectionQueue.process(async (job) => {
 			error: error instanceof Error ? error.message : "Unknown error",
 		};
 	}
-});
+}
 
-// Add monitoring
-athleteDetectionQueue.on("completed", (job, result) => {
-	console.log(`✅ Processed episode ${job.data.episodeId}:`, result);
-});
+// Get episode ID from command line argument
+const episodeId = process.argv[2];
 
-athleteDetectionQueue.on("failed", (job, error) => {
-	console.error(`❌ Failed to process episode ${job.data.episodeId}:`, error);
-});
+if (!episodeId) {
+	console.error("Please provide an episode ID as an argument");
+	console.error("Usage: bun run scripts/process-episode.ts <episodeId>");
+	process.exit(1);
+}
 
-// Export the queue for use in other files
-export default athleteDetectionQueue;
+// Run the processor
+processEpisode(episodeId).catch((error) => {
+	console.error("Error:", error);
+	process.exit(1);
+});

@@ -12,12 +12,32 @@ import { extractUrlsFromHtml } from "@/lib/extract-urls";
 import { LinkPreviewList } from "@/components/LinkPreview";
 import { TabsWithState } from "@/components/TabsWithState";
 import Image from "next/image";
+import { Suspense } from "react";
+import { AthleteReferences } from "@/components/athlete-references";
+import { MentionLoading } from "@/components/mention-loading";
+import { MentionError } from "@/components/mention-error";
+import { getEpisodeAthleteReferences } from "@/lib/queries/athlete-mentions";
 
 interface EpisodePageProps {
 	params: Promise<{
 		podcast: string;
 		episode: string;
 	}>;
+}
+
+async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
+	try {
+		const references = await getEpisodeAthleteReferences(episodeId);
+		return <AthleteReferences references={references} />;
+	} catch (error) {
+		console.error("Error loading athlete references:", error);
+		return (
+			<MentionError
+				title="Error Loading Athletes"
+				message="Unable to load athlete references for this episode."
+			/>
+		);
+	}
 }
 
 export async function generateMetadata({
@@ -169,6 +189,11 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 						/>
 					</div>
 					<Separator />
+					<div className="mt-8">
+						<Suspense fallback={<MentionLoading title="Athletes Mentioned" />}>
+							<AthleteReferencesSection episodeId={episode.id} />
+						</Suspense>
+					</div>
 					{urls.length > 0 ? (
 						<TabsWithState
 							className="max-w-3xl"

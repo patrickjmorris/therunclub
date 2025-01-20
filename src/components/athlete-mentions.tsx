@@ -1,9 +1,4 @@
 import { type AthleteMention } from "@/lib/queries/athlete-mentions";
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
-import { sanitizeHtml } from "@/lib/sanitize";
 import EpisodeEntry from "./podcasts/EpisodeEntry";
 
 interface AthleteMentionsProps {

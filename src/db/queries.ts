@@ -28,7 +28,7 @@ export const getNewEpisodes = unstable_cache(
 			})
 			.from(podcasts)
 			.innerJoin(episodes, eq(podcasts.id, episodes.podcastId))
-			.where(isNotNull(episodes.pubDate))
+			.where(and(isNotNull(episodes.pubDate), like(podcasts.language, "en%")))
 			.orderBy(desc(episodes.pubDate))
 			.limit(limit);
 	},
@@ -405,7 +405,7 @@ export const getFeaturedPodcasts = unstable_cache(
 				vibrantColor: podcasts.vibrantColor,
 			})
 			.from(podcasts)
-			.where(isNotNull(podcasts.image))
+			.where(and(isNotNull(podcasts.image), like(podcasts.language, "en%")))
 			.orderBy(desc(podcasts.lastBuildDate))
 			.limit(3);
 	},

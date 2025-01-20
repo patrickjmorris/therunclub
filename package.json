@@ -26,7 +26,8 @@
 		"queue": "bun run scripts/queue-episodes.ts",
 		"sync:mentions": "bun run scripts/sync-athlete-mentions.ts",
 		"check:supabase": "bun run scripts/check-supabase-config.ts",
-		"process:episode": "NODE_ENV=production bun run scripts/process-episode.ts"
+		"process:episode": "NODE_ENV=production bun run scripts/process-episode.ts",
+		"clear:queue": "bun run scripts/clear-queue.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {
@@ -59,7 +60,7 @@
 		"@vercel/speed-insights": "^1.0.14",
 		"autoprefixer": "^10.4.12",
 		"bull": "^4.16.5",
-		"caniuse-lite": "^1.0.30001692",
+		"caniuse-lite": "^1.0.30001695",
 		"canvas": "^2.11.2",
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.1",

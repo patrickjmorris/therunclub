@@ -10,11 +10,25 @@ interface DetectedAthlete {
 	context: string;
 }
 
-// Create a new queue instance
-const athleteDetectionQueue = new Queue(
-	"athlete-detection",
-	process.env.REDIS_URL || "redis://localhost:6379",
-);
+// Create a new queue instance with Redis configuration
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+console.log("Connecting to Redis at:", REDIS_URL);
+
+const athleteDetectionQueue = new Queue("athlete-detection", REDIS_URL, {
+	defaultJobOptions: {
+		attempts: 3,
+		backoff: {
+			type: "exponential",
+			delay: 1000,
+		},
+		removeOnComplete: true,
+		removeOnFail: false,
+	},
+	settings: {
+		stalledInterval: 30000, // Check for stalled jobs every 30 seconds
+		maxStalledCount: 1, // Only try to process a stalled job once
+	},
+});
 
 async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	console.time("detectAthletes");
@@ -98,9 +112,10 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	return Array.from(uniqueAthletes.values());
 }
 
-// Process jobs one at a time
-athleteDetectionQueue.process(async (job) => {
+// Configure the worker to process jobs with concurrency
+athleteDetectionQueue.process(1, async (job) => {
 	const { episodeId } = job.data;
+	console.log(`Starting to process episode: ${episodeId}`);
 	console.time(`processEpisode:${episodeId}`);
 
 	try {
@@ -118,8 +133,12 @@ athleteDetectionQueue.process(async (job) => {
 			throw new Error(`Episode not found: ${episodeId}`);
 		}
 
+		console.log(`Processing episode: ${episode.title}`);
+
 		// Process title
 		const titleAthletes = await detectAthletes(episode.title);
+		console.log(`Found ${titleAthletes.length} athletes in title`);
+
 		for (const athlete of titleAthletes) {
 			try {
 				await db
@@ -151,6 +170,8 @@ athleteDetectionQueue.process(async (job) => {
 		let contentAthletes: DetectedAthlete[] = [];
 		if (episode.content) {
 			contentAthletes = await detectAthletes(episode.content);
+			console.log(`Found ${contentAthletes.length} athletes in content`);
+
 			for (const athlete of contentAthletes) {
 				try {
 					await db
@@ -186,6 +207,8 @@ athleteDetectionQueue.process(async (job) => {
 			.where(eq(episodes.id, episodeId));
 
 		console.timeEnd(`processEpisode:${episodeId}`);
+		console.log(`Completed processing episode: ${episodeId}`);
+
 		return {
 			success: true,
 			titleMatches: titleAthletes.length,
@@ -193,20 +216,33 @@ athleteDetectionQueue.process(async (job) => {
 		};
 	} catch (error) {
 		console.error(`Error processing episode ${episodeId}:`, error);
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "Unknown error",
-		};
+		throw error; // Re-throw to mark job as failed
 	}
 });
 
-// Add monitoring
+// Add event handlers for monitoring
+athleteDetectionQueue.on("ready", () => {
+	console.log("Worker connected to Redis and ready to process jobs");
+});
+
+athleteDetectionQueue.on("active", (job) => {
+	console.log(`Started processing episode: ${job.data.episodeId}`);
+});
+
 athleteDetectionQueue.on("completed", (job, result) => {
 	console.log(`✅ Processed episode ${job.data.episodeId}:`, result);
 });
 
 athleteDetectionQueue.on("failed", (job, error) => {
 	console.error(`❌ Failed to process episode ${job.data.episodeId}:`, error);
+});
+
+athleteDetectionQueue.on("error", (error) => {
+	console.error("Queue error:", error);
+});
+
+athleteDetectionQueue.on("stalled", (job) => {
+	console.warn(`Job ${job.id} has stalled`);
 });
 
 // Export the queue for use in other files

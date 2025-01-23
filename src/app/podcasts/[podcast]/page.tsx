@@ -7,10 +7,11 @@ import {
 import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
 import { isNotNull } from "drizzle-orm";
-import { EpisodeList } from "@/components/podcasts/episode-list";
+
 import { fetchMore } from "./actions";
 import { Suspense } from "react";
 import { BasicEpisode } from "@/types/shared";
+import { EpisodeList } from "@/components/podcasts/episode-list";
 
 export const revalidate = 3600;
 

@@ -6,8 +6,11 @@ import {
 } from "@/db/queries";
 import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
-import EpisodeEntry from "@/components/podcasts/EpisodeEntry";
 import { isNotNull } from "drizzle-orm";
+import { EpisodeList } from "@/components/podcasts/episode-list";
+import { fetchMore } from "./actions";
+import { Suspense } from "react";
+import { BasicEpisode } from "@/types/shared";
 
 export const revalidate = 3600;
 
@@ -74,11 +77,11 @@ export default async function PodcastPage(props: {
 	// console.log("params", params);
 	const podcast = await getPodcastBySlug(params.podcast);
 
-	if (!podcast || !podcast.podcastSlug) {
+	if (!podcast) {
 		notFound();
 	}
 
-	const episodes = await getLastTenEpisodesByPodcastSlug(podcast.podcastSlug);
+	const episodes = await getLastTenEpisodesByPodcastSlug(params.podcast, 10, 0);
 
 	const jsonLd = {
 		"@context": "https://schema.org",
@@ -102,19 +105,21 @@ export default async function PodcastPage(props: {
 	};
 
 	return (
-		<div className="pt-4 pb-12 sm:pb-4 lg:pt-12">
+		<div className="container py-8">
 			<script
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
 			/>
-			<div className="divide-y divide-slate-100 sm:mt-4 lg:mt-8 lg:border-t lg:border-slate-100">
-				{episodes.map((episode) => (
-					<EpisodeEntry
-						key={episode.episodeSlug}
-						episodeSlug={episode.episodeSlug}
+			<div className="mt-8">
+				<h2 className="text-xl font-semibold mb-4">Latest Episodes</h2>
+				<Suspense fallback={<div>Loading episodes...</div>}>
+					<EpisodeList
+						initialEpisodes={episodes as BasicEpisode[]}
+						fetchMore={fetchMore.bind(null, params.podcast)}
+						hasMore={episodes.length === 10}
 					/>
-				))}
+				</Suspense>
 			</div>
 		</div>
 	);

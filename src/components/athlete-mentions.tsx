@@ -1,5 +1,6 @@
 import { type AthleteMention } from "@/lib/queries/athlete-mentions";
 import EpisodeEntry from "./podcasts/EpisodeEntry";
+import { BasicEpisode } from "@/types/shared";
 
 interface AthleteMentionsProps {
 	mentions: AthleteMention[];
@@ -20,8 +21,8 @@ export function AthleteMentions({
 			<div className="grid gap-4">
 				{mentions.map((mention) => (
 					<EpisodeEntry
-						key={mention.id}
-						episodeSlug={mention.episode.episodeSlug}
+						key={mention.episode.episodeSlug}
+						episode={mention.episode}
 					/>
 				))}
 			</div>

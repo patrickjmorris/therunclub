@@ -25,6 +25,16 @@ export type AthleteMention = {
 		episodeSlug: string;
 		content: string | null;
 		pubDate: Date | null;
+		image: string | null;
+		duration: string;
+		podcastSlug: string;
+		podcastTitle: string;
+		podcastImage: string | null;
+		podcastId: string;
+		podcastAuthor: string | null;
+		enclosureUrl: string | null;
+		explicit: "yes" | "no" | null;
+		link: string | null;
 	};
 	podcast: {
 		id: string;
@@ -63,6 +73,16 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 				episodeSlug: episodes.episodeSlug,
 				content: episodes.content,
 				pubDate: episodes.pubDate,
+				image: episodes.image,
+				duration: episodes.duration,
+				podcastSlug: podcasts.podcastSlug,
+				podcastTitle: podcasts.title,
+				podcastImage: podcasts.image,
+				podcastId: episodes.podcastId,
+				podcastAuthor: podcasts.author,
+				enclosureUrl: episodes.enclosureUrl,
+				explicit: episodes.explicit,
+				link: episodes.link,
 			},
 			podcast: {
 				id: podcasts.id,

@@ -36,7 +36,7 @@ async function getAthleteData(slug: string) {
 async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 	try {
 		const mentions = await getAthleteRecentMentions(athleteId);
-		console.log("Mentions:", mentions);
+
 		return <AthleteMentions mentions={mentions} />;
 	} catch (error) {
 		console.error("Error loading athlete mentions:", error);

@@ -1,23 +1,21 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+"use client";
+
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FormattedDate } from "../FormattedDate";
-import { EpisodePlayButton } from "../EpisodePlayButton";
 import { formatDuration } from "@/lib/formatDuration";
-import { getEpisode } from "@/db/queries";
 import { sanitizeHtml } from "@/lib/sanitize";
+import type { BasicEpisode } from "@/types/shared";
+import { EpisodePlayControls } from "./episode-play-controls";
 
-export default async function EpisodeEntry({
-	episodeSlug,
-}: {
-	episodeSlug: string;
-}) {
-	const episode = await getEpisode(episodeSlug);
+interface EpisodeEntryProps {
+	episode: BasicEpisode;
+}
 
+export default function EpisodeEntry({ episode }: EpisodeEntryProps) {
 	if (!episode) return null;
-
 	const date = episode.pubDate ? new Date(episode.pubDate) : null;
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
 
@@ -59,22 +57,7 @@ export default async function EpisodeEntry({
 						/>
 					</div>
 					<div className="flex items-center gap-4 mt-4 col-span-2 lg:col-span-1 lg:col-start-2">
-						<EpisodePlayButton
-							episode={episode}
-							className="flex items-center gap-2"
-							playing={
-								<>
-									<Pause className="h-4 w-4 fill-current" />
-									<span aria-hidden="true">Listen</span>
-								</>
-							}
-							paused={
-								<>
-									<Play className="h-4 w-4 fill-current" />
-									<span aria-hidden="true">Listen</span>
-								</>
-							}
-						/>
+						<EpisodePlayControls episode={episode} />
 						<Button variant="ghost" size="sm" asChild>
 							<Link
 								href={`/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`}

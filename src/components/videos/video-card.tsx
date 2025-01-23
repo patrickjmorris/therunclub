@@ -1,14 +1,15 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-
-import { Video } from "@/db/schema";
+import type { BasicVideo } from "@/types/shared";
 
 interface VideoCardProps {
-	video: Video;
+	video: BasicVideo;
 	onShare?: (id: string) => Promise<void>;
 }
 
@@ -32,9 +33,10 @@ export function VideoCard({ video, onShare }: VideoCardProps) {
 							{video.channelTitle}
 						</p>
 						<p className="text-xs text-muted-foreground mt-1">
-							{formatDistanceToNow(new Date(video.publishedAt ?? ""), {
-								addSuffix: true,
-							})}
+							{video.publishedAt &&
+								formatDistanceToNow(video.publishedAt, {
+									addSuffix: true,
+								})}
 						</p>
 					</div>
 				</CardContent>

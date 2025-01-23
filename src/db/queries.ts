@@ -297,7 +297,7 @@ export function revalidatePodcastsAndEpisodes() {
 
 // Add new function to get episodes by podcast slug
 export const getLastTenEpisodesByPodcastSlug = unstable_cache(
-	async (podcastSlug: string) => {
+	async (podcastSlug: string, limit = 10, offset = 0) => {
 		return db
 			.select({
 				id: episodes.id,
@@ -319,7 +319,8 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
 			.where(eq(podcasts.podcastSlug, podcastSlug))
 			.orderBy(desc(episodes.pubDate))
-			.limit(10);
+			.limit(limit)
+			.offset(offset);
 	},
 	["last-ten-episodes-by-slug"],
 	{ tags: ["episodes"] },
@@ -405,7 +406,13 @@ export const getFeaturedPodcasts = unstable_cache(
 				vibrantColor: podcasts.vibrantColor,
 			})
 			.from(podcasts)
-			.where(and(isNotNull(podcasts.image), like(podcasts.language, "en%")))
+			.where(
+				and(
+					isNotNull(podcasts.image),
+					isNotNull(podcasts.lastBuildDate),
+					like(podcasts.language, "en%"),
+				),
+			)
 			.orderBy(desc(podcasts.lastBuildDate))
 			.limit(3);
 	},

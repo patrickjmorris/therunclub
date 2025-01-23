@@ -2,11 +2,10 @@
 
 import { VideoCard } from "./video-card";
 import { useShare } from "./use-share";
-import { Video } from "@/db/schema";
+import type { BasicVideo } from "@/types/shared";
 
 interface VideoGridProps {
-	videos: Video[];
-	onShare?: (id: string) => Promise<void>;
+	videos: BasicVideo[];
 }
 
 export function VideoGrid({ videos }: VideoGridProps) {

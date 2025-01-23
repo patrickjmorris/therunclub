@@ -1,4 +1,3 @@
-import { VideoGrid } from "@/components/videos/video-grid";
 import {
 	getChannelById,
 	getChannelVideos,
@@ -10,6 +9,8 @@ import { Suspense } from "react";
 import { Metadata } from "next";
 import { Globe, Play, Users, Video as VideoIcon } from "lucide-react";
 import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
+import { InfiniteVideoGrid } from "@/components/videos/infinite-video-grid";
+import { fetchMore } from "./actions";
 
 interface ChannelPageProps {
 	params: Promise<{
@@ -19,7 +20,6 @@ interface ChannelPageProps {
 
 // Generate static params for initial channels
 export async function generateStaticParams() {
-	// Get first 5 channels from database ordered by subscriber count
 	const channels = await getAllChannels();
 	return channels.map((channel) => ({
 		channelId: channel.id,
@@ -27,47 +27,61 @@ export async function generateStaticParams() {
 }
 
 // Generate dynamic metadata for SEO
+export const revalidate = 3600;
+
 export async function generateMetadata({
 	params,
-}: { params: Promise<{ channelId: string }> }): Promise<Metadata> {
-	const { channelId } = await params;
-	const channel = await getChannelById(channelId);
+}: {
+	params: Promise<{ channelId: string }>;
+}): Promise<Metadata> {
+	const resolvedParams = await params;
+	const channel = await getChannelById(resolvedParams.channelId);
 
-	if (!channel) {
-		return {
-			title: "Channel Not Found",
-		};
-	}
+	if (!channel) return {};
+
+	const imageUrl = channel.thumbnailUrl || "";
+	const description =
+		channel.description?.substring(0, 155) ||
+		`Watch videos from ${channel.title} on The Run Club`;
 
 	return {
-		title: `${channel.title} | The Run Club`,
-		description: channel.description ?? undefined,
+		title: channel.title,
+		description: description,
 		openGraph: {
+			type: "website",
 			title: channel.title,
-			description: channel.description ?? undefined,
+			description: description,
+			siteName: "The Run Club",
 			images: [
 				{
-					url: channel.thumbnailUrl ?? "",
-					width: 800,
-					height: 600,
+					url: imageUrl,
+					width: 1200,
+					height: 630,
 					alt: channel.title,
 				},
 			],
+			locale: "en_US",
+		},
+		twitter: {
+			card: "summary_large_image",
+			title: channel.title,
+			description: description,
+			images: [imageUrl],
+		},
+		alternates: {
+			canonical: `/videos/channels/${resolvedParams.channelId}`,
 		},
 	};
 }
 
 export default async function ChannelPage({ params }: ChannelPageProps) {
-	// Await and parse the channelId parameter
 	const { channelId } = await params;
-
-	// Fetch channel info
 	const channel = await getChannelById(channelId);
+
 	if (!channel) {
 		notFound();
 	}
 
-	// Format numbers for better readability
 	function formatCompactNumber(num: number): string {
 		if (num >= 1000000)
 			return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
@@ -79,8 +93,8 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 	const subscribers = formatCompactNumber(Number(channel.subscriberCount ?? 0));
 	const videoCount = formatCompactNumber(Number(channel.videoCount ?? 0));
 
-	// Fetch channel's videos
-	const videos = await getChannelVideos(channel.id);
+	// Get initial videos
+	const videos = await getChannelVideos(channel.id, 12, 0);
 
 	if (!videos.length) {
 		return (
@@ -106,6 +120,15 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 			</div>
 		);
 	}
+
+	const jsonLd = {
+		"@context": "https://schema.org",
+		"@type": "WebPage",
+		name: channel.title,
+		description: channel.description,
+		image: channel.thumbnailUrl,
+		url: `/videos/channels/${channel.id}`,
+	};
 
 	return (
 		<div className="container py-8">
@@ -152,9 +175,19 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 			<div className="mt-8">
 				<h2 className="text-xl font-semibold mb-4">Latest Videos</h2>
 				<Suspense fallback={<LoadingGridSkeleton />}>
-					<VideoGrid videos={videos} />
+					<InfiniteVideoGrid
+						initialVideos={videos}
+						fetchMore={fetchMore.bind(null, channel.id)}
+						hasMore={videos.length === 12}
+					/>
 				</Suspense>
 			</div>
+
+			<script
+				type="application/ld+json"
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			/>
 		</div>
 	);
 }

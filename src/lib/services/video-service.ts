@@ -99,13 +99,18 @@ export const getFeaturedChannels = unstable_cache(
 );
 
 // Get channel videos
-export async function getChannelVideos(channelId: string, limit = 10) {
+export async function getChannelVideos(
+	channelId: string,
+	limit = 10,
+	offset = 0,
+) {
 	return db
 		.select()
 		.from(videos)
 		.where(eq(videos.channelId, channelId))
 		.orderBy(desc(videos.publishedAt))
-		.limit(limit);
+		.limit(limit)
+		.offset(offset);
 }
 
 // Get videos with channel info

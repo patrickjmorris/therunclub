@@ -75,11 +75,13 @@ export function LinkPreviewList({
 	podcastsLink,
 	preloadedData = {},
 }: LinkPreviewListProps) {
+	// Limit URLs to first 10
+	const limitedUrls = urls.slice(0, 10);
 	const [previews, setPreviews] =
 		useState<Record<string, OpenGraphData>>(preloadedData);
 	const [loading, setLoading] = useState(!Object.keys(preloadedData).length);
-	const urlsRef = useRef(urls);
-	urlsRef.current = urls;
+	const urlsRef = useRef(limitedUrls);
+	urlsRef.current = limitedUrls;
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
@@ -136,7 +138,7 @@ export function LinkPreviewList({
 
 	return (
 		<div className="space-y-4">
-			{urls.map((url) => {
+			{limitedUrls.map((url) => {
 				const preview = previews[url];
 				if (!preview) return null;
 
@@ -174,6 +176,11 @@ export function LinkPreviewList({
 					</Card>
 				);
 			})}
+			{urls.length > 10 && (
+				<p className="text-sm text-muted-foreground">
+					Showing first 10 links of {urls.length} total
+				</p>
+			)}
 			{podcastsLink && (
 				<p className="text-sm text-muted-foreground">
 					<a

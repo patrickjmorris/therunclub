@@ -160,18 +160,20 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 	const imageUrl = episode.image || episode.podcastImage;
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
 	const sanitizedContent = addLinkStyles(sanitizeHtml(episode.content ?? ""));
-	const urls = extractUrlsFromHtml(sanitizedContent);
-	
+	const urls = extractUrlsFromHtml(sanitizedContent).slice(0, 10); // Limit to first 10 URLs
+
 	// Prefetch OpenGraph data for all links using the cached API endpoint
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-const  preloadedOgData: Record<string, any> = {};
+	const preloadedOgData: Record<string, any> = {};
 	if (urls.length > 0) {
 		await Promise.all(
 			urls.map(async (url) => {
 				try {
 					const response = await fetch(
-						`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/og?url=${encodeURIComponent(url)}`,
-						{ next: { revalidate: 86400 } } // Cache for 24 hours
+						`${
+							process.env.NEXT_PUBLIC_APP_URL || ""
+						}/api/og?url=${encodeURIComponent(url)}`,
+						{ next: { revalidate: 86400 } }, // Cache for 24 hours
 					);
 					if (response.ok) {
 						const data = await response.json();
@@ -182,7 +184,7 @@ const  preloadedOgData: Record<string, any> = {};
 				} catch (error) {
 					console.error(`Error prefetching OpenGraph data for ${url}:`, error);
 				}
-			})
+			}),
 		);
 	}
 

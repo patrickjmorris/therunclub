@@ -102,7 +102,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 
 		// Extract URLs and convert them to links in the description
 		const urls = videoData.description
-			? extractUrlsFromText(videoData.description)
+			? extractUrlsFromText(videoData.description).slice(0, 10)
 			: [];
 		const descriptionWithLinks = videoData.description
 			? convertUrlsToLinks(videoData.description)

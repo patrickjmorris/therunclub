@@ -122,6 +122,9 @@ function addLinkStyles(html: string): string {
 	);
 }
 
+export const dynamic = "force-static";
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function EpisodePage({ params }: EpisodePageProps) {
 	const { episode: episodeSlug } = await params;
 	const episode = await getEpisode(episodeSlug);
@@ -242,7 +245,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 										<div className="space-y-4">
 											<LinkPreviewList
 												urls={urls}
-												podcastsLink={episode.link}
+												podcastsLink={episode.link || undefined}
 											/>
 										</div>
 									),

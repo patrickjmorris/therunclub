@@ -16,7 +16,7 @@ import { MentionError } from "@/components/mention-error";
 import { getAthleteRecentMentions } from "@/lib/queries/athlete-mentions";
 
 async function getAthleteData(slug: string) {
-	console.log("Attempting to fetch athlete with slug:", slug);
+	// console.log("Attempting to fetch athlete with slug:", slug);
 
 	const athlete = await db.query.athletes.findFirst({
 		where: eq(athletes.slug, slug),

@@ -76,6 +76,9 @@ function convertUrlsToLinks(text: string): string {
 	);
 }
 
+export const dynamic = "force-static";
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
 

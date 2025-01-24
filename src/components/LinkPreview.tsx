@@ -1,3 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getOpenGraphData } from "@/lib/og";
 import type { OpenGraphData } from "@/lib/og";
 import { cn } from "@/lib/utils";
@@ -73,57 +78,116 @@ function LinkPreviewSkeleton() {
 	);
 }
 
-export async function LinkPreviewList({
-	urls,
-	podcastsLink,
-	className,
-}: {
+interface LinkPreviewListProps {
 	urls: string[];
-	podcastsLink?: string | null;
-	className?: string;
-}) {
-	if (!urls.length && !podcastsLink) return null;
+	podcastsLink?: string;
+}
 
-	const allUrls = podcastsLink ? [podcastsLink, ...urls] : urls;
+export function LinkPreviewList({ urls, podcastsLink }: LinkPreviewListProps) {
+	const [previews, setPreviews] = useState<Record<string, OpenGraphData>>({});
+	const [loading, setLoading] = useState(true);
 
-	// Fetch all OpenGraph data in parallel and filter out invalid responses
-	const previews = await Promise.all(
-		allUrls.map(async (url) => {
-			try {
-				const ogData = await getOpenGraphData(url);
-				// Only include previews that have at least a title and aren't error states
-				const isValid =
-					ogData.title &&
-					ogData.title !== url &&
-					ogData.title !== new URL(url).hostname &&
-					!ogData.title.includes("Request timeout") &&
-					!ogData.title.includes("Connection failed") &&
-					!ogData.title.includes("Page not found") &&
-					!ogData.title.includes("Access denied") &&
-					!ogData.title.includes("Too many requests");
+	useEffect(() => {
+		async function fetchPreviews() {
+			setLoading(true);
+			const newPreviews: Record<string, OpenGraphData> = {};
 
-				return isValid ? { url, ogData } : null;
-			} catch {
-				return null;
+			for (const url of urls) {
+				try {
+					const response = await fetch(
+						`/api/og?url=${encodeURIComponent(url)}`,
+					);
+					const data = await response.json();
+					newPreviews[url] = data;
+				} catch (error) {
+					console.error(`Error fetching preview for ${url}:`, error);
+				}
 			}
-		}),
-	);
 
-	// Filter out null responses
-	const validPreviews = previews.filter(
-		(preview): preview is { url: string; ogData: OpenGraphData } =>
-			preview !== null,
-	);
+			setPreviews(newPreviews);
+			setLoading(false);
+		}
 
-	if (!validPreviews.length) return null;
+		if (urls.length > 0) {
+			fetchPreviews();
+		} else {
+			setLoading(false);
+		}
+	}, [urls]);
+
+	if (loading) {
+		return (
+			<div className="space-y-4">
+				{[...Array(Math.min(urls.length, 3))].map((_, i) => (
+					<Card key={`skeleton-${urls[i] || i}`}>
+						<CardContent className="p-4">
+							<div className="flex gap-4">
+								<Skeleton className="h-24 w-24 rounded-lg" />
+								<div className="flex-1 space-y-2">
+									<Skeleton className="h-4 w-3/4" />
+									<Skeleton className="h-4 w-1/2" />
+									<Skeleton className="h-4 w-full" />
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+				))}
+			</div>
+		);
+	}
 
 	return (
-		<div className={cn("my-4 flex flex-col gap-4", className)}>
-			{validPreviews.map(({ url, ogData }) => (
-				<Suspense key={url} fallback={<LinkPreviewSkeleton />}>
-					<LinkPreview url={url} ogData={ogData} />
-				</Suspense>
-			))}
+		<div className="space-y-4">
+			{urls.map((url) => {
+				const preview = previews[url];
+				if (!preview) return null;
+
+				return (
+					<Card key={url}>
+						<CardContent className="p-4">
+							<a
+								href={url}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="flex gap-4 hover:opacity-80 transition-opacity"
+							>
+								{preview.image && (
+									<div className="relative h-24 w-24 flex-shrink-0">
+										<img
+											src={preview.image}
+											alt={preview.title || "Link preview"}
+											className="h-full w-full object-cover rounded-lg"
+										/>
+									</div>
+								)}
+								<div className="flex-1 min-w-0">
+									<h3 className="font-medium line-clamp-1">{preview.title}</h3>
+									{preview.description && (
+										<p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+											{preview.description}
+										</p>
+									)}
+									<p className="text-sm text-muted-foreground mt-1 truncate">
+										{new URL(url).hostname}
+									</p>
+								</div>
+							</a>
+						</CardContent>
+					</Card>
+				);
+			})}
+			{podcastsLink && (
+				<p className="text-sm text-muted-foreground">
+					<a
+						href={podcastsLink}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-blue-600 dark:text-blue-400 underline decoration-blue-600/30 dark:decoration-blue-400/30 hover:decoration-blue-600 dark:hover:decoration-blue-400 transition-colors"
+					>
+						View episode on podcast website
+					</a>
+				</p>
+			)}
 		</div>
 	);
 }

@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getOpenGraphData } from "@/lib/og";
 import type { OpenGraphData } from "@/lib/og";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { Suspense } from "react";
 import { Link2 } from "lucide-react";
 
 interface LinkPreviewProps {
@@ -65,55 +64,54 @@ export async function LinkPreview({
 	);
 }
 
-function LinkPreviewSkeleton() {
-	return (
-		<div className="flex gap-4 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-			<div className="h-24 w-24 animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-800" />
-			<div className="flex min-w-0 flex-col justify-center gap-2">
-				<div className="h-5 w-3/4 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
-				<div className="h-4 w-full animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
-				<div className="h-4 w-1/2 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
-			</div>
-		</div>
-	);
-}
-
 interface LinkPreviewListProps {
 	urls: string[];
 	podcastsLink?: string;
+	preloadedData?: Record<string, OpenGraphData>;
 }
 
-export function LinkPreviewList({ urls, podcastsLink }: LinkPreviewListProps) {
-	const [previews, setPreviews] = useState<Record<string, OpenGraphData>>({});
-	const [loading, setLoading] = useState(true);
+export function LinkPreviewList({
+	urls,
+	podcastsLink,
+	preloadedData = {},
+}: LinkPreviewListProps) {
+	const [previews, setPreviews] =
+		useState<Record<string, OpenGraphData>>(preloadedData);
+	const [loading, setLoading] = useState(!Object.keys(preloadedData).length);
+	const urlsRef = useRef(urls);
+	urlsRef.current = urls;
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		async function fetchPreviews() {
-			setLoading(true);
-			const newPreviews: Record<string, OpenGraphData> = {};
+			const currentUrls = urlsRef.current;
+			// Only fetch data for URLs that don't have preloaded data
+			const urlsToFetch = currentUrls.filter((url) => !preloadedData[url]);
 
-			for (const url of urls) {
+			if (urlsToFetch.length === 0) {
+				setLoading(false);
+				return;
+			}
+
+			setLoading(true);
+
+			for (const url of urlsToFetch) {
 				try {
 					const response = await fetch(
 						`/api/og?url=${encodeURIComponent(url)}`,
 					);
 					const data = await response.json();
-					newPreviews[url] = data;
+					setPreviews((prev) => ({ ...prev, [url]: data }));
 				} catch (error) {
 					console.error(`Error fetching preview for ${url}:`, error);
 				}
 			}
 
-			setPreviews(newPreviews);
 			setLoading(false);
 		}
 
-		if (urls.length > 0) {
-			fetchPreviews();
-		} else {
-			setLoading(false);
-		}
-	}, [urls]);
+		fetchPreviews();
+	}, []); // Empty dependency array since we're using ref
 
 	if (loading) {
 		return (

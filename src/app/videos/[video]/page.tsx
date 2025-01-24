@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { extractUrlsFromText } from "@/lib/extract-urls";
 import { LinkPreviewList } from "@/components/LinkPreview";
+import type { OpenGraphData } from "@/lib/og";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { db } from "@/db/client";
@@ -107,6 +108,34 @@ export default async function VideoPage({ params }: VideoPageProps) {
 			? convertUrlsToLinks(videoData.description)
 			: "";
 
+		// Prefetch OpenGraph data for all links using the cached API endpoint
+		const preloadedOgData: Record<string, OpenGraphData> = {};
+		if (urls.length > 0) {
+			await Promise.all(
+				urls.map(async (url) => {
+					try {
+						const response = await fetch(
+							`${
+								process.env.NEXT_PUBLIC_APP_URL || ""
+							}/api/og?url=${encodeURIComponent(url)}`,
+							{ next: { revalidate: 86400 } }, // Cache for 24 hours
+						);
+						if (response.ok) {
+							const data = await response.json();
+							if (data && !data.error) {
+								preloadedOgData[url] = data;
+							}
+						}
+					} catch (error) {
+						console.error(
+							`Error prefetching OpenGraph data for ${url}:`,
+							error,
+						);
+					}
+				}),
+			);
+		}
+
 		return (
 			<div className="container py-8">
 				<VideoPlayer
@@ -187,7 +216,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
 								</TabsContent>
 								<TabsContent value="links">
 									<div className="space-y-4">
-										<LinkPreviewList urls={urls} />
+										<LinkPreviewList
+											urls={urls}
+											preloadedData={preloadedOgData}
+										/>
 									</div>
 								</TabsContent>
 							</Tabs>

@@ -19,7 +19,7 @@ import { MentionError } from "@/components/mention-error";
 import { getEpisodeAthleteReferences } from "@/lib/queries/athlete-mentions";
 import { db } from "@/db/client";
 import { episodes, podcasts } from "@/db/schema";
-import { isNotNull } from "drizzle-orm";
+import { isNotNull, desc } from "drizzle-orm";
 import { eq, and } from "drizzle-orm";
 
 interface EpisodePageProps {
@@ -45,21 +45,44 @@ async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
 }
 
 export async function generateStaticParams() {
-	const allEpisodes = await db
+	const allPodcasts = await db
 		.select({
-			episodeSlug: episodes.episodeSlug,
 			podcastSlug: podcasts.podcastSlug,
 		})
-		.from(episodes)
-		.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-		.where(
-			and(isNotNull(episodes.episodeSlug), isNotNull(podcasts.podcastSlug)),
-		);
+		.from(podcasts)
+		.where(isNotNull(podcasts.podcastSlug));
 
-	return allEpisodes.map((episode) => ({
-		podcast: episode.podcastSlug,
-		episode: episode.episodeSlug,
-	}));
+	const params = [];
+
+	for (const podcast of allPodcasts) {
+		// Get last 30 episodes for each podcast
+		const recentEpisodes = await db
+			.select({
+				episodeSlug: episodes.episodeSlug,
+			})
+			.from(episodes)
+			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+			.where(
+				and(
+					isNotNull(episodes.episodeSlug),
+					eq(podcasts.podcastSlug, podcast.podcastSlug),
+				),
+			)
+			.orderBy(desc(episodes.pubDate))
+			.limit(30);
+
+		// Add each episode to params
+		for (const episode of recentEpisodes) {
+			if (episode.episodeSlug) {
+				params.push({
+					podcast: podcast.podcastSlug,
+					episode: episode.episodeSlug,
+				});
+			}
+		}
+	}
+
+	return params;
 }
 
 export async function generateMetadata({

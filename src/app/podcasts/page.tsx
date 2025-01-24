@@ -60,12 +60,6 @@ export default async function PodcastList({ searchParams }: PageProps) {
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
 					<h2 className="text-2xl font-bold">Featured Channels</h2>
-					<Button variant="ghost" asChild>
-						<Link href="/podcasts" className="group">
-							View All Podcasts
-							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-						</Link>
-					</Button>
 				</div>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 					{featuredPodcasts.map((podcast) => (
@@ -140,7 +134,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 									)}
 									<Button variant="secondary" className="w-full">
 										<Headphones className="mr-2 h-4 w-4" />
-										Listen Now
+										See All Episodes
 									</Button>
 								</CardContent>
 							</Link>

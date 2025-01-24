@@ -17,6 +17,10 @@ import { AthleteReferences } from "@/components/athlete-references";
 import { MentionLoading } from "@/components/mention-loading";
 import { MentionError } from "@/components/mention-error";
 import { getEpisodeAthleteReferences } from "@/lib/queries/athlete-mentions";
+import { db } from "@/db/client";
+import { episodes, podcasts } from "@/db/schema";
+import { isNotNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 interface EpisodePageProps {
 	params: Promise<{
@@ -38,6 +42,24 @@ async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
 			/>
 		);
 	}
+}
+
+export async function generateStaticParams() {
+	const allEpisodes = await db
+		.select({
+			episodeSlug: episodes.episodeSlug,
+			podcastSlug: podcasts.podcastSlug,
+		})
+		.from(episodes)
+		.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+		.where(
+			and(isNotNull(episodes.episodeSlug), isNotNull(podcasts.podcastSlug)),
+		);
+
+	return allEpisodes.map((episode) => ({
+		podcast: episode.podcastSlug,
+		episode: episode.episodeSlug,
+	}));
 }
 
 export async function generateMetadata({

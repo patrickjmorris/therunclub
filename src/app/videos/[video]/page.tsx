@@ -10,11 +10,25 @@ import { extractUrlsFromText } from "@/lib/extract-urls";
 import { LinkPreviewList } from "@/components/LinkPreview";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import { db } from "@/db/client";
+import { videos } from "@/db/schema";
+import { isNotNull } from "drizzle-orm";
 
 interface VideoPageProps {
 	params: Promise<{
 		video: string;
 	}>;
+}
+
+export async function generateStaticParams() {
+	const allVideos = await db
+		.select({ id: videos.id })
+		.from(videos)
+		.where(isNotNull(videos.id));
+
+	return allVideos.map((video) => ({
+		video: video.id,
+	}));
 }
 
 export async function generateMetadata({

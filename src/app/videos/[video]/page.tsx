@@ -15,6 +15,7 @@ import { db } from "@/db/client";
 import { videos } from "@/db/schema";
 import { isNotNull, desc, eq } from "drizzle-orm";
 import { Suspense } from "react";
+import { performance } from "perf_hooks";
 
 interface VideoPageProps {
 	params: Promise<{
@@ -101,42 +102,82 @@ export const revalidate = 3600; // Revalidate every hour
 
 // Create a separate component for link previews
 async function LinkPreviewSection({ urls }: { urls: string[] }) {
+	const startTime = performance.now();
+	console.log(`[Build] Starting OpenGraph fetch for ${urls.length} URLs`);
+
 	// Prefetch OpenGraph data for all links using the cached API endpoint
 	const preloadedOgData: Record<string, OpenGraphData> = {};
 	if (urls.length > 0) {
-		await Promise.all(
-			urls.map(async (url) => {
-				try {
-					const response = await fetch(
-						`${
-							process.env.NEXT_PUBLIC_APP_URL || ""
-						}/api/og?url=${encodeURIComponent(url)}`,
-						{ next: { revalidate: 86400 } },
-					);
-					if (response.ok) {
-						const data = await response.json();
-						if (data && !data.error) {
-							preloadedOgData[url] = data;
-						}
-					}
-				} catch (error) {
-					console.error(`Error prefetching OpenGraph data for ${url}:`, error);
+		const fetchPromises = urls.map(async (url, index) => {
+			const urlStartTime = performance.now();
+			try {
+				const response = await fetch(
+					`${
+						process.env.NEXT_PUBLIC_APP_URL || ""
+					}/api/og?url=${encodeURIComponent(url)}`,
+					{
+						next: { revalidate: 86400 },
+						// Add timeout to prevent hanging
+						signal: AbortSignal.timeout(5000),
+					},
+				);
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
 				}
-			}),
-		);
+
+				const data = await response.json();
+				if (data && !data.error) {
+					preloadedOgData[url] = data;
+				}
+
+				const urlEndTime = performance.now();
+				console.log(
+					`[Build] URL ${index + 1}/${
+						urls.length
+					} (${url}) fetched in ${Math.round(urlEndTime - urlStartTime)}ms`,
+				);
+			} catch (error) {
+				if (error instanceof Error) {
+					console.error(
+						`[Build] Error fetching preview for ${url}:`,
+						error.message,
+					);
+				}
+				// Continue with other URLs even if one fails
+			}
+		});
+
+		// Use Promise.allSettled to continue even if some requests fail
+		await Promise.allSettled(fetchPromises);
 	}
+
+	const endTime = performance.now();
+	console.log(
+		`[Build] Completed OpenGraph fetch in ${Math.round(endTime - startTime)}ms`,
+	);
 
 	return <LinkPreviewList urls={urls} preloadedData={preloadedOgData} />;
 }
 
 export default async function VideoPage({ params }: VideoPageProps) {
+	const pageStartTime = performance.now();
 	const { video } = await params;
+	console.log(`[Build] Starting build for video: ${video}`);
 
 	try {
 		const videoData = await getVideoById(video);
 		if (!videoData) {
+			console.log(`[Build] Video not found: ${video}`);
 			notFound();
 		}
+
+		const dataFetchTime = performance.now();
+		console.log(
+			`[Build] Video data fetched in ${Math.round(
+				dataFetchTime - pageStartTime,
+			)}ms`,
+		);
 
 		// Format numbers for better readability
 		const views = new Intl.NumberFormat().format(
@@ -156,6 +197,13 @@ export default async function VideoPage({ params }: VideoPageProps) {
 		const descriptionWithLinks = videoData.description
 			? convertUrlsToLinks(videoData.description)
 			: "";
+
+		const processingTime = performance.now();
+		console.log(
+			`[Build] URL extraction and processing completed in ${Math.round(
+				processingTime - dataFetchTime,
+			)}ms`,
+		);
 
 		return (
 			<div className="container py-8">
@@ -269,7 +317,13 @@ export default async function VideoPage({ params }: VideoPageProps) {
 			</div>
 		);
 	} catch (error) {
-		console.error("Error loading video:", error);
+		const errorTime = performance.now();
+		console.error(
+			`[Build] Error building video page (${Math.round(
+				errorTime - pageStartTime,
+			)}ms):`,
+			error,
+		);
 		notFound();
 	}
 }

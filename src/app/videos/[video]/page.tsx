@@ -103,58 +103,89 @@ export const revalidate = 3600; // Revalidate every hour
 // Create a separate component for link previews
 async function LinkPreviewSection({ urls }: { urls: string[] }) {
 	const startTime = performance.now();
-	console.log(`[Build] Starting OpenGraph fetch for ${urls.length} URLs`);
+	console.log(
+		`[Build][LinkPreview] Starting OpenGraph fetch for ${urls.length} URLs`,
+	);
 
 	// Prefetch OpenGraph data for all links using the cached API endpoint
 	const preloadedOgData: Record<string, OpenGraphData> = {};
+
 	if (urls.length > 0) {
-		const fetchPromises = urls.map(async (url, index) => {
-			const urlStartTime = performance.now();
-			try {
-				const response = await fetch(
-					`${
-						process.env.NEXT_PUBLIC_APP_URL || ""
-					}/api/og?url=${encodeURIComponent(url)}`,
-					{
-						next: { revalidate: 86400 },
-						// Add timeout to prevent hanging
-						signal: AbortSignal.timeout(5000),
-					},
-				);
+		// Process URLs in batches of 3 to avoid overwhelming the server
+		const batchSize = 3;
+		for (let i = 0; i < urls.length; i += batchSize) {
+			const batch = urls.slice(i, i + batchSize);
+			console.log(
+				`[Build][LinkPreview] Processing batch ${i / batchSize + 1}/${Math.ceil(
+					urls.length / batchSize,
+				)}`,
+			);
 
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
-				if (data && !data.error) {
-					preloadedOgData[url] = data;
-				}
-
-				const urlEndTime = performance.now();
-				console.log(
-					`[Build] URL ${index + 1}/${
-						urls.length
-					} (${url}) fetched in ${Math.round(urlEndTime - urlStartTime)}ms`,
-				);
-			} catch (error) {
-				if (error instanceof Error) {
-					console.error(
-						`[Build] Error fetching preview for ${url}:`,
-						error.message,
+			const batchStartTime = performance.now();
+			const fetchPromises = batch.map(async (url) => {
+				const urlStartTime = performance.now();
+				try {
+					// Add cache-control headers to the request
+					const response = await fetch(
+						`${
+							process.env.NEXT_PUBLIC_APP_URL || ""
+						}/api/og?url=${encodeURIComponent(url)}`,
+						{
+							next: { revalidate: 86400 }, // Cache for 24 hours
+							signal: AbortSignal.timeout(3000), // Reduce timeout to 3 seconds
+							headers: {
+								"Cache-Control":
+									"public, max-age=86400, stale-while-revalidate=604800",
+							},
+						},
 					);
-				}
-				// Continue with other URLs even if one fails
-			}
-		});
 
-		// Use Promise.allSettled to continue even if some requests fail
-		await Promise.allSettled(fetchPromises);
+					if (!response.ok) {
+						throw new Error(`HTTP error! status: ${response.status}`);
+					}
+
+					const data = await response.json();
+					if (data && !data.error) {
+						preloadedOgData[url] = data;
+						const urlEndTime = performance.now();
+						console.log(
+							`[Build][LinkPreview] URL (${url}) fetched in ${Math.round(
+								urlEndTime - urlStartTime,
+							)}ms`,
+						);
+					}
+				} catch (error) {
+					if (error instanceof Error) {
+						if (error.name === "TimeoutError" || error.name === "AbortError") {
+							console.warn(`[Build][LinkPreview] Timeout fetching ${url}`);
+						} else {
+							console.error(
+								`[Build][LinkPreview] Error fetching ${url}:`,
+								error.message,
+							);
+						}
+					}
+					// Skip this URL and continue with others
+				}
+			});
+
+			// Wait for current batch to complete
+			await Promise.allSettled(fetchPromises);
+			const batchEndTime = performance.now();
+			console.log(
+				`[Build][LinkPreview] Batch ${
+					i / batchSize + 1
+				} completed in ${Math.round(batchEndTime - batchStartTime)}ms`,
+			);
+		}
 	}
 
 	const endTime = performance.now();
+	const successCount = Object.keys(preloadedOgData).length;
 	console.log(
-		`[Build] Completed OpenGraph fetch in ${Math.round(endTime - startTime)}ms`,
+		`[Build][LinkPreview] Completed OpenGraph fetch in ${Math.round(
+			endTime - startTime,
+		)}ms. ` + `Successfully fetched ${successCount}/${urls.length} URLs`,
 	);
 
 	return <LinkPreviewList urls={urls} preloadedData={preloadedOgData} />;
@@ -163,20 +194,21 @@ async function LinkPreviewSection({ urls }: { urls: string[] }) {
 export default async function VideoPage({ params }: VideoPageProps) {
 	const pageStartTime = performance.now();
 	const { video } = await params;
-	console.log(`[Build] Starting build for video: ${video}`);
+	console.log(`[Build][${video}] Starting build`);
 
 	try {
+		console.log(`[Build][${video}] Fetching video data...`);
 		const videoData = await getVideoById(video);
 		if (!videoData) {
-			console.log(`[Build] Video not found: ${video}`);
+			console.log(`[Build][${video}] Video not found`);
 			notFound();
 		}
 
 		const dataFetchTime = performance.now();
 		console.log(
-			`[Build] Video data fetched in ${Math.round(
+			`[Build][${video}] Video data fetched in ${Math.round(
 				dataFetchTime - pageStartTime,
-			)}ms`,
+			)}ms. YouTube ID: ${videoData.youtubeVideoId}`,
 		);
 
 		// Format numbers for better readability
@@ -191,21 +223,34 @@ export default async function VideoPage({ params }: VideoPageProps) {
 		);
 
 		// Extract URLs and convert them to links in the description
+		console.log(
+			`[Build][${video}] Processing description and extracting URLs...`,
+		);
+		const descStartTime = performance.now();
+
 		const urls = videoData.description
 			? extractUrlsFromText(videoData.description).slice(0, 10)
 			: [];
+
+		console.log(
+			`[Build][${video}] Found ${
+				urls.length
+			} URLs in description: ${JSON.stringify(urls)}`,
+		);
+
 		const descriptionWithLinks = videoData.description
 			? convertUrlsToLinks(videoData.description)
 			: "";
 
 		const processingTime = performance.now();
 		console.log(
-			`[Build] URL extraction and processing completed in ${Math.round(
-				processingTime - dataFetchTime,
+			`[Build][${video}] URL extraction and processing completed in ${Math.round(
+				processingTime - descStartTime,
 			)}ms`,
 		);
 
-		return (
+		// Render the page without waiting for OpenGraph data
+		const result = (
 			<div className="container py-8">
 				<VideoPlayer
 					videoId={videoData.youtubeVideoId}
@@ -316,10 +361,19 @@ export default async function VideoPage({ params }: VideoPageProps) {
 				</div>
 			</div>
 		);
+
+		const pageEndTime = performance.now();
+		console.log(
+			`[Build][${video}] Total page build time: ${Math.round(
+				pageEndTime - pageStartTime,
+			)}ms`,
+		);
+
+		return result;
 	} catch (error) {
 		const errorTime = performance.now();
 		console.error(
-			`[Build] Error building video page (${Math.round(
+			`[Build][${video}] Error building page (${Math.round(
 				errorTime - pageStartTime,
 			)}ms):`,
 			error,

@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { db } from "@/db/client";
 import { videos } from "@/db/schema";
-import { isNotNull } from "drizzle-orm";
+import { isNotNull, desc, eq } from "drizzle-orm";
 import { Suspense } from "react";
 
 interface VideoPageProps {
@@ -23,14 +23,32 @@ interface VideoPageProps {
 }
 
 export async function generateStaticParams() {
-	const allVideos = await db
-		.select({ id: videos.id })
+	// Get all unique channel IDs
+	const channels = await db
+		.select({ channelId: videos.channelId })
 		.from(videos)
-		.where(isNotNull(videos.id));
+		.where(isNotNull(videos.channelId))
+		.groupBy(videos.channelId);
 
-	return allVideos.map((video) => ({
-		video: video.id,
-	}));
+	const params = [];
+
+	// For each channel, get the last 25 videos
+	for (const channel of channels) {
+		const recentVideos = await db
+			.select({ id: videos.id })
+			.from(videos)
+			.where(eq(videos.channelId, channel.channelId))
+			.orderBy(desc(videos.publishedAt))
+			.limit(25);
+
+		params.push(
+			...recentVideos.map((video) => ({
+				video: video.id,
+			})),
+		);
+	}
+
+	return params;
 }
 
 export async function generateMetadata({

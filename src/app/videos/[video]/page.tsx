@@ -14,6 +14,7 @@ import Link from "next/link";
 import { db } from "@/db/client";
 import { videos } from "@/db/schema";
 import { isNotNull } from "drizzle-orm";
+import { Suspense } from "react";
 
 interface VideoPageProps {
 	params: Promise<{
@@ -80,6 +81,36 @@ function convertUrlsToLinks(text: string): string {
 export const dynamic = "force-static";
 export const revalidate = 3600; // Revalidate every hour
 
+// Create a separate component for link previews
+async function LinkPreviewSection({ urls }: { urls: string[] }) {
+	// Prefetch OpenGraph data for all links using the cached API endpoint
+	const preloadedOgData: Record<string, OpenGraphData> = {};
+	if (urls.length > 0) {
+		await Promise.all(
+			urls.map(async (url) => {
+				try {
+					const response = await fetch(
+						`${
+							process.env.NEXT_PUBLIC_APP_URL || ""
+						}/api/og?url=${encodeURIComponent(url)}`,
+						{ next: { revalidate: 86400 } },
+					);
+					if (response.ok) {
+						const data = await response.json();
+						if (data && !data.error) {
+							preloadedOgData[url] = data;
+						}
+					}
+				} catch (error) {
+					console.error(`Error prefetching OpenGraph data for ${url}:`, error);
+				}
+			}),
+		);
+	}
+
+	return <LinkPreviewList urls={urls} preloadedData={preloadedOgData} />;
+}
+
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
 
@@ -107,34 +138,6 @@ export default async function VideoPage({ params }: VideoPageProps) {
 		const descriptionWithLinks = videoData.description
 			? convertUrlsToLinks(videoData.description)
 			: "";
-
-		// Prefetch OpenGraph data for all links using the cached API endpoint
-		const preloadedOgData: Record<string, OpenGraphData> = {};
-		if (urls.length > 0) {
-			await Promise.all(
-				urls.map(async (url) => {
-					try {
-						const response = await fetch(
-							`${
-								process.env.NEXT_PUBLIC_APP_URL || ""
-							}/api/og?url=${encodeURIComponent(url)}`,
-							{ next: { revalidate: 86400 } }, // Cache for 24 hours
-						);
-						if (response.ok) {
-							const data = await response.json();
-							if (data && !data.error) {
-								preloadedOgData[url] = data;
-							}
-						}
-					} catch (error) {
-						console.error(
-							`Error prefetching OpenGraph data for ${url}:`,
-							error,
-						);
-					}
-				}),
-			);
-		}
 
 		return (
 			<div className="container py-8">
@@ -216,10 +219,20 @@ export default async function VideoPage({ params }: VideoPageProps) {
 								</TabsContent>
 								<TabsContent value="links">
 									<div className="space-y-4">
-										<LinkPreviewList
-											urls={urls}
-											preloadedData={preloadedOgData}
-										/>
+										<Suspense
+											fallback={
+												<div className="space-y-4">
+													{[...Array(Math.min(urls.length, 3))].map((_, i) => (
+														<div
+															key={`link-preview-skeleton-${urls[i] || i}`}
+															className="h-32 bg-muted animate-pulse rounded-lg"
+														/>
+													))}
+												</div>
+											}
+										>
+											<LinkPreviewSection urls={urls} />
+										</Suspense>
 									</div>
 								</TabsContent>
 							</Tabs>

@@ -21,6 +21,7 @@ import { db } from "@/db/client";
 import { episodes, podcasts } from "@/db/schema";
 import { isNotNull, desc } from "drizzle-orm";
 import { eq, and } from "drizzle-orm";
+import type { OpenGraphData } from "@/lib/og";
 
 interface EpisodePageProps {
 	params: Promise<{
@@ -42,6 +43,45 @@ async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
 			/>
 		);
 	}
+}
+
+// Create a separate component for link previews
+async function LinkPreviewSection({
+	urls,
+	podcastsLink,
+}: { urls: string[]; podcastsLink?: string }) {
+	// Prefetch OpenGraph data for all links using the cached API endpoint
+	const preloadedOgData: Record<string, OpenGraphData> = {};
+	if (urls.length > 0) {
+		await Promise.all(
+			urls.map(async (url) => {
+				try {
+					const response = await fetch(
+						`${
+							process.env.NEXT_PUBLIC_APP_URL || ""
+						}/api/og?url=${encodeURIComponent(url)}`,
+						{ next: { revalidate: 86400 } },
+					);
+					if (response.ok) {
+						const data = await response.json();
+						if (data && !data.error) {
+							preloadedOgData[url] = data;
+						}
+					}
+				} catch (error) {
+					console.error(`Error prefetching OpenGraph data for ${url}:`, error);
+				}
+			}),
+		);
+	}
+
+	return (
+		<LinkPreviewList
+			urls={urls}
+			podcastsLink={podcastsLink}
+			preloadedData={preloadedOgData}
+		/>
+	);
 }
 
 export async function generateStaticParams() {
@@ -162,32 +202,6 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 	const sanitizedContent = addLinkStyles(sanitizeHtml(episode.content ?? ""));
 	const urls = extractUrlsFromHtml(sanitizedContent).slice(0, 10); // Limit to first 10 URLs
 
-	// Prefetch OpenGraph data for all links using the cached API endpoint
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	const preloadedOgData: Record<string, any> = {};
-	if (urls.length > 0) {
-		await Promise.all(
-			urls.map(async (url) => {
-				try {
-					const response = await fetch(
-						`${
-							process.env.NEXT_PUBLIC_APP_URL || ""
-						}/api/og?url=${encodeURIComponent(url)}`,
-						{ next: { revalidate: 86400 } }, // Cache for 24 hours
-					);
-					if (response.ok) {
-						const data = await response.json();
-						if (data && !data.error) {
-							preloadedOgData[url] = data;
-						}
-					}
-				} catch (error) {
-					console.error(`Error prefetching OpenGraph data for ${url}:`, error);
-				}
-			}),
-		);
-	}
-
 	const jsonLd = {
 		"@context": "https://schema.org",
 		"@type": "PodcastEpisode",
@@ -292,11 +306,25 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 									label: `Links (${urls.length})`,
 									content: (
 										<div className="space-y-4">
-											<LinkPreviewList
-												urls={urls}
-												podcastsLink={episode.link || undefined}
-												preloadedData={preloadedOgData}
-											/>
+											<Suspense
+												fallback={
+													<div className="space-y-4">
+														{[...Array(Math.min(urls.length, 3))].map(
+															(_, i) => (
+																<div
+																	key={`link-preview-skeleton-${urls[i] || i}`}
+																	className="h-32 bg-muted animate-pulse rounded-lg"
+																/>
+															),
+														)}
+													</div>
+												}
+											>
+												<LinkPreviewSection
+													urls={urls}
+													podcastsLink={episode.link || undefined}
+												/>
+											</Suspense>
 										</div>
 									),
 								},

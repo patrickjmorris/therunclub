@@ -5,16 +5,66 @@ import { notFound } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { extractUrlsFromText } from "@/lib/extract-urls";
 import { LinkPreviewList } from "@/components/LinkPreview";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import { eq, desc, isNotNull } from "drizzle-orm";
+import { videos } from "@/db/schema";
+import { db } from "@/db/client";
 
 interface VideoPageProps {
 	params: Promise<{
 		video: string;
 	}>;
+}
+
+export async function generateStaticParams() {
+	console.log("[Build] Starting generateStaticParams for videos");
+	try {
+		// Get all unique channel IDs
+		const channels = await db
+			.select({ channelId: videos.channelId })
+			.from(videos)
+			.where(isNotNull(videos.channelId))
+			.groupBy(videos.channelId);
+
+		console.log(`[Build] Found ${channels.length} channels`);
+		const params = [];
+
+		// For each channel, get the last 10 videos
+		for (const channel of channels) {
+			try {
+				const recentVideos = await db
+					.select({ id: videos.id })
+					.from(videos)
+					.where(eq(videos.channelId, channel.channelId))
+					.orderBy(desc(videos.publishedAt))
+					.limit(10);
+
+				params.push(
+					...recentVideos.map((video) => ({
+						video: video.id,
+					})),
+				);
+				console.log(
+					`[Build] Added ${recentVideos.length} videos from channel ${channel.channelId}`,
+				);
+			} catch (error) {
+				// Log error but continue with other channels
+				console.error(
+					`[Build] Error processing channel ${channel.channelId}:`,
+					error,
+				);
+			}
+		}
+
+		console.log(`[Build] Total videos to build: ${params.length}`);
+		return params;
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams:", error);
+		return []; // Return empty array instead of failing
+	}
 }
 
 export async function generateMetadata({

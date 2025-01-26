@@ -17,6 +17,9 @@ import { AthleteReferences } from "@/components/athlete-references";
 import { MentionLoading } from "@/components/mention-loading";
 import { MentionError } from "@/components/mention-error";
 import { getEpisodeAthleteReferences } from "@/lib/queries/athlete-mentions";
+import { eq, desc, and, isNotNull } from "drizzle-orm";
+import { db } from "@/db/client";
+import { episodes, podcasts } from "@/db/schema";
 
 interface EpisodePageProps {
 	params: Promise<{
@@ -40,11 +43,67 @@ async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
 	}
 }
 
+export async function generateStaticParams() {
+	console.log("[Build] Starting generateStaticParams for podcast episodes");
+	try {
+		const allPodcasts = await db
+			.select({
+				podcastSlug: podcasts.podcastSlug,
+			})
+			.from(podcasts);
+
+		console.log(`[Build] Found ${allPodcasts.length} podcasts`);
+		const params = [];
+
+		for (const podcast of allPodcasts) {
+			try {
+				// Get last 10 episodes for each podcast (reduced from 30)
+				const recentEpisodes = await db
+					.select({
+						episodeSlug: episodes.episodeSlug,
+					})
+					.from(episodes)
+					.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+					.where(
+						and(
+							isNotNull(episodes.episodeSlug),
+							eq(podcasts.podcastSlug, podcast.podcastSlug),
+						),
+					)
+					.orderBy(desc(episodes.pubDate))
+					.limit(10);
+
+				// Add each episode to params
+				for (const episode of recentEpisodes) {
+					if (episode.episodeSlug) {
+						params.push({
+							podcast: podcast.podcastSlug,
+							episode: episode.episodeSlug,
+						});
+					}
+				}
+				console.log(
+					`[Build] Added ${recentEpisodes.length} episodes from podcast ${podcast.podcastSlug}`,
+				);
+			} catch (error) {
+				console.error(
+					`[Build] Error processing podcast ${podcast.podcastSlug}:`,
+					error,
+				);
+			}
+		}
+
+		console.log(`[Build] Total episodes to build: ${params.length}`);
+		return params;
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams:", error);
+		return []; // Return empty array instead of failing
+	}
+}
+
 export async function generateMetadata({
 	params,
-}: {
-	params: Promise<{ podcast: string; episode: string }>;
-}): Promise<Metadata> {
+}: EpisodePageProps): Promise<Metadata> {
 	const resolvedParams = await params;
 	const episode = await getEpisode(resolvedParams.episode);
 

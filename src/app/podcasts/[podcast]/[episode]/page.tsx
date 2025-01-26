@@ -9,7 +9,6 @@ import { formatDuration } from "@/lib/formatDuration";
 import { EpisodePlayButton } from "@/components/EpisodePlayButton";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { extractUrlsFromHtml } from "@/lib/extract-urls";
-import { LinkPreviewList } from "@/components/LinkPreview";
 import { TabsWithState } from "@/components/TabsWithState";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -20,6 +19,7 @@ import { getEpisodeAthleteReferences } from "@/lib/queries/athlete-mentions";
 import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { episodes, podcasts } from "@/db/schema";
+import { LinkPreviewClientWrapper } from "@/components/LinkPreviewClientWrapper";
 
 interface EpisodePageProps {
 	params: Promise<{
@@ -277,10 +277,18 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 									label: `Links (${urls.length})`,
 									content: (
 										<div className="space-y-4">
-											<LinkPreviewList
-												urls={urls}
-												podcastsLink={episode.link}
-											/>
+											<Suspense
+												fallback={
+													<div className="animate-pulse">
+														Loading link previews...
+													</div>
+												}
+											>
+												<LinkPreviewClientWrapper
+													urls={urls}
+													podcastsLink={episode.link ?? undefined}
+												/>
+											</Suspense>
 										</div>
 									),
 								},

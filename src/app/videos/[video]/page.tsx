@@ -6,12 +6,13 @@ import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { extractUrlsFromText } from "@/lib/extract-urls";
-import { LinkPreviewList } from "@/components/LinkPreview";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { eq, desc, isNotNull } from "drizzle-orm";
 import { videos } from "@/db/schema";
 import { db } from "@/db/client";
+import { Suspense } from "react";
+import { LinkPreviewClientWrapper } from "@/components/LinkPreviewClientWrapper";
 
 interface VideoPageProps {
 	params: Promise<{
@@ -220,7 +221,15 @@ export default async function VideoPage({ params }: VideoPageProps) {
 								</TabsContent>
 								<TabsContent value="links">
 									<div className="space-y-4">
-										<LinkPreviewList urls={urls} />
+										<Suspense
+											fallback={
+												<div className="animate-pulse">
+													Loading link previews...
+												</div>
+											}
+										>
+											<LinkPreviewClientWrapper urls={urls} />
+										</Suspense>
 									</div>
 								</TabsContent>
 							</Tabs>

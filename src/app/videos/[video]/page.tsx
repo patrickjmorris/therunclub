@@ -16,6 +16,7 @@ import { videos } from "@/db/schema";
 import { isNotNull, desc, eq } from "drizzle-orm";
 import { Suspense } from "react";
 import { performance } from "perf_hooks";
+import { cache } from "react";
 
 interface VideoPageProps {
 	params: Promise<{
@@ -23,40 +24,69 @@ interface VideoPageProps {
 	}>;
 }
 
-export async function generateStaticParams() {
-	// Get all unique channel IDs
-	const channels = await db
-		.select({ channelId: videos.channelId })
-		.from(videos)
-		.where(isNotNull(videos.channelId))
-		.groupBy(videos.channelId);
-
-	const params = [];
-
-	// For each channel, get the last 25 videos
-	for (const channel of channels) {
-		const recentVideos = await db
-			.select({ id: videos.id })
-			.from(videos)
-			.where(eq(videos.channelId, channel.channelId))
-			.orderBy(desc(videos.publishedAt))
-			.limit(25);
-
-		params.push(
-			...recentVideos.map((video) => ({
-				video: video.id,
-			})),
-		);
+// Cache the video fetch to prevent multiple fetches during build
+const getVideoCached = cache(async (id: string) => {
+	try {
+		return await getVideoById(id);
+	} catch (error) {
+		console.error(`[Build] Error fetching video ${id}:`, error);
+		return null;
 	}
+});
 
-	return params;
+export async function generateStaticParams() {
+	console.log("[Build] Starting generateStaticParams for videos");
+	try {
+		// Get all unique channel IDs
+		const channels = await db
+			.select({ channelId: videos.channelId })
+			.from(videos)
+			.where(isNotNull(videos.channelId))
+			.groupBy(videos.channelId);
+
+		console.log(`[Build] Found ${channels.length} channels`);
+		const params = [];
+
+		// For each channel, get the last 10 videos
+		for (const channel of channels) {
+			try {
+				const recentVideos = await db
+					.select({ id: videos.id })
+					.from(videos)
+					.where(eq(videos.channelId, channel.channelId))
+					.orderBy(desc(videos.publishedAt))
+					.limit(10);
+
+				params.push(
+					...recentVideos.map((video) => ({
+						video: video.id,
+					})),
+				);
+				console.log(
+					`[Build] Added ${recentVideos.length} videos from channel ${channel.channelId}`,
+				);
+			} catch (error) {
+				// Log error but continue with other channels
+				console.error(
+					`[Build] Error processing channel ${channel.channelId}:`,
+					error,
+				);
+			}
+		}
+
+		console.log(`[Build] Total videos to build: ${params.length}`);
+		return params;
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams:", error);
+		return []; // Return empty array instead of failing
+	}
 }
 
 export async function generateMetadata({
 	params,
 }: VideoPageProps): Promise<Metadata> {
 	const { video } = await params;
-	const videoData = await getVideoById(video);
+	const videoData = await getVideoCached(video);
 
 	if (!videoData) {
 		return {
@@ -100,93 +130,57 @@ function convertUrlsToLinks(text: string): string {
 export const dynamic = "force-static";
 export const revalidate = 3600; // Revalidate every hour
 
-// Create a separate component for link previews
+// Create a separate component for link previews that won't fail the build
 async function LinkPreviewSection({ urls }: { urls: string[] }) {
-	const startTime = performance.now();
-	console.log(
-		`[Build][LinkPreview] Starting OpenGraph fetch for ${urls.length} URLs`,
-	);
-
-	// Prefetch OpenGraph data for all links using the cached API endpoint
-	const preloadedOgData: Record<string, OpenGraphData> = {};
-
-	if (urls.length > 0) {
-		// Process URLs in batches of 3 to avoid overwhelming the server
-		const batchSize = 3;
-		for (let i = 0; i < urls.length; i += batchSize) {
-			const batch = urls.slice(i, i + batchSize);
-			console.log(
-				`[Build][LinkPreview] Processing batch ${i / batchSize + 1}/${Math.ceil(
-					urls.length / batchSize,
-				)}`,
-			);
-
-			const batchStartTime = performance.now();
-			const fetchPromises = batch.map(async (url) => {
-				const urlStartTime = performance.now();
-				try {
-					// Add cache-control headers to the request
-					const response = await fetch(
-						`${
-							process.env.NEXT_PUBLIC_APP_URL || ""
-						}/api/og?url=${encodeURIComponent(url)}`,
-						{
-							next: { revalidate: 86400 }, // Cache for 24 hours
-							signal: AbortSignal.timeout(3000), // Reduce timeout to 3 seconds
-							headers: {
-								"Cache-Control":
-									"public, max-age=86400, stale-while-revalidate=604800",
-							},
-						},
-					);
-
-					if (!response.ok) {
-						throw new Error(`HTTP error! status: ${response.status}`);
-					}
-
-					const data = await response.json();
-					if (data && !data.error) {
-						preloadedOgData[url] = data;
-						const urlEndTime = performance.now();
-						console.log(
-							`[Build][LinkPreview] URL (${url}) fetched in ${Math.round(
-								urlEndTime - urlStartTime,
-							)}ms`,
-						);
-					}
-				} catch (error) {
-					if (error instanceof Error) {
-						if (error.name === "TimeoutError" || error.name === "AbortError") {
-							console.warn(`[Build][LinkPreview] Timeout fetching ${url}`);
-						} else {
-							console.error(
-								`[Build][LinkPreview] Error fetching ${url}:`,
-								error.message,
-							);
-						}
-					}
-					// Skip this URL and continue with others
-				}
-			});
-
-			// Wait for current batch to complete
-			await Promise.allSettled(fetchPromises);
-			const batchEndTime = performance.now();
-			console.log(
-				`[Build][LinkPreview] Batch ${
-					i / batchSize + 1
-				} completed in ${Math.round(batchEndTime - batchStartTime)}ms`,
-			);
-		}
+	// Skip OpenGraph fetching during build to prevent timeouts
+	if (process.env.NEXT_PHASE === "build") {
+		return <LinkPreviewList urls={urls} preloadedData={{}} />;
 	}
 
-	const endTime = performance.now();
-	const successCount = Object.keys(preloadedOgData).length;
-	console.log(
-		`[Build][LinkPreview] Completed OpenGraph fetch in ${Math.round(
-			endTime - startTime,
-		)}ms. ` + `Successfully fetched ${successCount}/${urls.length} URLs`,
-	);
+	// Only fetch OpenGraph data on the client side or during revalidation
+	const preloadedOgData: Record<string, OpenGraphData> = {};
+
+	try {
+		if (urls.length > 0) {
+			// Process URLs in batches of 2 to reduce load
+			const batchSize = 2;
+			for (let i = 0; i < urls.length; i += batchSize) {
+				const batch = urls.slice(i, i + batchSize);
+				const fetchPromises = batch.map(async (url) => {
+					try {
+						const controller = new AbortController();
+						const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+						const response = await fetch(
+							`${
+								process.env.NEXT_PUBLIC_APP_URL || ""
+							}/api/og?url=${encodeURIComponent(url)}`,
+							{
+								next: { revalidate: 86400 },
+								signal: controller.signal,
+							},
+						);
+
+						clearTimeout(timeoutId);
+						if (!response.ok) return;
+
+						const data = await response.json();
+						if (data && !data.error) {
+							preloadedOgData[url] = data;
+						}
+					} catch {
+						// Silently continue on errors
+						return;
+					}
+				});
+
+				await Promise.allSettled(fetchPromises);
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+		}
+	} catch (error) {
+		console.error("[Build] Error fetching OpenGraph data:", error);
+	}
 
 	return <LinkPreviewList urls={urls} preloadedData={preloadedOgData} />;
 }
@@ -194,22 +188,25 @@ async function LinkPreviewSection({ urls }: { urls: string[] }) {
 export default async function VideoPage({ params }: VideoPageProps) {
 	const pageStartTime = performance.now();
 	const { video } = await params;
-	console.log(`[Build][${video}] Starting build`);
 
 	try {
-		console.log(`[Build][${video}] Fetching video data...`);
-		const videoData = await getVideoById(video);
+		const videoData = await getVideoCached(video);
+
 		if (!videoData) {
-			console.log(`[Build][${video}] Video not found`);
 			notFound();
 		}
 
-		const dataFetchTime = performance.now();
-		console.log(
-			`[Build][${video}] Video data fetched in ${Math.round(
-				dataFetchTime - pageStartTime,
-			)}ms. YouTube ID: ${videoData.youtubeVideoId}`,
-		);
+		// Extract URLs early and limit to 5 during build
+		const urls = videoData.description
+			? extractUrlsFromText(videoData.description).slice(
+					0,
+					process.env.NEXT_PHASE === "build" ? 5 : 10,
+			  )
+			: [];
+
+		const descriptionWithLinks = videoData.description
+			? convertUrlsToLinks(videoData.description)
+			: "";
 
 		// Format numbers for better readability
 		const views = new Intl.NumberFormat().format(
@@ -228,19 +225,11 @@ export default async function VideoPage({ params }: VideoPageProps) {
 		);
 		const descStartTime = performance.now();
 
-		const urls = videoData.description
-			? extractUrlsFromText(videoData.description).slice(0, 10)
-			: [];
-
 		console.log(
 			`[Build][${video}] Found ${
 				urls.length
 			} URLs in description: ${JSON.stringify(urls)}`,
 		);
-
-		const descriptionWithLinks = videoData.description
-			? convertUrlsToLinks(videoData.description)
-			: "";
 
 		const processingTime = performance.now();
 		console.log(
@@ -371,13 +360,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 
 		return result;
 	} catch (error) {
-		const errorTime = performance.now();
-		console.error(
-			`[Build][${video}] Error building page (${Math.round(
-				errorTime - pageStartTime,
-			)}ms):`,
-			error,
-		);
+		console.error("[Build] Error in VideoPage:", error);
 		notFound();
 	}
 }

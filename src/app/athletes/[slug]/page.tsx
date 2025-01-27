@@ -14,9 +14,8 @@ import { AthleteMentions } from "@/components/athlete-mentions";
 import { MentionLoading } from "@/components/mention-loading";
 import { MentionError } from "@/components/mention-error";
 import { getAthleteRecentMentions } from "@/lib/queries/athlete-mentions";
-import { ONE_DAY_IN_SECONDS } from "@/lib/time-constants";
 
-export const revalidate = ONE_DAY_IN_SECONDS; // Revalidate every day
+export const revalidate = 86400; // Revalidate every day
 
 async function getAthleteData(slug: string) {
 	// console.log("Attempting to fetch athlete with slug:", slug);

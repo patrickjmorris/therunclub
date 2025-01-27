@@ -25,9 +25,8 @@ import {
 	preloadLinks,
 } from "@/components/LinkPreviewPreloader";
 import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
-import { ONE_DAY_IN_SECONDS } from "@/lib/time-constants";
 
-export const revalidate = ONE_DAY_IN_SECONDS; // Revalidate every day
+export const revalidate = 86400; // Revalidate every day
 
 interface EpisodePageProps {
 	params: Promise<{

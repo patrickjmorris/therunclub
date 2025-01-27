@@ -18,9 +18,9 @@ import {
 	preloadLinks,
 } from "@/components/LinkPreviewPreloader";
 import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
-import { hoursToSeconds } from "@/lib/time-constants";
+import { FOUR_HOURS_IN_SECONDS } from "@/lib/time-constants";
 
-export const revalidate = hoursToSeconds(4); // Revalidate every 4 hours
+export const revalidate = FOUR_HOURS_IN_SECONDS; // Revalidate every 4 hours
 
 interface VideoPageProps {
 	params: Promise<{

@@ -13,6 +13,11 @@ import { videos } from "@/db/schema";
 import { db } from "@/db/client";
 import { Suspense } from "react";
 import { LinkPreviewClientWrapper } from "@/components/LinkPreviewClientWrapper";
+import {
+	LinkPreviewPreloader,
+	preloadLinks,
+} from "@/components/LinkPreviewPreloader";
+import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
 
 interface VideoPageProps {
 	params: Promise<{
@@ -141,6 +146,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
 			? convertUrlsToLinks(videoData.description)
 			: "";
 
+		// Start preloading the link previews
+		const preloadedData = preloadLinks(urls);
+
 		return (
 			<div className="container py-8">
 				<VideoPlayer
@@ -204,35 +212,52 @@ export default async function VideoPage({ params }: VideoPageProps) {
 					{/* Content */}
 					<div className="mt-6 max-w-3xl">
 						{urls.length > 0 ? (
-							<Tabs defaultValue="description">
-								<TabsList className="justify-start">
-									<TabsTrigger value="description">Description</TabsTrigger>
-									<TabsTrigger value="links">Links ({urls.length})</TabsTrigger>
-								</TabsList>
-								<TabsContent value="description">
-									<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
-										<div
-											// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
-											dangerouslySetInnerHTML={{
-												__html: descriptionWithLinks,
-											}}
-										/>
-									</div>
-								</TabsContent>
-								<TabsContent value="links">
-									<div className="space-y-4">
-										<Suspense
-											fallback={
-												<div className="animate-pulse">
-													Loading link previews...
-												</div>
-											}
-										>
-											<LinkPreviewClientWrapper urls={urls} />
-										</Suspense>
-									</div>
-								</TabsContent>
-							</Tabs>
+							<>
+								<LinkPreviewPreloader urls={urls} />
+								<Tabs defaultValue="description">
+									<TabsList className="justify-start">
+										<TabsTrigger value="description">Description</TabsTrigger>
+										<TabsTrigger value="links">
+											Links ({urls.length})
+										</TabsTrigger>
+									</TabsList>
+									<TabsContent value="description">
+										<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+											<div
+												// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
+												dangerouslySetInnerHTML={{
+													__html: descriptionWithLinks,
+												}}
+											/>
+										</div>
+									</TabsContent>
+									<TabsContent value="links">
+										<div className="space-y-4">
+											<Suspense
+												fallback={
+													<div className="animate-pulse">
+														Loading link previews...
+													</div>
+												}
+											>
+												<LinkPreviewErrorBoundary
+													fallback={
+														<div className="text-sm text-muted-foreground">
+															Unable to load link previews. You can still click
+															the links in the description.
+														</div>
+													}
+												>
+													<LinkPreviewClientWrapper
+														urls={urls}
+														preloadedData={preloadedData}
+													/>
+												</LinkPreviewErrorBoundary>
+											</Suspense>
+										</div>
+									</TabsContent>
+								</Tabs>
+							</>
 						) : (
 							<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
 								<div

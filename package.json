@@ -80,6 +80,7 @@
 		"isomorphic-dompurify": "^2.16.0",
 		"jimp": "^1.6.0",
 		"jotai": "^2.10.0",
+		"link-preview-js": "^3.0.13",
 		"lite-youtube-embed": "^0.3.3",
 		"lucide-react": "^0.378.0",
 		"nanoid": "^5.0.9",

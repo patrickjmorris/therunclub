@@ -1,4 +1,5 @@
 import { parse } from "node-html-parser";
+import { getLinkPreview } from "link-preview-js";
 
 const HEADERS = {
 	userAgent:
@@ -21,198 +22,79 @@ function cleanContent(content: string | null): string {
 	return content.trim().replace(/\s+/g, " ");
 }
 
+// Original implementation (commented out for now)
+/*
+export async function getOpenGraphData(url: string): Promise<OpenGraphData> {
+	// ... existing implementation ...
+}
+*/
+
+// New implementation using link-preview-js with timeout handling
 export async function getOpenGraphData(url: string): Promise<OpenGraphData> {
 	try {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-		const response = await fetch(url, {
+		const data = await getLinkPreview(url, {
+			timeout: 3000,
+			followRedirects: "follow",
 			headers: {
-				"User-Agent": HEADERS.userAgent,
-				Accept: HEADERS.accept,
-				"Accept-Language": HEADERS.acceptLanguage,
+				"user-agent": HEADERS.userAgent,
+				accept: HEADERS.accept,
+				"accept-language": HEADERS.acceptLanguage,
 			},
-			// Add next.js revalidate for 24 hours
-			next: {
-				revalidate: 60 * 60 * 24,
-			},
-			signal: controller.signal,
 		});
 
-		clearTimeout(timeoutId);
+		// Handle different response types from link-preview-js
+		if ("title" in data && typeof data.title === "string") {
+			return {
+				title: data.title || new URL(url).hostname,
+				description:
+					"description" in data && typeof data.description === "string"
+						? cleanContent(data.description)
+						: "",
+				image:
+					"images" in data &&
+					Array.isArray(data.images) &&
+					data.images.length > 0
+						? data.images[0]
+						: "",
+				url: "url" in data && typeof data.url === "string" ? data.url : url,
+			};
+		}
 
-		if (!response.ok) {
-			const errorMessage = `Failed to fetch URL (${response.status}): ${response.statusText}`;
-			console.error(errorMessage);
-			// Return a more user-friendly response for common status codes
-			if (response.status === 404) {
-				return {
-					title: "Page not found",
-					description: "The requested page could not be found.",
-					image: "",
-					url,
-				};
-			}
-			if (response.status === 403) {
-				return {
-					title: "Access denied",
-					description: "Access to this page is restricted.",
-					image: "",
-					url,
-				};
-			}
-			if (response.status === 429) {
-				return {
-					title: "Too many requests",
-					description: "Please try again later.",
-					image: "",
-					url,
-				};
-			}
+		// Handle media types (images, videos, etc)
+		if ("mediaType" in data) {
 			return {
 				title: new URL(url).hostname,
-				description: "",
-				image: "",
+				description: data.mediaType || "Media content",
+				image: data.mediaType === "image" ? url : "",
 				url,
 			};
 		}
 
-		const contentType = response.headers.get("content-type") || "";
-		if (!contentType.includes("text/html")) {
-			return {
-				title: new URL(url).hostname,
-				description: `Content type: ${contentType.split(";")[0]}`,
-				image: "",
-				url,
-			};
-		}
-
-		const html = await response.text();
-		const root = parse(html);
-
-		// Helper function to get meta content with multiple selectors
-		function getMetaContent(selectors: string[]): string | null {
-			for (const selector of selectors) {
-				const element = root.querySelector(selector);
-				if (!element) continue;
-
-				// Try content attribute first
-				const content = element.getAttribute("content");
-				if (content) return content;
-
-				// For some meta tags, the content might be in other attributes
-				const property = element.getAttribute("property");
-				const name = element.getAttribute("name");
-				if (property || name) {
-					const value = element.getAttribute("value");
-					if (value) return value;
-				}
-			}
-			return null;
-		}
-
-		// Extract OpenGraph data with improved fallbacks
-		const ogData = {
-			title: cleanContent(
-				getMetaContent([
-					'meta[property="og:title"]',
-					'meta[name="twitter:title"]',
-					'meta[property="title"]',
-					'meta[name="title"]',
-				]) ||
-					root.querySelector("title")?.text ||
-					new URL(url).hostname,
-			),
-
-			description: cleanContent(
-				getMetaContent([
-					'meta[property="og:description"]',
-					'meta[name="twitter:description"]',
-					'meta[name="description"]',
-					'meta[property="description"]',
-				]) || "",
-			),
-
-			image: cleanContent(
-				getMetaContent([
-					'meta[property="og:image"]',
-					'meta[property="og:image:secure_url"]',
-					'meta[name="twitter:image"]',
-					'meta[name="twitter:image:src"]',
-					'meta[property="og:image:url"]',
-					'meta[property="og:image:src"]',
-				]) || "",
-			),
-
-			url: cleanContent(
-				getMetaContent([
-					'meta[property="og:url"]',
-					'meta[property="al:web:url"]',
-					'meta[property="twitter:url"]',
-					'link[rel="canonical"]',
-				]) || url,
-			),
+		// Fallback for other types
+		return {
+			title: new URL(url).hostname,
+			description: "",
+			image: "",
+			url,
 		};
-
-		// Special handling for Instagram title and description only
-		if (url.includes("instagram.com")) {
-			// If title is missing or generic, try to get it from meta description
-			if (!ogData.title || ogData.title.includes("Instagram")) {
-				const metaDescription = getMetaContent(['meta[name="description"]']);
-				if (metaDescription) {
-					ogData.title = cleanContent(
-						metaDescription.match(/from\s+([^)]+)\)/)?.[1] ?? ogData.title,
-					);
-				}
-			}
-
-			// Ensure description is set from meta description if missing
-			if (!ogData.description) {
-				const metaDescription = getMetaContent(['meta[name="description"]']);
-				if (metaDescription) {
-					ogData.description = cleanContent(metaDescription);
-				}
-			}
-		}
-
-		return ogData;
-	} catch (error) {
-		console.error("Error fetching OpenGraph data:", error);
-		// Return more informative default data based on error type
-		if (error instanceof TypeError && error.message.includes("aborted")) {
-			return {
-				title: "Request timeout",
-				description: "The request took too long to complete.",
-				image: "",
-				url,
-			};
-		}
+	} catch (error: unknown) {
+		console.error("Error fetching link preview:", error);
 		if (
-			error instanceof TypeError &&
-			error.message.includes("Failed to fetch")
+			error instanceof Error &&
+			(error.message?.includes("timeout") || error.message?.includes("aborted"))
 		) {
 			return {
-				title: "Connection failed",
-				description: "Could not connect to the server.",
+				title: new URL(url).hostname,
+				description: "Preview timed out.",
 				image: "",
 				url,
 			};
 		}
-		try {
-			const hostname = new URL(url).hostname;
-			return {
-				title: hostname,
-				description: "Could not load preview.",
-				image: "",
-				url,
-			};
-		} catch {
-			return {
-				title: url,
-				description: "",
-				image: "",
-				url,
-			};
-		}
+		return {
+			title: new URL(url).hostname,
+			description: "Could not load preview.",
+			image: "",
+			url,
+		};
 	}
 }

@@ -9,7 +9,6 @@ import { formatDuration } from "@/lib/formatDuration";
 import { EpisodePlayButton } from "@/components/EpisodePlayButton";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { extractUrlsFromHtml } from "@/lib/extract-urls";
-import { LinkPreviewList } from "@/components/LinkPreview";
 import { TabsWithState } from "@/components/TabsWithState";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -17,6 +16,15 @@ import { AthleteReferences } from "@/components/athlete-references";
 import { MentionLoading } from "@/components/mention-loading";
 import { MentionError } from "@/components/mention-error";
 import { getEpisodeAthleteReferences } from "@/lib/queries/athlete-mentions";
+import { eq, desc, and, isNotNull, like, gt } from "drizzle-orm";
+import { db } from "@/db/client";
+import { episodes, podcasts } from "@/db/schema";
+import { LinkPreviewClientWrapper } from "@/components/LinkPreviewClientWrapper";
+import {
+	LinkPreviewPreloader,
+	preloadLinks,
+} from "@/components/LinkPreviewPreloader";
+import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
 
 interface EpisodePageProps {
 	params: Promise<{
@@ -40,11 +48,71 @@ async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
 	}
 }
 
+export async function generateStaticParams() {
+	// console.log("[Build] Starting generateStaticParams for podcast episodes");
+	try {
+		const allPodcasts = await db
+			.select({
+				podcastSlug: podcasts.podcastSlug,
+			})
+			.from(podcasts)
+			.where(like(podcasts.language, "%en%"));
+
+		// console.log(`[Build] Found ${allPodcasts.length} podcasts`);
+		const params = [];
+
+		for (const podcast of allPodcasts) {
+			try {
+				const oneYearAgo = new Date();
+				oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+				const recentEpisodes = await db
+					.select({
+						episodeSlug: episodes.episodeSlug,
+					})
+					.from(episodes)
+					.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+					.where(
+						and(
+							isNotNull(episodes.episodeSlug),
+							eq(podcasts.podcastSlug, podcast.podcastSlug),
+							gt(episodes.pubDate, oneYearAgo),
+						),
+					)
+					.orderBy(desc(episodes.pubDate))
+					.limit(10);
+
+				// Add each episode to params
+				for (const episode of recentEpisodes) {
+					if (episode.episodeSlug) {
+						params.push({
+							podcast: podcast.podcastSlug,
+							episode: episode.episodeSlug,
+						});
+					}
+				}
+				// console.log(
+				// 	`[Build] Added ${recentEpisodes.length} episodes from podcast ${podcast.podcastSlug}`,
+				// );
+			} catch (error) {
+				console.error(
+					`[Build] Error processing podcast ${podcast.podcastSlug}:`,
+					error,
+				);
+			}
+		}
+
+		// console.log(`[Build] Total episodes to build: ${params.length}`);
+		return params;
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams:", error);
+		return []; // Return empty array instead of failing
+	}
+}
+
 export async function generateMetadata({
 	params,
-}: {
-	params: Promise<{ podcast: string; episode: string }>;
-}): Promise<Metadata> {
+}: EpisodePageProps): Promise<Metadata> {
 	const resolvedParams = await params;
 	const episode = await getEpisode(resolvedParams.episode);
 
@@ -113,6 +181,9 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
 	const sanitizedContent = addLinkStyles(sanitizeHtml(episode.content ?? ""));
 	const urls = extractUrlsFromHtml(sanitizedContent);
+
+	// Start preloading the link previews
+	const preloadedData = preloadLinks(urls);
 
 	const jsonLd = {
 		"@context": "https://schema.org",
@@ -195,38 +266,59 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 						</Suspense>
 					</div>
 					{urls.length > 0 ? (
-						<TabsWithState
-							className="max-w-3xl"
-							tabs={[
-								{
-									value: "description",
-									label: "Description",
-									content: (
-										<div className="prose dark:prose-invert max-w-none overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
-											<div
-												className="space-y-4 whitespace-pre-wrap break-words"
-												// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
-												dangerouslySetInnerHTML={{
-													__html: sanitizedContent,
-												}}
-											/>
-										</div>
-									),
-								},
-								{
-									value: "links",
-									label: `Links (${urls.length})`,
-									content: (
-										<div className="space-y-4">
-											<LinkPreviewList
-												urls={urls}
-												podcastsLink={episode.link}
-											/>
-										</div>
-									),
-								},
-							]}
-						/>
+						<>
+							<LinkPreviewPreloader urls={urls} />
+							<TabsWithState
+								className="max-w-3xl"
+								tabs={[
+									{
+										value: "description",
+										label: "Description",
+										content: (
+											<div className="prose dark:prose-invert max-w-none overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+												<div
+													className="space-y-4 whitespace-pre-wrap break-words"
+													// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
+													dangerouslySetInnerHTML={{
+														__html: sanitizedContent,
+													}}
+												/>
+											</div>
+										),
+									},
+									{
+										value: "links",
+										label: `Links (${urls.length})`,
+										content: (
+											<div className="space-y-4">
+												<Suspense
+													fallback={
+														<div className="animate-pulse">
+															Loading link previews...
+														</div>
+													}
+												>
+													<LinkPreviewErrorBoundary
+														fallback={
+															<div className="text-sm text-muted-foreground">
+																Unable to load link previews. You can still
+																click the links in the description.
+															</div>
+														}
+													>
+														<LinkPreviewClientWrapper
+															urls={urls}
+															podcastsLink={episode.link ?? undefined}
+															preloadedData={preloadedData}
+														/>
+													</LinkPreviewErrorBoundary>
+												</Suspense>
+											</div>
+										),
+									},
+								]}
+							/>
+						</>
 					) : (
 						<div className="prose dark:prose-invert max-w-3xl overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
 							<div

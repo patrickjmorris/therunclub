@@ -1,7 +1,7 @@
 import { db } from "@/db/client";
 import { Suspense } from "react";
 import { athletes } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getUserRole } from "@/lib/auth-utils";
 import { ProfileSection } from "./components/profile-section";
@@ -16,7 +16,7 @@ import { MentionError } from "@/components/mention-error";
 import { getAthleteRecentMentions } from "@/lib/queries/athlete-mentions";
 
 async function getAthleteData(slug: string) {
-	console.log("Attempting to fetch athlete with slug:", slug);
+	// console.log("Attempting to fetch athlete with slug:", slug);
 
 	const athlete = await db.query.athletes.findFirst({
 		where: eq(athletes.slug, slug),
@@ -47,6 +47,17 @@ async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 			/>
 		);
 	}
+}
+
+export async function generateStaticParams() {
+	const allAthletes = await db
+		.select({ slug: athletes.slug })
+		.from(athletes)
+		.where(isNotNull(athletes.slug));
+
+	return allAthletes.map((athlete) => ({
+		slug: athlete.slug,
+	}));
 }
 
 export async function generateMetadata({

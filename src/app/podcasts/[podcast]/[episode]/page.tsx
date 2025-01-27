@@ -44,7 +44,7 @@ async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
 }
 
 export async function generateStaticParams() {
-	console.log("[Build] Starting generateStaticParams for podcast episodes");
+	// console.log("[Build] Starting generateStaticParams for podcast episodes");
 	try {
 		const allPodcasts = await db
 			.select({
@@ -52,7 +52,7 @@ export async function generateStaticParams() {
 			})
 			.from(podcasts);
 
-		console.log(`[Build] Found ${allPodcasts.length} podcasts`);
+		// console.log(`[Build] Found ${allPodcasts.length} podcasts`);
 		const params = [];
 
 		for (const podcast of allPodcasts) {
@@ -82,9 +82,9 @@ export async function generateStaticParams() {
 						});
 					}
 				}
-				console.log(
-					`[Build] Added ${recentEpisodes.length} episodes from podcast ${podcast.podcastSlug}`,
-				);
+				// console.log(
+				// 	`[Build] Added ${recentEpisodes.length} episodes from podcast ${podcast.podcastSlug}`,
+				// );
 			} catch (error) {
 				console.error(
 					`[Build] Error processing podcast ${podcast.podcastSlug}:`,
@@ -93,7 +93,7 @@ export async function generateStaticParams() {
 			}
 		}
 
-		console.log(`[Build] Total episodes to build: ${params.length}`);
+		// console.log(`[Build] Total episodes to build: ${params.length}`);
 		return params;
 	} catch (error) {
 		console.error("[Build] Error in generateStaticParams:", error);

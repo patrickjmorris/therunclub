@@ -1,23 +1,24 @@
-import { getOpenGraphData } from "@/lib/og";
-import type { OpenGraphData } from "@/lib/og";
+"use client";
+
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { Suspense } from "react";
 import { Link2 } from "lucide-react";
+import { Card, CardContent } from "./ui/card";
+
+export interface OpenGraphData {
+	title: string;
+	description: string;
+	image: string;
+	url: string;
+}
 
 interface LinkPreviewProps {
 	url: string;
 	className?: string;
-	ogData?: OpenGraphData;
+	ogData: OpenGraphData;
 }
 
-export async function LinkPreview({
-	url,
-	className,
-	ogData: preloadedData,
-}: LinkPreviewProps) {
-	const ogData = preloadedData || (await getOpenGraphData(url));
-
+export function LinkPreview({ url, className, ogData }: LinkPreviewProps) {
 	return (
 		<a
 			href={url}
@@ -73,57 +74,71 @@ function LinkPreviewSkeleton() {
 	);
 }
 
-export async function LinkPreviewList({
-	urls,
-	podcastsLink,
-	className,
-}: {
-	urls: string[];
-	podcastsLink?: string | null;
-	className?: string;
-}) {
-	if (!urls.length && !podcastsLink) return null;
+interface PreviewData {
+	title?: string;
+	description?: string;
+	images?: string[];
+	siteName?: string;
+	url: string;
+}
 
-	const allUrls = podcastsLink ? [podcastsLink, ...urls] : urls;
+interface LinkPreviewListProps {
+	urls: PreviewData[];
+	podcastsLink?: string;
+}
 
-	// Fetch all OpenGraph data in parallel and filter out invalid responses
-	const previews = await Promise.all(
-		allUrls.map(async (url) => {
-			try {
-				const ogData = await getOpenGraphData(url);
-				// Only include previews that have at least a title and aren't error states
-				const isValid =
-					ogData.title &&
-					ogData.title !== url &&
-					ogData.title !== new URL(url).hostname &&
-					!ogData.title.includes("Request timeout") &&
-					!ogData.title.includes("Connection failed") &&
-					!ogData.title.includes("Page not found") &&
-					!ogData.title.includes("Access denied") &&
-					!ogData.title.includes("Too many requests");
-
-				return isValid ? { url, ogData } : null;
-			} catch {
-				return null;
-			}
-		}),
-	);
-
-	// Filter out null responses
-	const validPreviews = previews.filter(
-		(preview): preview is { url: string; ogData: OpenGraphData } =>
-			preview !== null,
-	);
-
-	if (!validPreviews.length) return null;
-
+export function LinkPreviewList({ urls, podcastsLink }: LinkPreviewListProps) {
 	return (
-		<div className={cn("my-4 flex flex-col gap-4", className)}>
-			{validPreviews.map(({ url, ogData }) => (
-				<Suspense key={url} fallback={<LinkPreviewSkeleton />}>
-					<LinkPreview url={url} ogData={ogData} />
-				</Suspense>
+		<div className="space-y-4">
+			{urls.map((preview) => (
+				<Card key={preview.url}>
+					<CardContent className="p-4">
+						<a
+							href={preview.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex items-start gap-4 hover:opacity-80 transition-opacity"
+						>
+							{preview.images?.[0] && (
+								<div className="flex-shrink-0">
+									<Image
+										src={preview.images[0]}
+										alt={preview.title || "Link preview"}
+										width={96}
+										height={96}
+										className="rounded-lg object-cover w-24 h-24"
+									/>
+								</div>
+							)}
+							<div className="flex-grow min-w-0">
+								<h3 className="font-medium line-clamp-2">{preview.title}</h3>
+								{preview.description && (
+									<p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+										{preview.description}
+									</p>
+								)}
+								{preview.siteName && (
+									<p className="text-xs text-muted-foreground mt-2">
+										{preview.siteName}
+									</p>
+								)}
+							</div>
+						</a>
+					</CardContent>
+				</Card>
 			))}
+			{podcastsLink && (
+				<div className="text-sm text-muted-foreground">
+					<a
+						href={podcastsLink}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-blue-600 dark:text-blue-400 underline decoration-blue-600/30 dark:decoration-blue-400/30 hover:decoration-blue-600 dark:hover:decoration-blue-400 transition-colors"
+					>
+						View on podcast platform
+					</a>
+				</div>
+			)}
 		</div>
 	);
 }

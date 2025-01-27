@@ -21,7 +21,7 @@ interface VideoPageProps {
 }
 
 export async function generateStaticParams() {
-	console.log("[Build] Starting generateStaticParams for videos");
+	// console.log("[Build] Starting generateStaticParams for videos");
 	try {
 		// Get all unique channel IDs
 		const channels = await db
@@ -30,7 +30,7 @@ export async function generateStaticParams() {
 			.where(isNotNull(videos.channelId))
 			.groupBy(videos.channelId);
 
-		console.log(`[Build] Found ${channels.length} channels`);
+		// console.log(`[Build] Found ${channels.length} channels`);
 		const params = [];
 
 		// For each channel, get the last 10 videos
@@ -48,9 +48,9 @@ export async function generateStaticParams() {
 						video: video.id,
 					})),
 				);
-				console.log(
-					`[Build] Added ${recentVideos.length} videos from channel ${channel.channelId}`,
-				);
+				// console.log(
+				// 	`[Build] Added ${recentVideos.length} videos from channel ${channel.channelId}`,
+				// );
 			} catch (error) {
 				// Log error but continue with other channels
 				console.error(

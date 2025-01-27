@@ -1,8 +1,6 @@
 "use client";
 
 import { createContext, useContext, useMemo, useReducer, useRef } from "react";
-
-import { type Episode } from "@/db/schema";
 import { EpisodeWithPodcast } from "@/types/episodeWithPodcast";
 
 interface PlayerState {
@@ -72,32 +70,42 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 	});
 	const playerRef = useRef<React.ElementRef<"audio">>(null);
 
-	const actions = useMemo<PublicPlayerActions>(() => {
-		return {
-			play(episode) {
-				if (episode) {
-					dispatch({ type: ActionKind.SET_META, payload: episode });
+	const play = useMemo(
+		() => (episode?: EpisodeWithPodcast) => {
+			if (episode) {
+				dispatch({ type: ActionKind.SET_META, payload: episode });
 
-					if (
-						playerRef.current &&
-						playerRef.current.currentSrc !== episode.enclosureUrl
-					) {
-						const playbackRate = playerRef.current.playbackRate;
-						playerRef.current.src = episode.enclosureUrl ?? "";
-						playerRef.current.load();
-						playerRef.current.pause();
-						playerRef.current.playbackRate = playbackRate;
-						playerRef.current.currentTime = 0;
-					}
+				if (
+					playerRef.current &&
+					playerRef.current.currentSrc !== episode.enclosureUrl
+				) {
+					const playbackRate = playerRef.current.playbackRate;
+					playerRef.current.src = episode.enclosureUrl ?? "";
+					playerRef.current.load();
+					playerRef.current.pause();
+					playerRef.current.playbackRate = playbackRate;
+					playerRef.current.currentTime = 0;
 				}
+			}
 
-				playerRef.current?.play();
-			},
-			pause() {
-				playerRef.current?.pause();
-			},
+			playerRef.current?.play();
+		},
+		[],
+	);
+
+	const pause = useMemo(
+		() => () => {
+			playerRef.current?.pause();
+		},
+		[],
+	);
+
+	const actions = useMemo<PublicPlayerActions>(
+		() => ({
+			play,
+			pause,
 			toggle(episode) {
-				this.isPlaying(episode) ? actions.pause() : actions.play(episode);
+				this.isPlaying(episode) ? pause() : play(episode);
 			},
 			seekBy(amount) {
 				if (playerRef.current) {
@@ -123,8 +131,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 							playerRef.current?.currentSrc === episode.enclosureUrl
 					: state.playing;
 			},
-		};
-	}, [state.playing]);
+		}),
+		[state.playing, play, pause],
+	);
 
 	const api = useMemo<PlayerAPI>(
 		() => ({ ...state, ...actions }),
@@ -161,18 +170,21 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 export function useAudioPlayer(episode?: EpisodeWithPodcast) {
 	const player = useContext(AudioPlayerContext);
 
+	if (!player) {
+		throw new Error("useAudioPlayer must be used within an AudioProvider");
+	}
+
 	return useMemo<PlayerAPI>(
 		() => ({
-			// biome-ignore lint/style/noNonNullAssertion: <explanation>
-			...player!,
+			...player,
 			play() {
-				player!.play(episode);
+				player.play(episode);
 			},
 			toggle() {
-				player!.toggle(episode);
+				player.toggle(episode);
 			},
 			get playing() {
-				return player!.isPlaying(episode);
+				return player.isPlaying(episode);
 			},
 		}),
 		[player, episode],

@@ -126,7 +126,7 @@ function ExpandedPlayer({
 					<AccessibleButton onClick={(e) => e.stopPropagation()}>
 						<RewindButton player={player} />
 					</AccessibleButton>
-					<div className="scale-150">
+					<div className="scale-125">
 						<AccessibleButton onClick={(e) => e.stopPropagation()}>
 							<PlayButton player={player} />
 						</AccessibleButton>
@@ -286,57 +286,47 @@ export function AudioPlayer() {
 			`}</style>
 
 			{/* Desktop Player */}
-			<div className="hidden md:block">
-				<div className="flex items-center gap-6 bg-white/90 px-4 py-4 shadow shadow-slate-200/80 ring-1 ring-slate-900/5 backdrop-blur-sm md:px-6">
-					<div className="block">
-						<PlayButton player={player} />
+			<div className="fixed bottom-6 right-6 z-50 hidden md:block">
+				<div className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-xl ring-1 ring-slate-900/5">
+					<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-slate-50">
+						{player.episode.image && (
+							/* eslint-disable-next-line @next/next/no-img-element */
+							<img
+								src={player.episode.image}
+								alt={player.episode.title}
+								className="h-full w-full rounded-lg object-cover"
+							/>
+						)}
 					</div>
-					<div className="mb-[env(safe-area-inset-bottom)] flex flex-1 flex-col gap-3 overflow-hidden p-1">
+					<div
+						className="flex min-w-0 flex-col gap-0.5"
+						style={{ maxWidth: "200px" }}
+					>
 						<Link
 							href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
-							className="truncate text-sm font-bold leading-6"
+							className="truncate text-sm font-medium"
 							title={player.episode.title}
 						>
 							{player.episode.title}
 						</Link>
-						<div className="flex justify-between gap-6">
-							<div className="flex flex-none items-center gap-4">
-								<AccessibleButton onClick={(e) => e.stopPropagation()}>
-									<RewindButton player={player} />
-								</AccessibleButton>
-								<AccessibleButton onClick={(e) => e.stopPropagation()}>
-									<ForwardButton player={player} />
-								</AccessibleButton>
-							</div>
-							<Slider
-								label="Current time"
-								maxValue={player.duration}
-								step={1}
-								value={[currentTime ?? player.currentTime]}
-								onChange={([value]) => setCurrentTime(value)}
-								onChangeEnd={([value]) => {
-									player.seek(value);
-									if (wasPlayingRef.current) {
-										player.play();
-									}
-								}}
-								onChangeStart={() => {
-									wasPlayingRef.current = player.playing;
-									player.pause();
-								}}
-								numberFormatter={
-									{ format: formatTimelineTime } as Intl.NumberFormat
-								}
-							/>
-							<div className="flex items-center gap-4">
-								<div className="flex items-center">
-									<PlaybackRateButton player={player} />
-								</div>
-								<div className="flex items-center">
-									<MuteButton player={player} />
-								</div>
-							</div>
+						<p className="truncate text-xs text-slate-500">
+							{player.episode.podcastTitle}
+						</p>
+					</div>
+					<div className="flex items-center gap-4 pl-4">
+						<AccessibleButton onClick={(e) => e.stopPropagation()}>
+							<RewindButton player={player} />
+						</AccessibleButton>
+						<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900">
+							<PlayButton player={player} />
 						</div>
+						<AccessibleButton onClick={(e) => e.stopPropagation()}>
+							<ForwardButton player={player} />
+						</AccessibleButton>
+					</div>
+					<div className="flex items-center gap-3 border-l border-slate-200 pl-4">
+						<PlaybackRateButton player={player} />
+						<MuteButton player={player} />
 					</div>
 				</div>
 			</div>

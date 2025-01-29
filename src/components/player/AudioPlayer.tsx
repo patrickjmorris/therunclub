@@ -66,9 +66,9 @@ function ExpandedPlayer({
 	if (!player.episode) return null;
 
 	return (
-		<div className="flex h-full flex-col space-y-6 bg-white px-4 pb-6 pt-4">
+		<div className="flex h-full flex-col space-y-4 bg-background px-4 pb-4 pt-4">
 			<div
-				className="relative mx-auto aspect-square w-full max-w-[320px] rounded-lg bg-slate-50 transition-all duration-300"
+				className="relative mx-auto aspect-square w-full max-w-[280px] rounded-lg bg-slate-50 transition-all duration-300"
 				style={{
 					transformOrigin: "bottom left",
 					animation: isOpen ? "scaleUp 300ms ease forwards" : "none",
@@ -87,13 +87,17 @@ function ExpandedPlayer({
 					/>
 				)}
 			</div>
-			<div className="space-y-2 text-center">
-				<h3 className="text-lg font-semibold">{player.episode.title}</h3>
-				<p className="text-sm text-slate-600">{player.episode.podcastTitle}</p>
+			<div className="space-y-1 text-center">
+				<h3 className="text-lg font-semibold text-foreground">
+					{player.episode.title}
+				</h3>
+				<p className="text-sm text-muted-foreground">
+					{player.episode.podcastTitle}
+				</p>
 			</div>
-			<div className="space-y-2 px-2">
+			<div className="space-y-2">
 				<div className="relative w-full touch-none select-none">
-					<div className="h-11 flex items-center">
+					<div className="h-6 flex items-center">
 						<Slider
 							label="Current time"
 							maxValue={player.duration}
@@ -116,17 +120,17 @@ function ExpandedPlayer({
 						/>
 					</div>
 				</div>
-				<div className="flex justify-between px-3 text-sm text-slate-500">
+				<div className="flex justify-between px-3 text-sm text-muted-foreground">
 					<div>{formatTimelineTime(currentTime ?? player.currentTime)}</div>
 					<div>{formatTimelineTime(player.duration)}</div>
 				</div>
 			</div>
-			<div className="space-y-6">
+			<div className="space-y-4">
 				<div className="flex justify-center space-x-6">
 					<AccessibleButton onClick={(e) => e.stopPropagation()}>
 						<RewindButton player={player} />
 					</AccessibleButton>
-					<div className="scale-125">
+					<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900">
 						<AccessibleButton onClick={(e) => e.stopPropagation()}>
 							<PlayButton player={player} />
 						</AccessibleButton>
@@ -287,8 +291,8 @@ export function AudioPlayer() {
 
 			{/* Desktop Player */}
 			<div className="fixed bottom-6 right-6 z-50 hidden md:block">
-				<div className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-xl ring-1 ring-slate-900/5">
-					<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-slate-50">
+				<div className="flex items-center gap-4 rounded-xl bg-background p-3 shadow-xl ring-1 ring-border">
+					<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
 						{player.episode.image && (
 							/* eslint-disable-next-line @next/next/no-img-element */
 							<img
@@ -304,12 +308,12 @@ export function AudioPlayer() {
 					>
 						<Link
 							href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
-							className="truncate text-sm font-medium"
+							className="truncate text-sm font-medium text-foreground hover:text-foreground/90"
 							title={player.episode.title}
 						>
 							{player.episode.title}
 						</Link>
-						<p className="truncate text-xs text-slate-500">
+						<p className="truncate text-xs text-muted-foreground">
 							{player.episode.podcastTitle}
 						</p>
 					</div>
@@ -336,7 +340,7 @@ export function AudioPlayer() {
 				<Drawer.Root open={isOpen} onOpenChange={setIsOpen}>
 					<div className="relative">
 						<div
-							className="flex items-center gap-4 bg-white/90 px-4 py-4 shadow shadow-slate-200/80 ring-1 ring-slate-900/5 backdrop-blur-sm transition-all duration-300"
+							className="flex items-center gap-4 bg-background/90 px-4 py-4 shadow shadow-border/80 ring-1 ring-border backdrop-blur-sm transition-all duration-300"
 							style={{
 								transform: isOpen ? "translateY(100%)" : "translateY(0)",
 								opacity: isOpen ? 0 : 1,
@@ -346,7 +350,7 @@ export function AudioPlayer() {
 								<div className="flex flex-1 items-center gap-4 cursor-pointer min-w-0">
 									<div
 										ref={miniPlayerRef}
-										className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-slate-50"
+										className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted"
 									>
 										{player.episode.image && (
 											/* eslint-disable-next-line @next/next/no-img-element */
@@ -358,10 +362,10 @@ export function AudioPlayer() {
 										)}
 									</div>
 									<div className="flex flex-1 flex-col gap-1 min-w-0">
-										<div className="truncate text-sm font-medium">
+										<div className="truncate text-sm font-medium text-foreground">
 											{player.episode.title}
 										</div>
-										<p className="truncate text-xs text-slate-500">
+										<p className="truncate text-xs text-muted-foreground">
 											{player.episode.podcastTitle}
 										</p>
 									</div>
@@ -371,12 +375,14 @@ export function AudioPlayer() {
 								data-vaul-no-drag
 								className="flex items-center flex-shrink-0"
 							>
-								<PlayButton player={player} />
+								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900">
+									<PlayButton player={player} />
+								</div>
 							</div>
 						</div>
 						<Drawer.Portal>
 							<Drawer.Overlay className="fixed inset-0 bg-black/40" />
-							<Drawer.Content className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-white">
+							<Drawer.Content className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background">
 								<div className="mx-auto mb-2 mt-2 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300" />
 								<Drawer.Title className="sr-only">Audio Player</Drawer.Title>
 								<ExpandedPlayer

@@ -2,13 +2,16 @@ import { type PlayerAPI } from "@/components/AudioProvider";
 import { PauseIcon } from "@/components/PauseIcon";
 import { PlayIcon } from "@/components/PlayIcon";
 
-export function PlayButton({ player }: { player: PlayerAPI }) {
+export function PlayButton({
+	player,
+	size = "base",
+}: { player: PlayerAPI; size?: "sm" | "base" | "lg" }) {
 	const Icon = player.playing ? PauseIcon : PlayIcon;
 
 	return (
 		<button
 			type="button"
-			className="group relative flex h-8 w-8 flex-shrink-0 items-center justify-center focus:outline-none focus:ring-2 focus:ring-slate-700 focus:ring-offset-2"
+			className="group relative flex flex-shrink-0 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2"
 			onClick={() => player.toggle()}
 			aria-label={player.playing ? "Pause" : "Play"}
 		>

@@ -134,68 +134,26 @@ function ExpandedPlayer({
 				</div>
 			</div>
 			<div className="space-y-4">
-				<div className="flex justify-center space-x-6">
-					<AccessibleButton
-						onClick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							player.seekBy(-10);
-						}}
-					>
+				<div className="flex items-center justify-center gap-8 touch-auto">
+					<div data-vaul-no-drag className="touch-auto">
 						<RewindButton player={player} />
-					</AccessibleButton>
-					<div
-						className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900"
-						onClick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-						}}
-						onKeyDown={(e) => {
-							if (e.key === "Enter" || e.key === " ") {
-								e.preventDefault();
-								e.stopPropagation();
-							}
-						}}
-						role="button"
-						tabIndex={0}
-					>
-						<AccessibleButton
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								player.toggle();
-							}}
-						>
-							<PlayButton player={player} />
-						</AccessibleButton>
 					</div>
-					<AccessibleButton
-						onClick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							player.seekBy(10);
-						}}
-					>
+					<div data-vaul-no-drag className="touch-auto">
+						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900">
+							<PlayButton player={player} size="lg" />
+						</div>
+					</div>
+					<div data-vaul-no-drag className="touch-auto">
 						<ForwardButton player={player} />
-					</AccessibleButton>
+					</div>
 				</div>
-				<div
-					className="flex justify-between px-4"
-					onClick={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-					}}
-					onKeyDown={(e) => {
-						if (e.key === "Enter" || e.key === " ") {
-							e.preventDefault();
-							e.stopPropagation();
-						}
-					}}
-					role="button"
-					tabIndex={0}
-				>
-					<MuteButton player={player} />
-					<PlaybackRateButton player={player} />
+				<div className="flex justify-between px-4" data-vaul-no-drag>
+					<div className="touch-auto">
+						<MuteButton player={player} />
+					</div>
+					<div className="touch-auto">
+						<PlaybackRateButton player={player} />
+					</div>
 				</div>
 			</div>
 		</div>
@@ -371,18 +329,12 @@ export function AudioPlayer() {
 							{player.episode.podcastTitle}
 						</p>
 					</div>
-					<div className="flex items-center gap-4 pl-4">
-						<AccessibleButton onClick={(e) => e.stopPropagation()}>
-							<RewindButton player={player} />
-						</AccessibleButton>
-						<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900">
-							<AccessibleButton onClick={(e) => e.stopPropagation()}>
-								<PlayButton player={player} />
-							</AccessibleButton>
+					<div className="flex items-center gap-6 pl-4">
+						<RewindButton player={player} />
+						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900">
+							<PlayButton player={player} size="lg" />
 						</div>
-						<AccessibleButton onClick={(e) => e.stopPropagation()}>
-							<ForwardButton player={player} />
-						</AccessibleButton>
+						<ForwardButton player={player} />
 					</div>
 					<div className="flex items-center gap-3 border-l border-slate-200 pl-4">
 						<PlaybackRateButton player={player} />
@@ -431,21 +383,23 @@ export function AudioPlayer() {
 								data-vaul-no-drag
 								className="flex items-center flex-shrink-0"
 							>
-								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900">
-									<PlayButton player={player} />
+								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900">
+									<PlayButton player={player} size="lg" />
 								</div>
 							</div>
 						</div>
 						<Drawer.Portal>
 							<Drawer.Overlay className="fixed inset-0 bg-black/40" />
-							<Drawer.Content className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background">
+							<Drawer.Content className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background touch-none">
 								<div className="mx-auto mb-2 mt-2 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300" />
 								<Drawer.Title className="sr-only">Audio Player</Drawer.Title>
-								<ExpandedPlayer
-									player={player}
-									miniPlayerRef={miniPlayerRef}
-									isOpen={isOpen}
-								/>
+								<div className="touch-auto">
+									<ExpandedPlayer
+										player={player}
+										miniPlayerRef={miniPlayerRef}
+										isOpen={isOpen}
+									/>
+								</div>
 							</Drawer.Content>
 						</Drawer.Portal>
 					</div>

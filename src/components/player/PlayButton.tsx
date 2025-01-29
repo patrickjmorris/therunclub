@@ -8,6 +8,12 @@ export function PlayButton({
 }: { player: PlayerAPI; size?: "sm" | "base" | "lg" }) {
 	const Icon = player.playing ? PauseIcon : PlayIcon;
 
+	const iconSize = {
+		sm: "h-3 w-3",
+		base: "h-4 w-4",
+		lg: "h-5 w-5",
+	}[size];
+
 	return (
 		<button
 			type="button"
@@ -16,7 +22,7 @@ export function PlayButton({
 			aria-label={player.playing ? "Pause" : "Play"}
 		>
 			<div className="absolute -inset-3 md:hidden" />
-			<Icon className="h-4 w-4 fill-white group-active:fill-white/80" />
+			<Icon className={`${iconSize} fill-white group-active:fill-white/80`} />
 		</button>
 	);
 }

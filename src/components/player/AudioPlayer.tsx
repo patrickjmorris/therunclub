@@ -40,9 +40,17 @@ function AccessibleButton({
 		<div
 			role="button"
 			tabIndex={0}
-			onClick={onClick}
+			onClick={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				onClick(e);
+			}}
 			onKeyDown={(e) => {
-				if (e.key === "Enter" || e.key === " ") onClick(e);
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					e.stopPropagation();
+					onClick(e);
+				}
 			}}
 			className="focus:outline-none"
 		>
@@ -127,19 +135,65 @@ function ExpandedPlayer({
 			</div>
 			<div className="space-y-4">
 				<div className="flex justify-center space-x-6">
-					<AccessibleButton onClick={(e) => e.stopPropagation()}>
+					<AccessibleButton
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							player.seekBy(-10);
+						}}
+					>
 						<RewindButton player={player} />
 					</AccessibleButton>
-					<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900">
-						<AccessibleButton onClick={(e) => e.stopPropagation()}>
+					<div
+						className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900"
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+						}}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								e.stopPropagation();
+							}
+						}}
+						role="button"
+						tabIndex={0}
+					>
+						<AccessibleButton
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.toggle();
+							}}
+						>
 							<PlayButton player={player} />
 						</AccessibleButton>
 					</div>
-					<AccessibleButton onClick={(e) => e.stopPropagation()}>
+					<AccessibleButton
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							player.seekBy(10);
+						}}
+					>
 						<ForwardButton player={player} />
 					</AccessibleButton>
 				</div>
-				<div className="flex justify-between px-4">
+				<div
+					className="flex justify-between px-4"
+					onClick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							e.stopPropagation();
+						}
+					}}
+					role="button"
+					tabIndex={0}
+				>
 					<MuteButton player={player} />
 					<PlaybackRateButton player={player} />
 				</div>
@@ -322,7 +376,9 @@ export function AudioPlayer() {
 							<RewindButton player={player} />
 						</AccessibleButton>
 						<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900">
-							<PlayButton player={player} />
+							<AccessibleButton onClick={(e) => e.stopPropagation()}>
+								<PlayButton player={player} />
+							</AccessibleButton>
 						</div>
 						<AccessibleButton onClick={(e) => e.stopPropagation()}>
 							<ForwardButton player={player} />

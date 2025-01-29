@@ -273,6 +273,25 @@ export function AudioPlayer() {
 		player.playing,
 	]);
 
+	// Add effect to handle body scroll
+	useEffect(() => {
+		if (isOpen) {
+			document.body.style.overflow = "hidden";
+			document.body.style.position = "fixed";
+			document.body.style.width = "100%";
+		} else {
+			document.body.style.overflow = "";
+			document.body.style.position = "";
+			document.body.style.width = "";
+		}
+
+		return () => {
+			document.body.style.overflow = "";
+			document.body.style.position = "";
+			document.body.style.width = "";
+		};
+	}, [isOpen]);
+
 	if (!player.episode) {
 		return null;
 	}
@@ -390,7 +409,18 @@ export function AudioPlayer() {
 						</div>
 						<Drawer.Portal>
 							<Drawer.Overlay className="fixed inset-0 bg-black/40" />
-							<Drawer.Content className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background touch-none">
+							<Drawer.Content
+								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background touch-none"
+								style={{
+									position: "fixed",
+									bottom: 0,
+									left: 0,
+									right: 0,
+									zIndex: 50,
+									maxHeight: "90vh",
+									overflowY: "auto",
+								}}
+							>
 								<div className="mx-auto mb-2 mt-2 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300" />
 								<Drawer.Title className="sr-only">Audio Player</Drawer.Title>
 								<div className="touch-auto">

@@ -422,21 +422,19 @@ export function AudioPlayer() {
 						<Drawer.Portal>
 							<Drawer.Overlay className="fixed inset-0 bg-black/40" />
 							<Drawer.Content
-								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background"
+								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background overflow-hidden"
 								style={{
 									position: "fixed",
 									bottom: 0,
 									left: 0,
 									right: 0,
 									zIndex: 50,
-									maxHeight: "90vh",
-									overflowY: "auto",
-									WebkitOverflowScrolling: "touch", // Enable momentum scrolling on iOS
+									height: "85vh",
 								}}
 							>
 								<div className="mx-auto mb-2 mt-2 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300" />
 								<Drawer.Title className="sr-only">Audio Player</Drawer.Title>
-								<div className="h-full">
+								<div className="flex-1 overflow-y-auto overscroll-contain">
 									<ExpandedPlayer
 										player={player}
 										miniPlayerRef={miniPlayerRef}

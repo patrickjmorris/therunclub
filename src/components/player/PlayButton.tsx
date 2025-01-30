@@ -1,19 +1,40 @@
-import { type PlayerAPI } from '@/components/AudioProvider'
-import { PauseIcon } from '@/components/PauseIcon'
-import { PlayIcon } from '@/components/PlayIcon'
+import { type PlayerAPI } from "@/components/AudioProvider";
+import { PauseIcon } from "@/components/PauseIcon";
+import { PlayIcon } from "@/components/PlayIcon";
+import { forwardRef } from "react";
+import { Slot } from "@radix-ui/react-slot";
 
-export function PlayButton({ player }: { player: PlayerAPI }) {
-  let Icon = player.playing ? PauseIcon : PlayIcon
-
-  return (
-    <button
-      type="button"
-      className="group relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-700 focus:ring-offset-2 md:h-14 md:w-14"
-      onClick={() => player.toggle()}
-      aria-label={player.playing ? 'Pause' : 'Play'}
-    >
-      <div className="absolute -inset-3 md:hidden" />
-      <Icon className="h-5 w-5 fill-white group-active:fill-white/80 md:h-7 md:w-7" />
-    </button>
-  )
+interface PlayButtonProps extends React.HTMLAttributes<HTMLDivElement> {
+	player: PlayerAPI;
+	size?: "sm" | "base" | "lg";
+	asChild?: boolean;
 }
+
+export const PlayButton = forwardRef<HTMLDivElement, PlayButtonProps>(
+	({ player, size = "base", asChild = false, className, ...props }, ref) => {
+		const Icon = player.playing ? PauseIcon : PlayIcon;
+		const Comp = asChild ? Slot : "div";
+
+		const iconSize = {
+			sm: "h-4 w-4",
+			base: "h-6 w-6",
+			lg: "h-8 w-8",
+		}[size];
+
+		return (
+			// biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
+			<Comp
+				ref={ref}
+				className={`group relative flex flex-shrink-0 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 ${className}`}
+				onClick={() => player.toggle()}
+				aria-label={player.playing ? "Pause" : "Play"}
+				{...props}
+			>
+				<span className="relative">
+					<div className="absolute -inset-3 md:hidden" />
+					<Icon className={`${iconSize} fill-white group-active:fill-white/80`} />
+				</span>
+			</Comp>
+		);
+	}
+);

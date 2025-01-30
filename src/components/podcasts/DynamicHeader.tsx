@@ -6,7 +6,7 @@ import Link from "next/link";
 interface DynamicHeaderProps {
 	imageUrl: string;
 	title: string;
-	author: string;
+
 	vibrantColor?: string;
 	podcastSlug: string;
 }
@@ -14,7 +14,6 @@ interface DynamicHeaderProps {
 export default function DynamicHeader({
 	imageUrl,
 	title,
-	author,
 	vibrantColor,
 	podcastSlug,
 }: DynamicHeaderProps) {
@@ -41,7 +40,6 @@ export default function DynamicHeader({
 						</div>
 						<div className="flex flex-col justify-end">
 							<h1 className="text-4xl md:text-5xl font-bold">{title}</h1>
-							<p className="text-xl mt-4 text-muted-foreground">{author}</p>
 						</div>
 					</div>
 				</div>

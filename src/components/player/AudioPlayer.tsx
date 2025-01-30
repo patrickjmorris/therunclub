@@ -2,6 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+	Drawer,
+	DrawerContent,
+	DrawerTrigger,
+	DrawerPortal,
+	DrawerTitle,
+	DrawerDescription,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 
 import { useAudioPlayer } from "@/components/AudioProvider";
 import { ForwardButton } from "@/components/player/ForwardButton";
@@ -9,23 +18,8 @@ import { MuteButton } from "@/components/player/MuteButton";
 import { PlaybackRateButton } from "@/components/player/PlaybackRateButton";
 import { PlayButton } from "@/components/player/PlayButton";
 import { RewindButton } from "@/components/player/RewindButton";
-import { Slider } from "@/components/player/Slider";
-import { slugify } from "@/lib/utils";
-import { FEEDS } from "@/lib/episodes";
-
-// function parseTime(seconds: number) {
-// 	const hours = Math.floor(seconds / 3600);
-// 	const minutes = Math.floor((seconds - hours * 3600) / 60);
-// 	seconds = seconds - hours * 3600 - minutes * 60;
-// 	return [hours, minutes, seconds];
-// }
-
-function formatHumanTime(seconds: number) {
-	const [h, m, s] = formatTime(seconds);
-	return `${h} hour${h === 1 ? "" : "s"}, ${m} minute${
-		m === 1 ? "" : "s"
-	}, ${s} second${s === 1 ? "" : "s"}`;
-}
+import { MiniPlayer } from "@/components/player/MiniPlayer";
+import { ExpandedPlayer } from "@/components/player/ExpandedPlayer";
 
 function formatTime(totalSeconds: number): [number, number, number] {
 	const hours = Math.floor(totalSeconds / 3600);
@@ -34,68 +28,115 @@ function formatTime(totalSeconds: number): [number, number, number] {
 	return [hours, minutes, remainingSeconds];
 }
 
+function formatTimelineTime(seconds: number): string {
+	const [hours, minutes, remainingSeconds] = formatTime(seconds);
+	if (hours > 0) {
+		return `${hours}:${minutes.toString().padStart(2, "0")}:${remainingSeconds
+			.toString()
+			.padStart(2, "0")}`;
+	}
+	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
+function AccessibleButton({
+	onClick,
+	children,
+}: {
+	onClick: (e: React.MouseEvent | React.KeyboardEvent) => void;
+	children: React.ReactNode;
+}) {
+	return (
+		<div
+			role="button"
+			tabIndex={0}
+			onClick={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				onClick(e);
+			}}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					e.stopPropagation();
+					onClick(e);
+				}
+			}}
+			className="focus:outline-none"
+		>
+			{children}
+		</div>
+	);
+}
+
 export function AudioPlayer() {
 	const player = useAudioPlayer();
+	const miniPlayerRef = useRef<HTMLDivElement>(null);
+	const [isOpen, setIsOpen] = useState(false);
 
-	const wasPlayingRef = useRef(false);
-
-	const [currentTime, setCurrentTime] = useState<number | null>(
-		player.currentTime,
-	);
-
+	// Handle media session
 	useEffect(() => {
-		setCurrentTime(null);
-	}, []);
+		if (!player.episode || !("mediaSession" in navigator)) return;
 
-	useEffect(() => {
-		if (!player.episode) return;
+		navigator.mediaSession.metadata = new MediaMetadata({
+			title: player.episode.title,
+			artist: player.episode.podcastAuthor ?? "",
+			album: player.episode.podcastTitle,
+			artwork: [
+				{
+					src: player.episode.image || player.episode.podcastImage || "",
+					sizes: "512x512",
+					type: "image/jpeg",
+				},
+			],
+		});
 
-		if ("mediaSession" in navigator && player.episode) {
-			navigator.mediaSession.metadata = new MediaMetadata({
-				title: player.episode.podcastTitle,
-				artist: player.episode.podcastAuthor ?? "",
-				artwork: [
-					{
-						src: player.episode.image || player.episode.podcastImage || "",
-						sizes: "512x512",
-						type: "image/jpeg",
-					},
-				],
-			});
+		navigator.mediaSession.playbackState = player.playing
+			? "playing"
+			: "paused";
 
-			const updatePositionState = () => {
-				if (navigator.mediaSession && player.duration) {
-					navigator.mediaSession.setPositionState({
-						duration: player.duration,
-						playbackRate: 1, // Adjust if you implement playback rate changes
-						position: player.currentTime,
-					});
-				}
-			};
+		const updatePositionState = () => {
+			if (player.duration) {
+				navigator.mediaSession.setPositionState({
+					duration: player.duration,
+					playbackRate: 1,
+					position: player.currentTime,
+				});
+			}
+		};
 
-			navigator.mediaSession.setActionHandler("play", () => player.play());
-			navigator.mediaSession.setActionHandler("pause", () => player.pause());
-			navigator.mediaSession.setActionHandler("seekbackward", () =>
-				player.seekBy(-10),
-			);
-			navigator.mediaSession.setActionHandler("seekforward", () =>
-				player.seekBy(10),
-			);
-			navigator.mediaSession.setActionHandler("seekto", (details) => {
-				if (details.seekTime !== undefined && !Number.isNaN(details.seekTime)) {
-					player.seek(details.seekTime);
-					updatePositionState();
-				}
-			});
-		}
+		updatePositionState();
+
+		navigator.mediaSession.setActionHandler("play", () => {
+			player.play();
+			navigator.mediaSession.playbackState = "playing";
+		});
+		navigator.mediaSession.setActionHandler("pause", () => {
+			player.pause();
+			navigator.mediaSession.playbackState = "paused";
+		});
+		navigator.mediaSession.setActionHandler("seekbackward", () => {
+			player.seekBy(-15);
+			updatePositionState();
+		});
+		navigator.mediaSession.setActionHandler("seekforward", () => {
+			player.seekBy(15);
+			updatePositionState();
+		});
+
+		return () => {
+			navigator.mediaSession.setActionHandler("play", null);
+			navigator.mediaSession.setActionHandler("pause", null);
+			navigator.mediaSession.setActionHandler("seekbackward", null);
+			navigator.mediaSession.setActionHandler("seekforward", null);
+		};
 	}, [
 		player.episode,
+		player.playing,
+		player.currentTime,
+		player.duration,
 		player.play,
 		player.pause,
-		player.seek,
 		player.seekBy,
-		player.duration,
-		player.currentTime,
 	]);
 
 	if (!player.episode) {
@@ -103,57 +144,138 @@ export function AudioPlayer() {
 	}
 
 	return (
-		<div className="flex items-center gap-6 bg-white/90 px-4 py-4 shadow shadow-slate-200/80 ring-1 ring-slate-900/5 backdrop-blur-sm md:px-6">
-			<div className="hidden md:block">
-				<PlayButton player={player} />
-			</div>
-			<div className="mb-[env(safe-area-inset-bottom)] flex flex-1 flex-col gap-3 overflow-hidden p-1">
-				<Link
-					href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
-					className="truncate text-center text-sm font-bold leading-6 md:text-left"
-					title={player.episode.title}
-				>
-					{player.episode.title}
-				</Link>
-				<div className="flex justify-between gap-6">
-					<div className="flex items-center md:hidden">
-						<MuteButton player={player} />
+		<>
+			{/* Desktop Player */}
+			<div className="fixed bottom-6 right-6 z-50 hidden md:block">
+				<div className="flex items-center gap-4 rounded-xl bg-background p-3 shadow-xl ring-1 ring-border">
+					<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+						{player.episode.image && (
+							/* eslint-disable-next-line @next/next/no-img-element */
+							<img
+								src={player.episode.image}
+								alt={player.episode.title}
+								className="h-full w-full rounded-lg object-cover"
+							/>
+						)}
 					</div>
-					<div className="flex flex-none items-center gap-4">
-						<RewindButton player={player} />
-						<div className="md:hidden">
-							<PlayButton player={player} />
-						</div>
-						<ForwardButton player={player} />
+					<div
+						className="flex min-w-0 flex-col gap-0.5"
+						style={{ maxWidth: "200px" }}
+					>
+						<Link
+							href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
+							className="truncate text-sm font-medium text-foreground hover:text-foreground/90"
+							title={player.episode.title}
+						>
+							{player.episode.title}
+						</Link>
+						<p className="truncate text-xs text-muted-foreground">
+							{player.episode.podcastTitle}
+						</p>
 					</div>
-					<Slider
-						label="Current time"
-						maxValue={player.duration}
-						step={1}
-						value={[currentTime ?? player.currentTime]}
-						onChange={([value]) => setCurrentTime(value)}
-						onChangeEnd={([value]) => {
-							player.seek(value);
-							if (wasPlayingRef.current) {
-								player.play();
-							}
-						}}
-						numberFormatter={{ format: formatHumanTime } as Intl.NumberFormat}
-						onChangeStart={() => {
-							wasPlayingRef.current = player.playing;
-							player.pause();
-						}}
-					/>
-					<div className="flex items-center gap-4">
-						<div className="flex items-center">
-							<PlaybackRateButton player={player} />
-						</div>
-						<div className="hidden items-center md:flex">
-							<MuteButton player={player} />
-						</div>
+					<div className="flex items-center gap-6 pl-4">
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.seekBy(-15);
+							}}
+							className="p-0"
+						>
+							<div className="flex items-center justify-center">
+								<RewindButton player={player} />
+							</div>
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.toggle();
+							}}
+							className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 active:bg-primary p-0"
+						>
+							<div className="flex items-center justify-center">
+								<PlayButton player={player} size="base" />
+							</div>
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.seekBy(15);
+							}}
+							className="p-0"
+						>
+							<div className="flex items-center justify-center">
+								<ForwardButton player={player} />
+							</div>
+						</Button>
+					</div>
+					<div className="flex items-center gap-3 border-l border-slate-200 pl-4">
+						<PlaybackRateButton player={player} />
+						<Button
+							variant="ghost"
+							size="icon"
+							className="group relative rounded-md focus:outline-none"
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.toggleMute();
+							}}
+							aria-label={player.muted ? "Unmute" : "Mute"}
+						>
+							<MuteButton player={player} asChild />
+						</Button>
 					</div>
 				</div>
 			</div>
-		</div>
+
+			{/* Mobile Player with Drawer */}
+			<div className="md:hidden">
+				<Drawer
+					open={isOpen}
+					onOpenChange={setIsOpen}
+					shouldScaleBackground={false}
+				>
+					<DrawerTrigger asChild>
+						<div ref={miniPlayerRef} className="touch-none">
+							<MiniPlayer
+								player={player}
+								isDrawerTrigger
+								onPlayPause={(e) => {
+									e.stopPropagation();
+									player.toggle();
+								}}
+							/>
+						</div>
+					</DrawerTrigger>
+
+					<DrawerPortal>
+						<DrawerContent className="fixed inset-x-0 bottom-0 z-50">
+							<DrawerTitle className="sr-only">Audio Player</DrawerTitle>
+							<DrawerDescription className="sr-only">
+								Audio Player
+							</DrawerDescription>
+							<div className="bg-background">
+								<div className="mx-auto max-w-2xl">
+									<ExpandedPlayer
+										player={player}
+										miniPlayerRef={miniPlayerRef}
+										isOpen={isOpen}
+										onClose={() => setIsOpen(false)}
+									/>
+								</div>
+							</div>
+						</DrawerContent>
+					</DrawerPortal>
+				</Drawer>
+			</div>
+		</>
 	);
 }

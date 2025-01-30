@@ -23,7 +23,6 @@ export default async function PodcastLayout({
 			<DynamicHeader
 				imageUrl={data.image ?? ""}
 				title={data.title}
-				author={data.author ?? ""}
 				vibrantColor={data.vibrantColor ?? "#1e3a8a"}
 				podcastSlug={data.podcastSlug ?? ""}
 			/>

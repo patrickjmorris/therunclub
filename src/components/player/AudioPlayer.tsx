@@ -164,6 +164,7 @@ export function AudioPlayer() {
 	const player = useAudioPlayer();
 	const wasPlayingRef = useRef(false);
 	const miniPlayerRef = useRef<HTMLDivElement>(null);
+	const scrollPositionRef = useRef(0);
 	const [currentTime, setCurrentTime] = useState<number | null>(
 		player.currentTime,
 	);
@@ -273,22 +274,33 @@ export function AudioPlayer() {
 		player.playing,
 	]);
 
-	// Add effect to handle body scroll
+	// Handle scroll locking for iOS
 	useEffect(() => {
 		if (isOpen) {
+			// Store current scroll position
+			scrollPositionRef.current = window.scrollY;
+			// Apply fixed position to body
+			// document.body.style.position = "fixed";
 			document.body.style.overflow = "hidden";
-			document.body.style.position = "fixed";
+			document.body.style.top = `-${scrollPositionRef.current}px`;
 			document.body.style.width = "100%";
 		} else {
+			// Restore scroll position
+			// document.body.style.position = "";
 			document.body.style.overflow = "";
-			document.body.style.position = "";
+			document.body.style.top = "";
 			document.body.style.width = "";
+			window.scrollTo(0, scrollPositionRef.current);
 		}
 
 		return () => {
+			// document.body.style.position = "";
 			document.body.style.overflow = "";
-			document.body.style.position = "";
+			document.body.style.top = "";
 			document.body.style.width = "";
+			if (scrollPositionRef.current) {
+				window.scrollTo(0, scrollPositionRef.current);
+			}
 		};
 	}, [isOpen]);
 
@@ -410,7 +422,7 @@ export function AudioPlayer() {
 						<Drawer.Portal>
 							<Drawer.Overlay className="fixed inset-0 bg-black/40" />
 							<Drawer.Content
-								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background touch-none"
+								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background"
 								style={{
 									position: "fixed",
 									bottom: 0,
@@ -419,11 +431,12 @@ export function AudioPlayer() {
 									zIndex: 50,
 									maxHeight: "90vh",
 									overflowY: "auto",
+									WebkitOverflowScrolling: "touch", // Enable momentum scrolling on iOS
 								}}
 							>
 								<div className="mx-auto mb-2 mt-2 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300" />
 								<Drawer.Title className="sr-only">Audio Player</Drawer.Title>
-								<div className="touch-auto">
+								<div className="h-full">
 									<ExpandedPlayer
 										player={player}
 										miniPlayerRef={miniPlayerRef}

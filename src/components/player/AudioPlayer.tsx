@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Drawer } from "vaul";
+import {
+	Drawer,
+	DrawerContent,
+	DrawerTrigger,
+	DrawerPortal,
+	DrawerTitle,
+} from "@/components/ui/drawer";
 
 import { useAudioPlayer } from "@/components/AudioProvider";
 import { ForwardButton } from "@/components/player/ForwardButton";
@@ -192,21 +198,6 @@ function ExpandedPlayer({
 	);
 }
 
-// Add a utility function for scroll locking
-function useLockBody() {
-	useEffect(() => {
-		const originalStyle = window.getComputedStyle(
-			document.documentElement,
-		).scrollBehavior;
-		const originalOverflow = document.body.style.overflow;
-
-		return () => {
-			document.documentElement.style.scrollBehavior = originalStyle;
-			document.body.style.overflow = originalOverflow;
-		};
-	}, []);
-}
-
 export function AudioPlayer() {
 	const player = useAudioPlayer();
 	const wasPlayingRef = useRef(false);
@@ -217,12 +208,10 @@ export function AudioPlayer() {
 	);
 	const [isOpen, setIsOpen] = useState(false);
 
+	// Remove the scroll locking effects since our UI drawer handles this
 	useEffect(() => {
 		setCurrentTime(null);
 	}, []);
-
-	// Use the scroll lock utility
-	useLockBody();
 
 	useEffect(() => {
 		if (!player.episode) return;
@@ -323,16 +312,6 @@ export function AudioPlayer() {
 		player.currentTime,
 		player.playing,
 	]);
-
-	// Remove the previous scroll locking effect
-	useEffect(() => {
-		if (isOpen) {
-			// Prevent body scrolling without changing position
-			document.body.style.overflow = "hidden";
-		} else {
-			document.body.style.overflow = "";
-		}
-	}, [isOpen]);
 
 	if (!player.episode) {
 		return null;
@@ -438,11 +417,7 @@ export function AudioPlayer() {
 
 			{/* Mobile Player with Drawer */}
 			<div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-				<Drawer.Root
-					open={isOpen}
-					onOpenChange={setIsOpen}
-					shouldScaleBackground={false}
-				>
+				<Drawer open={isOpen} onOpenChange={setIsOpen}>
 					<div className="relative">
 						<div
 							className="flex items-center gap-4 bg-background/90 px-4 py-4 shadow shadow-border/80 ring-1 ring-border backdrop-blur-sm transition-all duration-300"
@@ -451,7 +426,7 @@ export function AudioPlayer() {
 								opacity: isOpen ? 0 : 1,
 							}}
 						>
-							<Drawer.Trigger asChild>
+							<DrawerTrigger asChild>
 								<div className="flex flex-1 items-center gap-4 cursor-pointer min-w-0">
 									<div
 										ref={miniPlayerRef}
@@ -475,11 +450,8 @@ export function AudioPlayer() {
 										</p>
 									</div>
 								</div>
-							</Drawer.Trigger>
-							<div
-								data-vaul-no-drag
-								className="flex items-center flex-shrink-0"
-							>
+							</DrawerTrigger>
+							<div className="flex items-center flex-shrink-0">
 								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900">
 									<AccessibleButton
 										onClick={(e) => {
@@ -493,32 +465,20 @@ export function AudioPlayer() {
 								</div>
 							</div>
 						</div>
-						<Drawer.Portal>
-							<Drawer.Overlay className="fixed inset-0 bg-black/40" />
-							<Drawer.Content
-								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background overflow-hidden overscroll-none"
-								style={{
-									position: "fixed",
-									bottom: 0,
-									left: 0,
-									right: 0,
-									zIndex: 50,
-									height: "85vh",
-								}}
-							>
-								<div className="mx-auto mb-2 mt-2 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300" />
-								<Drawer.Title className="sr-only">Audio Player</Drawer.Title>
-								<div className="flex-1 overflow-y-auto overscroll-contain">
+						<DrawerPortal>
+							<DrawerContent>
+								<DrawerTitle className="sr-only">Audio Player</DrawerTitle>
+								<div className="flex-1 overflow-y-auto">
 									<ExpandedPlayer
 										player={player}
 										miniPlayerRef={miniPlayerRef}
 										isOpen={isOpen}
 									/>
 								</div>
-							</Drawer.Content>
-						</Drawer.Portal>
+							</DrawerContent>
+						</DrawerPortal>
 					</div>
-				</Drawer.Root>
+				</Drawer>
 			</div>
 		</>
 	);

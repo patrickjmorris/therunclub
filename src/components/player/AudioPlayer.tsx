@@ -136,20 +136,52 @@ function ExpandedPlayer({
 			<div className="space-y-4">
 				<div className="flex items-center justify-center gap-8 touch-auto">
 					<div data-vaul-no-drag className="touch-auto">
-						<RewindButton player={player} />
+						<AccessibleButton
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.seekBy(-15);
+							}}
+						>
+							<RewindButton player={player} />
+						</AccessibleButton>
 					</div>
 					<div data-vaul-no-drag className="touch-auto">
 						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900">
-							<PlayButton player={player} size="lg" />
+							<AccessibleButton
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									player.toggle();
+								}}
+							>
+								<PlayButton player={player} size="lg" />
+							</AccessibleButton>
 						</div>
 					</div>
 					<div data-vaul-no-drag className="touch-auto">
-						<ForwardButton player={player} />
+						<AccessibleButton
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.seekBy(15);
+							}}
+						>
+							<ForwardButton player={player} />
+						</AccessibleButton>
 					</div>
 				</div>
 				<div className="flex justify-between px-4" data-vaul-no-drag>
 					<div className="touch-auto">
-						<MuteButton player={player} />
+						<AccessibleButton
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.toggleMute();
+							}}
+						>
+							<MuteButton player={player} />
+						</AccessibleButton>
 					</div>
 					<div className="touch-auto">
 						<PlaybackRateButton player={player} />
@@ -361,15 +393,47 @@ export function AudioPlayer() {
 						</p>
 					</div>
 					<div className="flex items-center gap-6 pl-4">
-						<RewindButton player={player} />
+						<AccessibleButton
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.seekBy(-15);
+							}}
+						>
+							<RewindButton player={player} />
+						</AccessibleButton>
 						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900">
-							<PlayButton player={player} size="lg" />
+							<AccessibleButton
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									player.toggle();
+								}}
+							>
+								<PlayButton player={player} size="lg" />
+							</AccessibleButton>
 						</div>
-						<ForwardButton player={player} />
+						<AccessibleButton
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.seekBy(15);
+							}}
+						>
+							<ForwardButton player={player} />
+						</AccessibleButton>
 					</div>
 					<div className="flex items-center gap-3 border-l border-slate-200 pl-4">
 						<PlaybackRateButton player={player} />
-						<MuteButton player={player} />
+						<AccessibleButton
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								player.toggleMute();
+							}}
+						>
+							<MuteButton player={player} />
+						</AccessibleButton>
 					</div>
 				</div>
 			</div>
@@ -415,7 +479,15 @@ export function AudioPlayer() {
 								className="flex items-center flex-shrink-0"
 							>
 								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900">
-									<PlayButton player={player} size="lg" />
+									<AccessibleButton
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											player.toggle();
+										}}
+									>
+										<PlayButton player={player} size="lg" />
+									</AccessibleButton>
 								</div>
 							</div>
 						</div>

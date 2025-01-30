@@ -1,8 +1,9 @@
 import { useState } from "react";
-
 import { type PlayerAPI } from "@/components/AudioProvider";
+import { forwardRef } from "react";
+import { Slot } from "@radix-ui/react-slot";
 
-export const playbackRates = [
+const playbackRates = [
 	{
 		value: 1,
 		icon: function PlaybackIcon(props: React.ComponentPropsWithoutRef<"svg">) {
@@ -89,28 +90,56 @@ export const playbackRates = [
 	},
 ];
 
-export function PlaybackRateButton({ player }: { player: PlayerAPI }) {
+interface PlaybackRateButtonProps {
+	player: PlayerAPI;
+	asChild?: boolean;
+	className?: string;
+}
+
+export function PlaybackRateButton({
+	player,
+	asChild = false,
+	className,
+}: PlaybackRateButtonProps) {
 	const [playbackRate, setPlaybackRate] = useState(playbackRates[0]);
+	const Comp = asChild ? Slot : "button";
+
+	const handleClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		setPlaybackRate((rate) => {
+			const existingIdx = playbackRates.indexOf(rate);
+			const idx = (existingIdx + 1) % playbackRates.length;
+			const next = playbackRates[idx];
+
+			player.playbackRate(next.value);
+			return next;
+		});
+	};
+
+	const Icon = playbackRate.icon;
+
+	if (asChild) {
+		return (
+			<Comp>
+				<Icon className="h-6 w-6 text-foreground group-hover:text-foreground/90" />
+			</Comp>
+		);
+	}
 
 	return (
 		<button
 			type="button"
-			className="relative flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
-			onClick={() => {
-				setPlaybackRate((rate) => {
-					const existingIdx = playbackRates.indexOf(rate);
-					const idx = (existingIdx + 1) % playbackRates.length;
-					const next = playbackRates[idx];
-
-					player.playbackRate(next.value);
-
-					return next;
-				});
-			}}
+			className={
+				className ||
+				"relative flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+			}
+			onClick={handleClick}
 			aria-label="Playback rate"
 		>
 			<div className="absolute -inset-4 md:hidden" />
-			<playbackRate.icon className="h-4 w-4" />
+			<Icon className="h-4 w-4" />
 		</button>
 	);
 }

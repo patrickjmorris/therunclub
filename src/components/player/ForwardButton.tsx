@@ -1,27 +1,8 @@
 import { type PlayerAPI } from "@/components/AudioProvider";
+import { forwardRef } from "react";
 
 function ForwardIcon(props: React.ComponentPropsWithoutRef<"svg">) {
 	return (
-		// <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" {...props}>
-		//   <path
-		//     d="M16 5L19 8M19 8L16 11M19 8H10.5C7.46243 8 5 10.4624 5 13.5C5 15.4826 5.85204 17.2202 7 18.188"
-		//     strokeWidth="1.5"
-		//     strokeLinecap="round"
-		//     strokeLinejoin="round"
-		//   />
-		//   <path
-		//     d="M13 15V19"
-		//     strokeWidth="1.5"
-		//     strokeLinecap="round"
-		//     strokeLinejoin="round"
-		//   />
-		//   <path
-		//     d="M16 18V16C16 15.4477 16.4477 15 17 15H18C18.5523 15 19 15.4477 19 16V18C19 18.5523 18.5523 19 18 19H17C16.4477 19 16 18.5523 16 18Z"
-		//     strokeWidth="1.5"
-		//     strokeLinecap="round"
-		//     strokeLinejoin="round"
-		//   />
-		// </svg>
 		<svg
 			width="32"
 			height="32"
@@ -32,7 +13,7 @@ function ForwardIcon(props: React.ComponentPropsWithoutRef<"svg">) {
 			xmlns="http://www.w3.org/2000/svg"
 			{...props}
 		>
-			<title>Rewind 15 seconds</title>
+			<title>Forward 15 seconds</title>
 			<path
 				d="M16 4C9.373 4 4 9.373 4 16s5.373 12 12 12 12-5.373 12-12a11.97 11.97 0 0 0-4-8.944"
 				stroke="currentColor"
@@ -46,22 +27,31 @@ function ForwardIcon(props: React.ComponentPropsWithoutRef<"svg">) {
 	);
 }
 
-export function ForwardButton({
-	player,
-	amount = 15,
-}: {
+interface ForwardButtonProps extends React.HTMLAttributes<HTMLDivElement> {
 	player: PlayerAPI;
 	amount?: number;
-}) {
-	return (
-		<button
-			type="button"
-			className="group relative flex h-10 w-10 items-center justify-center rounded-full focus:outline-none"
-			onClick={() => player.seekBy(amount)}
-			aria-label={`Fast-forward ${amount} seconds`}
-		>
-			<div className="absolute -inset-4 -left-2 md:hidden" />
-			<ForwardIcon className="h-6 w-6 text-foreground group-hover:text-foreground/90" />
-		</button>
-	);
+	size?: "sm" | "base" | "lg";
 }
+
+export const ForwardButton = forwardRef<HTMLDivElement, ForwardButtonProps>(
+	({ player, amount = 15, size = "base", className, ...props }, ref) => {
+		const iconSize = {
+			sm: "h-4 w-4",
+			base: "h-6 w-6",
+			lg: "h-8 w-8",
+		}[size];
+
+		return (
+			<div
+				ref={ref}
+				className={`group relative flex flex-shrink-0 items-center justify-center ${className}`}
+				{...props}
+				onClick={() => player.seekBy(amount)}
+				aria-label={`Fast-forward ${amount} seconds`}
+			>
+				<div className="absolute -inset-4 -left-2 md:hidden" />
+				<ForwardIcon className={`${iconSize} text-foreground group-hover:text-foreground/90`} />
+			</div>
+		);
+	}
+);

@@ -192,6 +192,21 @@ function ExpandedPlayer({
 	);
 }
 
+// Add a utility function for scroll locking
+function useLockBody() {
+	useEffect(() => {
+		const originalStyle = window.getComputedStyle(
+			document.documentElement,
+		).scrollBehavior;
+		const originalOverflow = document.body.style.overflow;
+
+		return () => {
+			document.documentElement.style.scrollBehavior = originalStyle;
+			document.body.style.overflow = originalOverflow;
+		};
+	}, []);
+}
+
 export function AudioPlayer() {
 	const player = useAudioPlayer();
 	const wasPlayingRef = useRef(false);
@@ -205,6 +220,9 @@ export function AudioPlayer() {
 	useEffect(() => {
 		setCurrentTime(null);
 	}, []);
+
+	// Use the scroll lock utility
+	useLockBody();
 
 	useEffect(() => {
 		if (!player.episode) return;
@@ -306,34 +324,14 @@ export function AudioPlayer() {
 		player.playing,
 	]);
 
-	// Handle scroll locking for iOS
+	// Remove the previous scroll locking effect
 	useEffect(() => {
 		if (isOpen) {
-			// Store current scroll position
-			scrollPositionRef.current = window.scrollY;
-			// Apply fixed position to body
-			// document.body.style.position = "fixed";
+			// Prevent body scrolling without changing position
 			document.body.style.overflow = "hidden";
-			document.body.style.top = `-${scrollPositionRef.current}px`;
-			document.body.style.width = "100%";
 		} else {
-			// Restore scroll position
-			// document.body.style.position = "";
 			document.body.style.overflow = "";
-			document.body.style.top = "";
-			document.body.style.width = "";
-			window.scrollTo(0, scrollPositionRef.current);
 		}
-
-		return () => {
-			// document.body.style.position = "";
-			document.body.style.overflow = "";
-			document.body.style.top = "";
-			document.body.style.width = "";
-			if (scrollPositionRef.current) {
-				window.scrollTo(0, scrollPositionRef.current);
-			}
-		};
 	}, [isOpen]);
 
 	if (!player.episode) {
@@ -440,7 +438,11 @@ export function AudioPlayer() {
 
 			{/* Mobile Player with Drawer */}
 			<div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-				<Drawer.Root open={isOpen} onOpenChange={setIsOpen}>
+				<Drawer.Root
+					open={isOpen}
+					onOpenChange={setIsOpen}
+					shouldScaleBackground={false}
+				>
 					<div className="relative">
 						<div
 							className="flex items-center gap-4 bg-background/90 px-4 py-4 shadow shadow-border/80 ring-1 ring-border backdrop-blur-sm transition-all duration-300"
@@ -494,7 +496,7 @@ export function AudioPlayer() {
 						<Drawer.Portal>
 							<Drawer.Overlay className="fixed inset-0 bg-black/40" />
 							<Drawer.Content
-								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background overflow-hidden"
+								className="fixed inset-x-0 bottom-0 flex flex-col rounded-t-[10px] bg-background overflow-hidden overscroll-none"
 								style={{
 									position: "fixed",
 									bottom: 0,

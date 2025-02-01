@@ -1,13 +1,21 @@
 import { db } from "@/db/client";
-import { athleteMentions, episodes, podcasts } from "@/db/schema";
+import {
+	athleteHonors,
+	athleteMentions,
+	athleteResults,
+	athletes,
+	episodes,
+	podcasts,
+} from "@/db/schema";
 import {
 	desc,
 	eq,
 	sql,
 	and,
 	inArray,
-	type InferSelectModel,
 	like,
+	isNotNull,
+	ilike,
 } from "drizzle-orm";
 
 // Define the exact type structure we're returning from the query
@@ -138,4 +146,106 @@ export async function getEpisodeAthleteReferences(
 		},
 		orderBy: [desc(athleteMentions.confidence)],
 	});
+}
+
+export async function getAthleteById(athleteId: string) {
+	return await db.query.athletes.findFirst({
+		where: eq(athletes.id, athleteId),
+	});
+}
+
+export async function getAthleteBySlug(slug: string) {
+	return await db.query.athletes.findFirst({
+		where: eq(athletes.slug, slug),
+	});
+}
+
+export async function getAthleteData(slug: string) {
+	// console.log("Attempting to fetch athlete with slug:", slug);
+
+	const athlete = await db.query.athletes.findFirst({
+		where: eq(athletes.slug, slug),
+		with: {
+			honors: true,
+			results: true,
+			sponsors: true,
+			gear: true,
+			events: true,
+		},
+	});
+
+	if (!athlete) return null;
+	return athlete;
+}
+
+export async function getAllAthletes() {
+	return await db
+		.select({ slug: athletes.slug })
+		.from(athletes)
+		.where(isNotNull(athletes.slug));
+}
+
+export async function getOlympicGoldMedalists() {
+	return await db
+		.select({
+			id: athletes.id,
+		})
+		.from(athletes)
+		.innerJoin(
+			athleteHonors,
+			and(
+				eq(athletes.id, athleteHonors.athleteId),
+				ilike(athleteHonors.categoryName, "%olympic%"),
+				sql`${athleteHonors.categoryName} NOT ILIKE '%youth%'`,
+				eq(athleteHonors.place, "1."),
+			),
+		)
+		.orderBy(desc(athletes.name));
+}
+
+interface GetAthletesQueryParams {
+	fromDate: string;
+	limit: number;
+	offset: number;
+	goldMedalistIds: string[];
+}
+
+export async function getAllAthletesWithDisciplines({
+	fromDate,
+	limit,
+	offset,
+	goldMedalistIds,
+}: GetAthletesQueryParams) {
+	const quotedIds = goldMedalistIds.map((id) => `'${id}'`).join(",");
+
+	return db
+		.select({
+			athlete: athletes,
+			disciplines: sql<string[]>`
+			  array_agg(DISTINCT ${athleteResults.discipline})
+			  FILTER (
+				WHERE ${athleteResults.discipline} NOT ILIKE '%short track%'
+				AND ${athleteResults.discipline} NOT ILIKE '%relay%'
+				AND ${athleteResults.date} >= ${fromDate}::date
+			  )
+			`,
+		})
+		.from(athletes)
+		.leftJoin(athleteResults, eq(athletes.id, athleteResults.athleteId))
+		.groupBy(athletes.id)
+		.orderBy(
+			sql`CASE WHEN ${athletes.id} IN (${sql.raw(
+				quotedIds,
+			)}) THEN 0 ELSE 1 END`,
+			desc(athletes.name),
+		)
+		.limit(limit)
+		.offset(offset);
+}
+
+export async function getAthleteCount() {
+	const [{ count }] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(athletes);
+	return count;
 }

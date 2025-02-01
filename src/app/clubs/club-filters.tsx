@@ -10,21 +10,11 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-	MapPin,
-	X,
-	Facebook,
-	Instagram,
-	Twitter,
-	ExternalLink,
-	Footprints,
-} from "lucide-react";
-import Link from "next/link";
+import { MapPin, X, ExternalLink, Footprints } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
-import { getFilteredClubs } from "./actions";
 import { type RunningClub } from "@/db/schema";
-
+import { getFilteredClubs } from "./actions";
 interface ClubFiltersProps {
 	cities: string[];
 }

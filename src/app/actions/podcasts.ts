@@ -1,9 +1,8 @@
 "use server";
 
-import { z } from "zod";
 import { addNewPodcast } from "@/lib/podcast-service";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { type PodcastSearchResult } from "@/lib/podcast-index";
 import { addPodcastSchema } from "./validation";
 import type { AddPodcastState } from "./types";
 import { requireRole, AuthError } from "@/lib/auth-utils";

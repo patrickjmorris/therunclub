@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { db } from "@/db/client";
-import { athletes, athleteHonors, athleteResults } from "@/db/schema";
-import { desc, eq, and, ilike, sql, gt } from "drizzle-orm";
 import { format, subYears } from "date-fns";
 import { convertToAlpha2 } from "@/lib/utils/country-codes";
-import { Button } from "@/components/ui/button";
-
+import {
+	getAllAthletesWithDisciplines,
+	getAthleteCount,
+	getOlympicGoldMedalists,
+} from "@/lib/services/athlete-service";
 const ATHLETES_PER_PAGE = 24;
 
 interface AthletesListProps {
@@ -91,69 +91,24 @@ async function AthletesList({ athletes, hasMore, page }: AthletesListProps) {
 async function getAthletes(page = 1) {
 	console.log(`Getting athletes for page ${page}`);
 
-	// Calculate date 5 years ago and format it to YYYY-MM-DD
+	// First, get athletes with Olympic gold medals (excluding youth olympics)
+	const olympicGoldMedalists = await getOlympicGoldMedalists();
+	const goldMedalistIds = olympicGoldMedalists.map((a) => a.id);
+
+	const offset = (page - 1) * ATHLETES_PER_PAGE;
 	const fiveYearsAgo = format(subYears(new Date(), 5), "yyyy-MM-dd");
 
-	// First, get athletes with Olympic gold medals (excluding youth olympics)
-	const olympicGoldMedalists = await db
-		.select({
-			id: athletes.id,
-		})
-		.from(athletes)
-		.innerJoin(
-			athleteHonors,
-			and(
-				eq(athletes.id, athleteHonors.athleteId),
-				ilike(athleteHonors.categoryName, "%olympic%"),
-				sql`${athleteHonors.categoryName} NOT ILIKE '%youth%'`,
-				eq(athleteHonors.place, "1."),
-			),
-		)
-		.orderBy(desc(athletes.name));
+	const [allAthletes, count] = await Promise.all([
+		getAllAthletesWithDisciplines({
+			fromDate: fiveYearsAgo,
+			limit: ATHLETES_PER_PAGE,
+			offset,
+			goldMedalistIds,
+		}),
+		getAthleteCount(),
+	]);
 
-	console.log(
-		"Found Olympic gold medalists:",
-		olympicGoldMedalists.slice(0, 5),
-	);
-	const goldMedalistIds = olympicGoldMedalists.map((a) => a.id);
-	console.log("Total Olympic gold medalists:", goldMedalistIds.length);
-
-	// Then get all athletes with pagination
-	const offset = (page - 1) * ATHLETES_PER_PAGE;
-
-	const quotedIds = goldMedalistIds.map((id) => `'${id}'`).join(",");
-
-	// Get athletes with their disciplines from recent results
-	const allAthletes = await db
-		.select({
-			athlete: athletes,
-			disciplines: sql<string[]>`
-				array_agg(DISTINCT ${athleteResults.discipline})
-				FILTER (
-					WHERE ${athleteResults.discipline} NOT ILIKE '%short track%'
-					AND ${athleteResults.discipline} NOT ILIKE '%relay%'
-					AND ${athleteResults.date} >= ${fiveYearsAgo}::date
-				)
-			`,
-		})
-		.from(athletes)
-		.leftJoin(athleteResults, eq(athletes.id, athleteResults.athleteId))
-		.groupBy(athletes.id)
-		.orderBy(
-			sql`CASE WHEN ${athletes.id} IN (${sql.raw(
-				quotedIds,
-			)}) THEN 0 ELSE 1 END`,
-			desc(athletes.name),
-		)
-		.limit(ATHLETES_PER_PAGE)
-		.offset(offset);
-
-	// Get total count for pagination
-	const [{ count }] = await db
-		.select({ count: sql<number>`count(*)` })
-		.from(athletes);
-
-	const result = {
+	return {
 		athletes: allAthletes.map(({ athlete, disciplines }) => ({
 			id: athlete.id,
 			name: athlete.name,
@@ -167,8 +122,6 @@ async function getAthletes(page = 1) {
 		hasMore: offset + ATHLETES_PER_PAGE < count,
 		page,
 	};
-
-	return result;
 }
 
 export default async function AthletesPage({

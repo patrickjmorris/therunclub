@@ -1,6 +1,9 @@
 "use server";
 
-import { getLastTenEpisodesByPodcastSlug, getEpisode } from "@/db/queries";
+import {
+	getLastTenEpisodesByPodcastSlug,
+	getEpisode,
+} from "@/lib/services/podcast-service";
 import type { BasicEpisode } from "@/types/shared";
 
 export async function fetchMore(

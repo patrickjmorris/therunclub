@@ -27,7 +27,7 @@ import {
 	CommandList,
 	CommandSeparator,
 } from "@/components/ui/command";
-import { search } from "@/app/actions";
+import { search } from "@/app/search/actions";
 import type { SearchResult } from "@/lib/services/search-service";
 
 export function CommandMenu({ ...props }: DialogProps) {
@@ -162,7 +162,9 @@ export function CommandMenu({ ...props }: DialogProps) {
 													key={navItem.href}
 													value={navItem.title}
 													onSelect={() => {
-														runCommand(() => router.push(navItem.href as string));
+														runCommand(() =>
+															router.push(navItem.href as string),
+														);
 													}}
 												>
 													<FileIcon className="mr-2 h-4 w-4" />
@@ -173,15 +175,21 @@ export function CommandMenu({ ...props }: DialogProps) {
 
 									<CommandSeparator />
 									<CommandGroup heading="Theme">
-										<CommandItem onSelect={() => runCommand(() => setTheme("light"))}>
+										<CommandItem
+											onSelect={() => runCommand(() => setTheme("light"))}
+										>
 											<SunIcon className="mr-2 h-4 w-4" />
 											Light
 										</CommandItem>
-										<CommandItem onSelect={() => runCommand(() => setTheme("dark"))}>
+										<CommandItem
+											onSelect={() => runCommand(() => setTheme("dark"))}
+										>
 											<MoonIcon className="mr-2 h-4 w-4" />
 											Dark
 										</CommandItem>
-										<CommandItem onSelect={() => runCommand(() => setTheme("system"))}>
+										<CommandItem
+											onSelect={() => runCommand(() => setTheme("system"))}
+										>
 											<LaptopIcon className="mr-2 h-4 w-4" />
 											System
 										</CommandItem>

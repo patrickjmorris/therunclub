@@ -1,4 +1,4 @@
-import { getProfile } from "@/db/queries";
+import { getProfile } from "@/lib/services/profile-service";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 

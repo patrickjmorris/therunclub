@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import { videos, channels, type Video, type Channel } from "@/db/schema";
-import { desc, eq, ilike, sql } from "drizzle-orm";
+import { desc, eq, ilike, sql, isNotNull } from "drizzle-orm";
 import {
 	CHANNELS,
 	getChannelInfo,
@@ -8,7 +8,6 @@ import {
 	getVideoInfo,
 } from "@/lib/youtube";
 import { unstable_cache } from "next/cache";
-import { isNotNull } from "drizzle-orm";
 
 // Get video by ID
 export async function getVideoById(videoId: string) {
@@ -21,27 +20,28 @@ export async function getVideoById(videoId: string) {
 	return video;
 }
 
-// Get latest videos with pagination
-export async function getLatestVideos(limit = 30, offset = 0) {
-	return db
-		.select()
-		.from(videos)
-		.orderBy(desc(videos.publishedAt))
-		.limit(limit)
-		.offset(offset);
-}
-
-// Search videos
-export async function searchVideos(query: string, limit = 30) {
-	return db
-		.select()
-		.from(videos)
-		.where(
-			sql`to_tsvector('english', ${videos.title} || ' ' || ${videos.description}) @@ to_tsquery('english', ${query})`,
-		)
-		.orderBy(desc(videos.publishedAt))
-		.limit(limit);
-}
+// Get latest videos
+export const getLatestVideos = unstable_cache(
+	async () => {
+		return db
+			.select({
+				id: videos.id,
+				title: videos.title,
+				description: videos.description,
+				thumbnailUrl: videos.thumbnailUrl,
+				channelTitle: channels.title,
+				channelId: channels.id,
+				publishedAt: videos.publishedAt,
+				duration: videos.duration,
+			})
+			.from(videos)
+			.innerJoin(channels, eq(videos.channelId, channels.id))
+			.orderBy(desc(videos.publishedAt))
+			.limit(3);
+	},
+	["latest-videos"],
+	{ tags: ["videos"], revalidate: 3600 }, // 60 minutes in seconds
+);
 
 // Get channel by ID
 export async function getChannelById(channelId: string) {
@@ -267,7 +267,7 @@ export async function processChannel(
 			.where(eq(channels.youtubeChannelId, channelId))
 			.limit(1);
 
-		let channelInfo: Awaited<ReturnType<typeof getChannelInfo>> | undefined;
+		let channelInfo: Awaited<ReturnType<typeof getChannelInfo>>;
 		if (
 			!existingChannel.length ||
 			forceUpdate ||
@@ -297,25 +297,22 @@ export async function processChannel(
 			`Updating channel in database: "${channelData.snippet.title}" (${channelId})`,
 		);
 
-		const thumbnail = channelData.snippet.thumbnails;
-		const imageUrl =
-			thumbnail.high?.url ?? thumbnail.medium?.url ?? thumbnail.default?.url;
-
 		// Insert or update channel
 		const [insertedChannel] = await db
 			.insert(channels)
 			.values({
-				youtubeChannelId: channelId,
+				youtubeChannelId: channelData.id,
 				title: channelData.snippet.title,
 				description: channelData.snippet.description,
 				customUrl: channelData.snippet.customUrl,
-				publishedAt: new Date(channelData.snippet.publishedAt),
-				thumbnailUrl: imageUrl,
+				thumbnailUrl:
+					channelData.snippet.thumbnails.high?.url ||
+					channelData.snippet.thumbnails.medium?.url ||
+					channelData.snippet.thumbnails.default?.url,
+				subscriberCount: channelData.statistics.subscriberCount,
+				videoCount: channelData.statistics.videoCount,
+				viewCount: channelData.statistics.viewCount,
 				country: channelData.snippet.country,
-				viewCount: String(channelData.statistics.viewCount),
-				subscriberCount: String(channelData.statistics.subscriberCount),
-				videoCount: String(channelData.statistics.videoCount),
-				uploadsPlaylistId: channelData.contentDetails.relatedPlaylists.uploads,
 			})
 			.onConflictDoUpdate({
 				target: channels.youtubeChannelId,
@@ -324,68 +321,40 @@ export async function processChannel(
 					description: sql`EXCLUDED.description`,
 					customUrl: sql`EXCLUDED.custom_url`,
 					thumbnailUrl: sql`EXCLUDED.thumbnail_url`,
-					country: sql`EXCLUDED.country`,
-					viewCount: sql`EXCLUDED.view_count`,
 					subscriberCount: sql`EXCLUDED.subscriber_count`,
 					videoCount: sql`EXCLUDED.video_count`,
-					uploadsPlaylistId: sql`EXCLUDED.uploads_playlist_id`,
+					viewCount: sql`EXCLUDED.view_count`,
+					country: sql`EXCLUDED.country`,
 					updatedAt: sql`CURRENT_TIMESTAMP`,
 				},
 			})
 			.returning();
 
-		console.log(`Successfully updated channel: ${channelData.snippet.title}`);
-
 		// Get channel's latest videos
-		console.log(`Fetching playlist items for channel ${channelId}...`);
+		console.log(`Fetching latest videos for channel ${channelId}...`);
 		const playlistId = channelData.contentDetails.relatedPlaylists.uploads;
-		const playlistItems = await getAllPlaylistItems(playlistId);
+		const videoResults = [];
 
-		if (!playlistItems) {
+		const videoItems = await getAllPlaylistItems(playlistId);
+		if (!videoItems) {
 			console.log(`No videos found for channel ${channelId}`);
 			return { status: "success" as const, data: insertedChannel, videos: [] };
 		}
 
-		// Process only the specified number of videos
-		const videosToProcess = playlistItems
-			? playlistItems
-					.slice(0, Math.min(maxVideos || videosPerChannel, videosPerChannel))
-					.filter(Boolean)
-			: [];
-		console.log(
-			`Processing ${videosToProcess.length} videos for channel ${channelId}...`,
-		);
+		console.log(`Found ${videoItems.length} videos for channel ${channelId}`);
 
-		const videoResults = [];
-		let processedCount = 0;
-
-		for (const item of videosToProcess) {
-			processedCount++;
-			console.log(
-				`\nProcessing video ${processedCount}/${videosToProcess.length}...`,
-			);
-
-			const result = await processVideo(
-				item.snippet.resourceId.videoId,
-				insertedChannel.id,
-				forceUpdate,
-			);
+		// Process each video
+		for (const item of videoItems.slice(0, maxVideos)) {
+			const videoId = item.snippet.resourceId.videoId;
+			const result = await processVideo(videoId, insertedChannel.id);
 			videoResults.push(result);
 
-			// Log progress
-			const stats = {
-				updated: videoResults.filter((r) => r.status === "updated").length,
-				cached: videoResults.filter((r) => r.status === "cached").length,
-				failed: videoResults.filter(
-					(r) => r.status === "error" || r.status === "not_found",
-				).length,
-			};
-			console.log(
-				`Progress: ${processedCount}/${videosToProcess.length} videos processed`,
-			);
-			console.log(
-				`Stats so far: ${stats.updated} updated, ${stats.cached} cached, ${stats.failed} failed`,
-			);
+			if (result.status === "error") {
+				console.error(
+					`Error processing video ${videoId} for channel ${channelId}:`,
+					result.error,
+				);
+			}
 		}
 
 		console.log(`\nFinished processing channel ${channelId}`);

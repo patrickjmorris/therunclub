@@ -5,12 +5,11 @@ import { FormattedDate } from "@/components/FormattedDate";
 import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
+import { searchEpisodesWithPodcasts } from "@/db/queries";
 import {
-	getAllPodcastAndLastEpisodes,
 	getFeaturedPodcasts,
 	getNewEpisodes,
-	searchEpisodesWithPodcasts,
-} from "@/db/queries";
+} from "@/lib/services/podcast-service";
 import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";

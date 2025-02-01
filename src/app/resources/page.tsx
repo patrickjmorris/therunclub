@@ -1,5 +1,7 @@
 import { ComingSoon } from "@/components/coming-soon";
 
-export default function ResourcesPage() {
+function ResourcesPage() {
 	return <ComingSoon />;
 }
+
+export default ResourcesPage;

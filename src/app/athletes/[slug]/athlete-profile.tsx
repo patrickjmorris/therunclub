@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
+
 import type { athletes, athleteHonors, athleteResults } from "@/db/schema";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -35,7 +35,7 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 	// Count Olympic medals
 	const olympicMedals = athlete.honors.filter(
 		(h) =>
-			h.competition.toLowerCase().includes("olympic") &&
+			h.competition.toLowerCase().includes("olympic games") &&
 			!h.competition.toLowerCase().includes("youth") &&
 			h.place &&
 			["1.", "2.", "3."].includes(h.place),
@@ -92,7 +92,7 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 	const majorHonors = athlete.honors
 		.filter(
 			(h) =>
-				h.competition.toLowerCase().includes("olympic") ||
+				h.competition.toLowerCase().includes("olympic games") ||
 				(h.competition.toLowerCase().includes("world championships") &&
 					!h.competition.toLowerCase().includes("youth")),
 		)

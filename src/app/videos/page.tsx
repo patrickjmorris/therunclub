@@ -43,12 +43,12 @@ export default async function VideosPage({ searchParams }: PageProps) {
 	const query = parseAsString.withDefault("").parseServerSide(q);
 
 	// Get featured channels
-	const featuredChannels = await getFeaturedChannels();
+	const featuredChannels = await getFeaturedChannels(4);
 
 	// Get videos based on search or latest
 	const videos = query
 		? await searchVideosWithChannels(query)
-		: await getLatestVideos();
+		: await getLatestVideos(30);
 
 	return (
 		<div className="container py-8">

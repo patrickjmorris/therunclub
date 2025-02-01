@@ -3,31 +3,24 @@ import { formatDistanceToNow } from "date-fns";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Headphones,
-	Video,
-	PersonStanding,
-	Dumbbell,
-	Users,
-	Clock,
-	MapPin,
-	ArrowRight,
-} from "lucide-react";
+import { Headphones, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import {
-	getNewEpisodes,
-	getLatestVideos,
-	getPopularRunClubs,
-	getFeaturedPodcasts,
-} from "@/db/queries";
 import { GlobalSearch } from "@/components/search/global-search";
-import { getFeaturedChannels } from "@/lib/services/video-service";
+import {
+	getFeaturedChannels,
+	getLatestVideos,
+} from "@/lib/services/video-service";
 import {
 	FeaturedChannel,
 	FeaturedPodcast,
 } from "@/components/featured-channel/index";
 import { Suspense } from "react";
-import LoadingFeaturedChannel from "./examples/featured-channel/loading";
+import LoadingFeaturedChannel from "@/components/videos/loading-ui";
+import {
+	getFeaturedPodcasts,
+	getNewEpisodes,
+} from "@/lib/services/podcast-service";
+import { getPopularRunClubs } from "@/lib/services/club-service";
 
 export const revalidate = 3600;
 
@@ -37,7 +30,7 @@ export default async function HomePage() {
 			getNewEpisodes(),
 			getLatestVideos(),
 			getPopularRunClubs(),
-			getFeaturedPodcasts(),
+			getFeaturedPodcasts(3),
 			getFeaturedChannels(),
 		]);
 

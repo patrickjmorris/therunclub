@@ -1,5 +1,7 @@
 import { ComingSoon } from "@/components/coming-soon";
 
-export default function CalculatorsPage() {
+function AboutPage() {
 	return <ComingSoon />;
 }
+
+export default AboutPage;

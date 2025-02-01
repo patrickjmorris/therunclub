@@ -1,6 +1,5 @@
-import { type AthleteMention } from "@/lib/queries/athlete-mentions";
-import EpisodeEntry from "./podcasts/EpisodeEntry";
-import { BasicEpisode } from "@/types/shared";
+import { type AthleteMention } from "@/lib/services/athlete-service";
+import EpisodeEntry from "@/components/podcasts/EpisodeEntry";
 
 interface AthleteMentionsProps {
 	mentions: AthleteMention[];

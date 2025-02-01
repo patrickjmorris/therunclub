@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEpisode } from "@/db/queries";
+import { getEpisode } from "@/lib/services/podcast-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Play, Calendar, Clock, Pause } from "lucide-react";
@@ -15,7 +15,7 @@ import { Suspense } from "react";
 import { AthleteReferences } from "@/components/athlete-references";
 import { MentionLoading } from "@/components/mention-loading";
 import { MentionError } from "@/components/mention-error";
-import { getEpisodeAthleteReferences } from "@/lib/queries/athlete-mentions";
+import { getEpisodeAthleteReferences } from "@/lib/services/athlete-service";
 import { eq, desc, and, isNotNull, like, gt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { episodes, podcasts } from "@/db/schema";

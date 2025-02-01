@@ -22,7 +22,6 @@ export const PlayButton = forwardRef<HTMLDivElement, PlayButtonProps>(
 		}[size];
 
 		return (
-			// biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
 			<Comp
 				ref={ref}
 				className={`group relative flex flex-shrink-0 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 ${className}`}
@@ -32,9 +31,11 @@ export const PlayButton = forwardRef<HTMLDivElement, PlayButtonProps>(
 			>
 				<span className="relative">
 					<div className="absolute -inset-3 md:hidden" />
-					<Icon className={`${iconSize} fill-white group-active:fill-white/80`} />
+					<Icon
+						className={`${iconSize} fill-white group-active:fill-white/80`}
+					/>
 				</span>
 			</Comp>
 		);
-	}
+	},
 );

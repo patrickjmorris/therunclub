@@ -5,12 +5,11 @@ import { FormattedDate } from "@/components/FormattedDate";
 import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
+import { searchEpisodesWithPodcasts } from "@/db/queries";
 import {
-	getAllPodcastAndLastEpisodes,
 	getFeaturedPodcasts,
 	getNewEpisodes,
-	searchEpisodesWithPodcasts,
-} from "@/db/queries";
+} from "@/lib/services/podcast-service";
 import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";
@@ -43,7 +42,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 	const query = parseAsString.withDefault("").parseServerSide(q);
 
 	// Get featured podcasts
-	const featuredPodcasts = await getFeaturedPodcasts();
+	const featuredPodcasts = await getFeaturedPodcasts(4);
 
 	const podcasts = query
 		? await searchEpisodesWithPodcasts(query)
@@ -74,7 +73,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 							href={`/podcasts/${podcast.podcastSlug}`}
 							className="transition-opacity hover:opacity-80"
 						>
-							<Card>
+							<Card className="hover:shadow-md transition-all border-border/40 hover:border-border/80 bg-card/50 hover:bg-card">
 								<CardContent className="p-4">
 									<div className="flex flex-col items-center text-center gap-4">
 										<div className="relative w-20 h-20">
@@ -84,7 +83,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 													alt={podcast.title}
 													width={80}
 													height={80}
-													className="rounded-lg object-cover w-full h-full"
+													className="rounded-lg object-cover w-full h-full shadow-sm"
 												/>
 											</div>
 										</div>

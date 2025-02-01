@@ -4,13 +4,13 @@ import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import { CommandMenu } from "@/components/command-menu";
 import { Icons } from "@/components/icons";
-import { MainNav } from "@/components/main-nav";
+import { MainNav } from "@/components/nav/main-nav";
 import { MobileNav } from "@/components/mobile-nav";
 import { ModeToggle } from "@/components/mode-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { UserNav } from "./nav/user-nav";
 import { createClient } from "@/utils/supabase/server";
-import { getProfile } from "@/db/queries";
+import { getProfile } from "@/lib/services/profile-service";
 
 export async function SiteHeader() {
 	const supabase = await createClient();

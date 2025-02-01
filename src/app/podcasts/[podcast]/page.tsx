@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import {
 	getLastTenEpisodesByPodcastSlug,
 	getPodcastBySlug,
-} from "@/db/queries";
+} from "@/lib/services/podcast-service";
 import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
 import { isNotNull } from "drizzle-orm";

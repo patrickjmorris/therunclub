@@ -1,7 +1,4 @@
-import { db } from "@/db/client";
 import { Suspense } from "react";
-import { athletes } from "@/db/schema";
-import { eq, isNotNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getUserRole } from "@/lib/auth-utils";
 import { ProfileSection } from "./components/profile-section";
@@ -13,27 +10,13 @@ import { Metadata } from "next";
 import { AthleteMentions } from "@/components/athlete-mentions";
 import { MentionLoading } from "@/components/mention-loading";
 import { MentionError } from "@/components/mention-error";
-import { getAthleteRecentMentions } from "@/lib/queries/athlete-mentions";
+import {
+	getAthleteRecentMentions,
+	getAthleteData,
+	getAllAthletes,
+} from "@/lib/services/athlete-service";
 
 export const revalidate = 86400; // Revalidate every day
-
-async function getAthleteData(slug: string) {
-	// console.log("Attempting to fetch athlete with slug:", slug);
-
-	const athlete = await db.query.athletes.findFirst({
-		where: eq(athletes.slug, slug),
-		with: {
-			honors: true,
-			results: true,
-			sponsors: true,
-			gear: true,
-			events: true,
-		},
-	});
-
-	if (!athlete) return null;
-	return athlete;
-}
 
 async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 	try {
@@ -52,10 +35,7 @@ async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 }
 
 export async function generateStaticParams() {
-	const allAthletes = await db
-		.select({ slug: athletes.slug })
-		.from(athletes)
-		.where(isNotNull(athletes.slug));
+	const allAthletes = await getAllAthletes();
 
 	return allAthletes.map((athlete) => ({
 		slug: athlete.slug,

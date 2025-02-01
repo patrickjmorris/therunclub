@@ -379,7 +379,7 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 
 // Get featured podcasts
 export const getFeaturedPodcasts = unstable_cache(
-	async () => {
+	async (limit = 3) => {
 		return db
 			.select({
 				id: podcasts.id,
@@ -389,15 +389,9 @@ export const getFeaturedPodcasts = unstable_cache(
 				vibrantColor: podcasts.vibrantColor,
 			})
 			.from(podcasts)
-			.where(
-				and(
-					isNotNull(podcasts.image),
-					isNotNull(podcasts.lastBuildDate),
-					like(podcasts.language, "en%"),
-				),
-			)
-			.orderBy(desc(podcasts.lastBuildDate))
-			.limit(3);
+			.where(and(isNotNull(podcasts.image), like(podcasts.language, "en%")))
+			.orderBy(desc(podcasts.episodeCount))
+			.limit(limit);
 	},
 	["featured-podcasts"],
 	{ tags: ["podcasts"], revalidate: 3600 },

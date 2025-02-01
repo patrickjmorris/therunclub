@@ -30,7 +30,7 @@ export default async function HomePage() {
 			getNewEpisodes(),
 			getLatestVideos(),
 			getPopularRunClubs(),
-			getFeaturedPodcasts(),
+			getFeaturedPodcasts(3),
 			getFeaturedChannels(),
 		]);
 

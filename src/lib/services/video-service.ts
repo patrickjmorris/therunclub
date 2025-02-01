@@ -22,7 +22,7 @@ export async function getVideoById(videoId: string) {
 
 // Get latest videos
 export const getLatestVideos = unstable_cache(
-	async () => {
+	async (limit = 3) => {
 		return db
 			.select({
 				id: videos.id,
@@ -37,7 +37,7 @@ export const getLatestVideos = unstable_cache(
 			.from(videos)
 			.innerJoin(channels, eq(videos.channelId, channels.id))
 			.orderBy(desc(videos.publishedAt))
-			.limit(3);
+			.limit(limit);
 	},
 	["latest-videos"],
 	{ tags: ["videos"], revalidate: 3600 }, // 60 minutes in seconds

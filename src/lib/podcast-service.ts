@@ -1,5 +1,6 @@
 import { db } from "@/db/client";
 import { podcasts, episodes, type Episode, type Podcast } from "@/db/schema";
+import { webSubManager } from "@/lib/websub-manager";
 import { eq, sql, isNull } from "drizzle-orm";
 import Parser from "rss-parser";
 import { updatePodcastColors } from "@/lib/update-podcast-colors";
@@ -78,6 +79,34 @@ async function getITunesPodcastByID(iTunesId: string) {
 	}
 }
 
+async function findWebSubHub(feedUrl: string): Promise<string | null> {
+    try {
+        const response = await fetch(feedUrl);
+        const text = await response.text();
+        
+        // Look for WebSub hub in the Link header
+        const linkHeader = response.headers.get('link');
+        if (linkHeader) {
+            const links = linkHeader.split(',');
+            for (const link of links) {
+                const [url, rel] = link.split(';');
+                if (rel.trim() === 'rel="hub"') {
+                    return url.trim().replace(/[<>]/g, '');
+                }
+            }
+        }
+        
+        // Look for WebSub hub in the feed XML
+        const hubMatch = text.match(/<link[^>]*rel=["']hub["'][^>]*href=["']([^"']+)["'][^>]*>/i) ||
+                        text.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["']hub["'][^>]*>/i);
+        
+        return hubMatch ? hubMatch[1] : null;
+    } catch (error) {
+        console.error('Error finding WebSub hub:', error);
+        return null;
+    }
+}
+
 async function processPodcast(
 	podcast: Podcast,
 	customParser: Parser<CustomFeed, CustomItem>,
@@ -89,6 +118,13 @@ async function processPodcast(
 		feedUrl: podcast.feedUrl,
 		lastBuildDate: podcast.lastBuildDate,
 	});
+
+	// Check for WebSub hub and subscribe if found
+	const hubUrl = await findWebSubHub(podcast.feedUrl);
+	if (hubUrl) {
+		console.log(`Found WebSub hub for ${podcast.title}: ${hubUrl}`);
+		await webSubManager.subscribe(podcast.feedUrl, hubUrl);
+	}
 
 	try {
 		// Quick RSS feed check first
@@ -333,13 +369,50 @@ async function processPodcast(
 	}
 }
 
-export async function updatePodcastData() {
-	const allPodcasts = await db.select().from(podcasts);
+interface UpdatePodcastOptions {
+	minHoursSinceUpdate?: number;
+	limit?: number;
+	randomSample?: boolean;
+}
+
+export async function updatePodcastData(options: UpdatePodcastOptions = {}) {
+	const {
+		minHoursSinceUpdate = 24,
+		limit,
+		randomSample = false
+	} = options;
+
+	// Calculate the cutoff time for updates
+	const cutoffDate = new Date();
+	cutoffDate.setHours(cutoffDate.getHours() - minHoursSinceUpdate);
+
+	// Build the base query conditions
+	const formattedCutoffDate = cutoffDate.toISOString();
+	const baseConditions = sql`(${podcasts.updatedAt} IS NULL OR ${podcasts.updatedAt} < ${formattedCutoffDate}) OR
+		(${podcasts.lastBuildDate} IS NULL OR ${podcasts.lastBuildDate} < ${formattedCutoffDate})`;
+
+	// Create the query based on whether random sampling is requested
+	const podcastsToUpdate = await (randomSample && limit
+		? db
+				.select()
+				.from(podcasts)
+				.where(baseConditions)
+				.orderBy(sql`RANDOM()`)
+				.limit(limit)
+		: db
+				.select()
+				.from(podcasts)
+				.where(baseConditions)
+				.orderBy((cols) => [cols.updatedAt])
+				.limit(limit || Number.MAX_SAFE_INTEGER));
+
+	console.log(`Updating ${podcastsToUpdate.length} podcasts`);
+
 	const results = [];
 
 	// Process podcasts in batches
-	for (let i = 0; i < allPodcasts.length; i += BATCH_SIZE) {
-		const batch = allPodcasts.slice(i, i + BATCH_SIZE);
+	for (let i = 0; i < podcastsToUpdate.length; i += BATCH_SIZE) {
+		const batch = podcastsToUpdate.slice(i, i + BATCH_SIZE);
 		const batchResults = await Promise.all(
 			batch.map((podcast) => processPodcast(podcast, parser)),
 		);

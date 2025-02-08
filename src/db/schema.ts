@@ -127,30 +127,38 @@ export const podcasts = pgTable(
 		isDead: integer("is_dead").default(0),
 		hasParseErrors: integer("has_parse_errors").default(0),
 		iTunesId: text("itunes_id").unique(),
+		updatedAt: timestamp("updated_at").defaultNow(),
 	},
 	(table) => ({
 		feedUrlIdx: uniqueIndex("feed_url_idx").on(table.feedUrl),
 	}),
 );
 
-export const episodes = pgTable("episodes", {
-	id: uuid("id").primaryKey().defaultRandom(),
-	podcastId: uuid("podcast_id")
-		.notNull()
-		.references(() => podcasts.id),
-	episodeSlug: text("episode_slug").notNull(),
-	title: text("title").notNull(),
-	pubDate: timestamp("pub_date"),
-	content: text("content"),
-	link: text("link"),
-	enclosureUrl: text("enclosure_url").notNull().unique(),
-	duration: text("duration").notNull(),
-	explicit: text("explicit", { enum: ["yes", "no"] }).default("no"),
-	image: text("image"),
-	athleteMentionsProcessed: boolean("athlete_mentions_processed").default(
-		false,
-	),
-});
+export const episodes = pgTable(
+	"episodes",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		podcastId: uuid("podcast_id")
+			.notNull()
+			.references(() => podcasts.id),
+		episodeSlug: text("episode_slug").notNull(),
+		title: text("title").notNull(),
+		pubDate: timestamp("pub_date"),
+		content: text("content"),
+		link: text("link"),
+		enclosureUrl: text("enclosure_url").notNull().unique(),
+		duration: text("duration").notNull(),
+		explicit: text("explicit", { enum: ["yes", "no"] }).default("no"),
+		image: text("image"),
+		athleteMentionsProcessed: boolean("athlete_mentions_processed").default(
+			false,
+		),
+		updatedAt: timestamp("updated_at").defaultNow(),
+	},
+	(table) => ({
+		enclosureUrlIdx: uniqueIndex("enclosure_url_idx").on(table.enclosureUrl),
+	}),
+);
 
 export const userPodcastPreferences = pgTable("user_podcast_preferences", {
 	id: uuid("id").primaryKey().defaultRandom(),

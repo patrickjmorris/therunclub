@@ -186,7 +186,28 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 		}
 
 		if (type === "podcasts") {
-			const results = await updatePodcastData();
+			const minHoursSinceUpdate = parseInt(
+				request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
+				10,
+			);
+			const limit = parseInt(
+				request.nextUrl.searchParams.get("limit") || "50",
+				10,
+			);
+			const randomSample =
+				request.nextUrl.searchParams.get("randomSample") === "true";
+
+			console.log("Podcast update parameters:", {
+				minHoursSinceUpdate,
+				limit,
+				randomSample,
+			});
+
+			const results = await updatePodcastData({
+				minHoursSinceUpdate,
+				limit,
+				randomSample,
+			});
 			const successfulUpdates = results.filter(
 				(result) => result.success,
 			).length;
@@ -198,6 +219,11 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					total: results.length,
 					successful: successfulUpdates,
 					failed: failedUpdates,
+					params: {
+						minHoursSinceUpdate,
+						limit,
+						randomSample,
+					},
 				},
 			});
 		}

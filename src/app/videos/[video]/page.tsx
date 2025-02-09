@@ -1,12 +1,12 @@
 import { Metadata } from "next";
 import { VideoPlayer } from "@/components/videos/video-player";
-import { getVideoById } from "@/lib/services/video-service";
+import { getVideoById, getChannelVideos } from "@/lib/services/video-service";
 import { notFound } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { extractUrlsFromText } from "@/lib/extract-urls";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsWithState } from "@/components/TabsWithState";
 import Link from "next/link";
 import { eq, desc, isNotNull } from "drizzle-orm";
 import { videos } from "@/db/schema";
@@ -18,6 +18,7 @@ import {
 	preloadLinks,
 } from "@/components/LinkPreviewPreloader";
 import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
+import { MoreContent } from "@/components/content/more-content";
 
 export const revalidate = 14400; // Revalidate every day
 
@@ -129,6 +130,12 @@ export default async function VideoPage({ params }: VideoPageProps) {
 			notFound();
 		}
 
+		// Get more videos from the same channel (fetch 4 to ensure we have enough after filtering)
+		const moreVideos = await getChannelVideos(videoData.channelId, 4);
+		const filteredMoreVideos = moreVideos
+			.filter((v) => v.id !== video)
+			.slice(0, 3);
+
 		// Format numbers for better readability
 		const views = new Intl.NumberFormat().format(
 			Number(videoData.viewCount ?? 0),
@@ -216,49 +223,54 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						{urls.length > 0 ? (
 							<>
 								<LinkPreviewPreloader urls={urls} />
-								<Tabs defaultValue="description">
-									<TabsList className="justify-start">
-										<TabsTrigger value="description">Description</TabsTrigger>
-										<TabsTrigger value="links">
-											Links ({urls.length})
-										</TabsTrigger>
-									</TabsList>
-									<TabsContent value="description">
-										<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
-											<div
-												// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
-												dangerouslySetInnerHTML={{
-													__html: descriptionWithLinks,
-												}}
-											/>
-										</div>
-									</TabsContent>
-									<TabsContent value="links">
-										<div className="space-y-4">
-											<Suspense
-												fallback={
-													<div className="animate-pulse">
-														Loading link previews...
-													</div>
-												}
-											>
-												<LinkPreviewErrorBoundary
-													fallback={
-														<div className="text-sm text-muted-foreground">
-															Unable to load link previews. You can still click
-															the links in the description.
-														</div>
-													}
-												>
-													<LinkPreviewClientWrapper
-														urls={urls}
-														preloadedData={preloadedData}
+								<TabsWithState
+									className="max-w-3xl"
+									tabs={[
+										{
+											value: "description",
+											label: "Description",
+											content: (
+												<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+													<div
+														// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
+														dangerouslySetInnerHTML={{
+															__html: descriptionWithLinks,
+														}}
 													/>
-												</LinkPreviewErrorBoundary>
-											</Suspense>
-										</div>
-									</TabsContent>
-								</Tabs>
+												</div>
+											),
+										},
+										{
+											value: "links",
+											label: `Links (${urls.length})`,
+											content: (
+												<div className="space-y-4">
+													<Suspense
+														fallback={
+															<div className="animate-pulse">
+																Loading link previews...
+															</div>
+														}
+													>
+														<LinkPreviewErrorBoundary
+															fallback={
+																<div className="text-sm text-muted-foreground">
+																	Unable to load link previews. You can still
+																	click the links in the description.
+																</div>
+															}
+														>
+															<LinkPreviewClientWrapper
+																urls={urls}
+																preloadedData={preloadedData}
+															/>
+														</LinkPreviewErrorBoundary>
+													</Suspense>
+												</div>
+											),
+										},
+									]}
+								/>
 							</>
 						) : (
 							<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap break-words [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
@@ -272,6 +284,22 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						)}
 					</div>
 				</div>
+
+				{/* More Videos Section */}
+				{filteredMoreVideos.length > 0 && (
+					<MoreContent
+						title={`More from ${videoData.channelTitle}`}
+						items={filteredMoreVideos.map((v) => ({
+							id: v.id,
+							title: v.title,
+							thumbnailUrl: v.thumbnailUrl ?? undefined,
+							publishedAt: v.publishedAt ?? undefined,
+							duration: v.duration ?? undefined,
+							type: "video",
+							channelTitle: v.channelTitle ?? undefined,
+						}))}
+					/>
+				)}
 			</div>
 		);
 	} catch (error) {

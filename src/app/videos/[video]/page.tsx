@@ -130,9 +130,11 @@ export default async function VideoPage({ params }: VideoPageProps) {
 			notFound();
 		}
 
-		// Get more videos from the same channel
-		const moreVideos = await getChannelVideos(videoData.channelId, 3);
-		const filteredMoreVideos = moreVideos.filter((v) => v.id !== video);
+		// Get more videos from the same channel (fetch 4 to ensure we have enough after filtering)
+		const moreVideos = await getChannelVideos(videoData.channelId, 4);
+		const filteredMoreVideos = moreVideos
+			.filter((v) => v.id !== video)
+			.slice(0, 3);
 
 		// Format numbers for better readability
 		const views = new Intl.NumberFormat().format(

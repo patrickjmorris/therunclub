@@ -182,11 +182,11 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		notFound();
 	}
 
-	// Get more episodes from the same podcast
-	const moreEpisodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 3);
-	const filteredMoreEpisodes = moreEpisodes.filter(
-		(e) => e.episodeSlug !== episodeSlug,
-	);
+	// Get more episodes from the same podcast (fetch 4 to ensure we have enough after filtering)
+	const moreEpisodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 4);
+	const filteredMoreEpisodes = moreEpisodes
+		.filter((e) => e.episodeSlug !== episodeSlug)
+		.slice(0, 3);
 
 	const date = episode.pubDate ? new Date(episode.pubDate) : new Date();
 	const imageUrl = episode.image || episode.podcastImage;

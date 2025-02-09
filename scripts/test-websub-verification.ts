@@ -11,9 +11,8 @@ const env = envArg ? envArg.split("=")[1] : "development";
 
 // Set environment variables based on environment
 if (env === "production") {
-	process.env.NEXT_PUBLIC_APP_URL = "https://therunclub.xyz";
-	process.env.DATABASE_URL =
-		"postgresql://postgres.akzhyzwiwjxtjuirmqyx:Hukjeq-jobru0-hebqod@aws-0-us-east-1.pooler.supabase.com:6543/postgres";
+	process.env.NEXT_PUBLIC_APP_URL;
+	process.env.DATABASE_URL;
 } else {
 	process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 }

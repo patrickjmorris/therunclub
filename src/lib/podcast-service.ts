@@ -79,34 +79,6 @@ async function getITunesPodcastByID(iTunesId: string) {
 	}
 }
 
-async function findWebSubHub(feedUrl: string): Promise<string | null> {
-    try {
-        const response = await fetch(feedUrl);
-        const text = await response.text();
-        
-        // Look for WebSub hub in the Link header
-        const linkHeader = response.headers.get('link');
-        if (linkHeader) {
-            const links = linkHeader.split(',');
-            for (const link of links) {
-                const [url, rel] = link.split(';');
-                if (rel.trim() === 'rel="hub"') {
-                    return url.trim().replace(/[<>]/g, '');
-                }
-            }
-        }
-        
-        // Look for WebSub hub in the feed XML
-        const hubMatch = text.match(/<link[^>]*rel=["']hub["'][^>]*href=["']([^"']+)["'][^>]*>/i) ||
-                        text.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["']hub["'][^>]*>/i);
-        
-        return hubMatch ? hubMatch[1] : null;
-    } catch (error) {
-        console.error('Error finding WebSub hub:', error);
-        return null;
-    }
-}
-
 async function processPodcast(
 	podcast: Podcast,
 	customParser: Parser<CustomFeed, CustomItem>,
@@ -119,8 +91,8 @@ async function processPodcast(
 		lastBuildDate: podcast.lastBuildDate,
 	});
 
-	// Check for WebSub hub and subscribe if found
-	const hubUrl = await findWebSubHub(podcast.feedUrl);
+	// Try to discover and subscribe to WebSub hub
+	const hubUrl = await webSubManager.discoverWebSubHub(podcast.feedUrl);
 	if (hubUrl) {
 		console.log(`Found WebSub hub for ${podcast.title}: ${hubUrl}`);
 		await webSubManager.subscribe(podcast.feedUrl, hubUrl);
@@ -376,11 +348,7 @@ interface UpdatePodcastOptions {
 }
 
 export async function updatePodcastData(options: UpdatePodcastOptions = {}) {
-	const {
-		minHoursSinceUpdate = 24,
-		limit,
-		randomSample = false
-	} = options;
+	const { minHoursSinceUpdate = 24, limit, randomSample = false } = options;
 
 	// Calculate the cutoff time for updates
 	const cutoffDate = new Date();

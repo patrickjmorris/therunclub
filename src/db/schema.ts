@@ -516,3 +516,29 @@ export const athleteMentionsRelations = relations(
 		}),
 	}),
 );
+
+export const websubSubscriptions = pgTable("websub_subscriptions", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	topic: text("topic").notNull().unique(), // The feed URL
+	hub: text("hub").notNull(), // The WebSub hub URL
+	secret: text("secret").notNull(), // Secret for verifying notifications
+	leaseSeconds: integer("lease_seconds").notNull(),
+	expiresAt: timestamp("expires_at").notNull(),
+	status: text("status", { enum: ["pending", "active", "expired"] }).notNull(),
+	createdAt: timestamp("created_at").defaultNow(),
+	updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Add to relations
+export const websubSubscriptionsRelations = relations(
+	websubSubscriptions,
+	({ one }) => ({
+		podcast: one(podcasts, {
+			fields: [websubSubscriptions.topic],
+			references: [podcasts.feedUrl],
+		}),
+	}),
+);
+
+// Add to types
+export type WebSubSubscription = typeof websubSubscriptions.$inferSelect;

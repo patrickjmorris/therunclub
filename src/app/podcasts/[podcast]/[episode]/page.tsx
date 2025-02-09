@@ -1,6 +1,9 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEpisode } from "@/lib/services/podcast-service";
+import {
+	getEpisode,
+	getLastTenEpisodesByPodcastSlug,
+} from "@/lib/services/podcast-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Play, Calendar, Clock, Pause } from "lucide-react";
@@ -25,6 +28,7 @@ import {
 	preloadLinks,
 } from "@/components/LinkPreviewPreloader";
 import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
+import { MoreContent } from "@/components/content/more-content";
 
 export const revalidate = 86400; // Revalidate every day
 
@@ -171,12 +175,18 @@ function addLinkStyles(html: string): string {
 }
 
 export default async function EpisodePage({ params }: EpisodePageProps) {
-	const { episode: episodeSlug } = await params;
+	const { podcast: podcastSlug, episode: episodeSlug } = await params;
 	const episode = await getEpisode(episodeSlug);
 
 	if (!episode) {
 		notFound();
 	}
+
+	// Get more episodes from the same podcast
+	const moreEpisodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 3);
+	const filteredMoreEpisodes = moreEpisodes.filter(
+		(e) => e.episodeSlug !== episodeSlug,
+	);
 
 	const date = episode.pubDate ? new Date(episode.pubDate) : new Date();
 	const imageUrl = episode.image || episode.podcastImage;
@@ -334,6 +344,23 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 					)}
 				</CardContent>
 			</Card>
+
+			{/* More Episodes Section */}
+			{filteredMoreEpisodes.length > 0 && (
+				<MoreContent
+					title={`More from ${episode.podcastTitle}`}
+					items={filteredMoreEpisodes.map((e) => ({
+						id: e.id,
+						title: e.title,
+						thumbnailUrl: e.image ?? e.podcastImage ?? undefined,
+						publishedAt: e.pubDate ? new Date(e.pubDate) : undefined,
+						duration: e.duration ?? undefined,
+						type: "episode",
+						podcastSlug: e.podcastSlug ?? undefined,
+						episodeSlug: e.episodeSlug ?? undefined,
+					}))}
+				/>
+			)}
 		</div>
 	);
 }

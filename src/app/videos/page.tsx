@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import {
 	getFeaturedChannels,
+	getFilteredVideos,
 	getLatestVideos,
-	searchVideosWithChannels,
 } from "@/lib/services/video-service";
 import { parseAsString } from "nuqs/server";
 import AddContentWrapper from "@/components/content/AddContentWrapper";
@@ -32,29 +32,39 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-	searchParams: Promise<{ q?: string }>;
+	searchParams: Promise<{ q?: string; category?: string }>;
 }
 
 export const revalidate = 3600;
 
 export default async function VideosPage({ searchParams }: PageProps) {
 	// Parse search params
-	const { q } = await searchParams;
+	const { q, category } = await searchParams;
 	const query = parseAsString.withDefault("").parseServerSide(q);
+	const tag = parseAsString.withDefault("").parseServerSide(category);
+
+	console.log("Search params:", { query, tag });
 
 	// Get featured channels
 	const featuredChannels = await getFeaturedChannels(4);
 
-	// Get videos based on search or latest
-	const videos = query
-		? await searchVideosWithChannels(query)
-		: await getLatestVideos(30);
+	// Get videos based on filters or get latest
+	const videos =
+		query || tag
+			? await getFilteredVideos({
+					searchQuery: query || undefined,
+					tag: tag || undefined,
+					limit: 30,
+			  })
+			: await getLatestVideos(30);
+
+	console.log("Videos count:", videos.length);
+	console.log("First video:", videos[0]);
 
 	return (
 		<div className="container py-8">
 			{/* Search Section */}
 			<div className="flex items-center justify-between mb-8">
-				<VideoFilter />
 				<AddContentWrapper defaultTab="channel" />
 			</div>
 			{/* Featured Channels Section */}
@@ -111,12 +121,29 @@ export default async function VideosPage({ searchParams }: PageProps) {
 				<div className="mt-8">
 					<Suspense fallback={<LoadingGridSkeleton />}>
 						<VideoGrid
-							videos={
-								"video" in (videos[0] || {})
-									? // biome-ignore lint/suspicious/noExplicitAny: need for now
-									  videos.map((item: any) => item.video)
-									: videos
-							}
+							videos={videos.map((item) => {
+								// Handle both filtered and latest videos formats
+								const video = "video" in item ? item.video : item;
+								const channel = "channel" in item ? item.channel : null;
+
+								return {
+									id: video.id,
+									title: video.title,
+									description: video.description,
+									thumbnailUrl: video.thumbnailUrl,
+									publishedAt: video.publishedAt,
+									channelTitle: channel?.title ?? null,
+									channelId: video.channelId,
+									viewCount: video.viewCount,
+									likeCount: video.likeCount,
+									commentCount: video.commentCount,
+									duration: video.duration,
+									youtubeVideoId: video.youtubeVideoId,
+									createdAt: video.createdAt,
+									updatedAt: video.updatedAt,
+									tags: video.tags,
+								};
+							})}
 						/>
 					</Suspense>
 				</div>

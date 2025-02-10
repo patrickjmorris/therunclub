@@ -206,7 +206,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						</div>
 					</div>
 
-					{/* Tags */}
+					{/* Tags
 					{videoData.tags && videoData.tags.length > 0 && (
 						<div className="mt-4 flex flex-wrap gap-2">
 							<Tag className="h-4 w-4 text-muted-foreground" />
@@ -216,7 +216,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 								</Badge>
 							))}
 						</div>
-					)}
+					)} */}
 
 					{/* Content */}
 					<div className="mt-6 max-w-3xl">

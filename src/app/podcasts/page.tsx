@@ -46,7 +46,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 
 	const podcasts = query
 		? await searchEpisodesWithPodcasts(query)
-		: await getNewEpisodes(25);
+		: await getNewEpisodes(30);
 
 	return (
 		<div className="container py-8 md:py-12">

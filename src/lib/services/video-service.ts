@@ -622,9 +622,8 @@ export async function getFilteredVideos({
 	// Add search filter if provided
 	if (searchQuery) {
 		conditions.push(sql`
-			to_tsvector('english', 
-				setweight(coalesce(${videos.title}, ''), 'A'::char) || ' ' ||
-				setweight(coalesce(${videos.description}, ''), 'B'::char)
+			(
+				to_tsvector('english', coalesce(${videos.title}, '') || ' ' || coalesce(${videos.description}, ''))
 			) @@ websearch_to_tsquery('english', ${searchQuery})
 		`);
 	}
@@ -640,9 +639,8 @@ export async function getFilteredVideos({
 	const recencyScore = sql`extract(epoch from now() - ${videos.publishedAt})`;
 	const searchScore = searchQuery
 		? sql`ts_rank(
-				to_tsvector('english', 
-					setweight(coalesce(${videos.title}, ''), 'A'::char) || ' ' ||
-					setweight(coalesce(${videos.description}, ''), 'B'::char)
+				(
+					to_tsvector('english', coalesce(${videos.title}, '') || ' ' || coalesce(${videos.description}, ''))
 				),
 				websearch_to_tsquery('english', ${searchQuery})
 			)`

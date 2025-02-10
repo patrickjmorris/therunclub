@@ -657,3 +657,16 @@ export async function getFilteredVideos({
 
 	return query.orderBy(desc(finalScore)).limit(limit).offset(offset);
 }
+
+// Get top video tags
+export async function getTopVideoTags(limit = 10) {
+	return db
+		.select({
+			tag: sql<string>`lower(unnest(${videos.tags}))`,
+			count: sql<number>`count(1)`,
+		})
+		.from(videos)
+		.groupBy(sql`1`)
+		.orderBy(sql`2 desc`)
+		.limit(limit);
+}

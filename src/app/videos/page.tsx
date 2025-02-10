@@ -12,6 +12,7 @@ import {
 	getFeaturedChannels,
 	getFilteredVideos,
 	getLatestVideos,
+	getTopVideoTags,
 } from "@/lib/services/video-service";
 import { parseAsString } from "nuqs/server";
 import AddContentWrapper from "@/components/content/AddContentWrapper";
@@ -45,8 +46,11 @@ export default async function VideosPage({ searchParams }: PageProps) {
 
 	console.log("Search params:", { query, tag });
 
-	// Get featured channels
-	const featuredChannels = await getFeaturedChannels(4);
+	// Get featured channels and top tags
+	const [featuredChannels, topTags] = await Promise.all([
+		getFeaturedChannels(4),
+		getTopVideoTags(10),
+	]);
 
 	// Get videos based on filters or get latest
 	const videos =
@@ -117,9 +121,9 @@ export default async function VideosPage({ searchParams }: PageProps) {
 			{/* Videos Section */}
 			<div>
 				<h2 className="text-2xl font-bold mb-6">Latest Videos</h2>
-				<VideoFilter />
+				<VideoFilter tags={topTags} />
 				<div className="mt-8">
-					<Suspense fallback={<LoadingGridSkeleton />}>
+					<Suspense key={`${query}-${tag}`} fallback={<LoadingGridSkeleton />}>
 						<VideoGrid
 							videos={videos.map((item) => {
 								// Handle both filtered and latest videos formats

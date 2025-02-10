@@ -2,11 +2,18 @@
 
 import { Button } from "@/components/ui/button";
 import { useQueryState, parseAsString } from "nuqs";
-import { VIDEO_CATEGORIES } from "@/lib/youtube";
 import { SearchBar } from "@/components/search/search-bar";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
-export function VideoFilter() {
+interface VideoFilterProps {
+	tags: Array<{ tag: string; count: number }>;
+	onLoadingChange?: (isLoading: boolean) => void;
+}
+
+export function VideoFilter({ tags, onLoadingChange }: VideoFilterProps) {
+	const router = useRouter();
+	const [isLoading, setIsLoading] = useState(false);
 	const [query, setQuery] = useQueryState("q", parseAsString.withDefault(""));
 	const [category, setCategory] = useQueryState(
 		"category",
@@ -16,37 +23,40 @@ export function VideoFilter() {
 
 	const handleSearch = useCallback(
 		async (searchQuery: string) => {
-			// Clear any existing timeout
 			if (searchTimeoutRef.current) {
 				clearTimeout(searchTimeoutRef.current);
 			}
 
-			// Don't search if query is the same
 			if (searchQuery === query) return;
 
-			// Set a new timeout for debouncing
+			setIsLoading(true);
+			onLoadingChange?.(true);
+
 			searchTimeoutRef.current = setTimeout(async () => {
-				// Only update if the query is at least 3 characters or empty
 				if (searchQuery.length === 0 || searchQuery.length >= 3) {
 					await setQuery(searchQuery || null);
+					router.refresh();
 				}
-			}, 300); // 300ms debounce delay
+			}, 300);
 		},
-		[query, setQuery],
+		[query, setQuery, router, onLoadingChange],
 	);
 
 	const handleCategoryClick = useCallback(
 		async (value: string) => {
+			setIsLoading(true);
+			onLoadingChange?.(true);
+
 			if (value === category) {
 				await setCategory(null);
 			} else if (category === null || value !== category) {
 				await setCategory(value);
 			}
+			router.refresh();
 		},
-		[category, setCategory],
+		[category, setCategory, router, onLoadingChange],
 	);
 
-	// Cleanup timeout on unmount
 	useEffect(() => {
 		return () => {
 			if (searchTimeoutRef.current) {
@@ -54,6 +64,14 @@ export function VideoFilter() {
 			}
 		};
 	}, []);
+
+	// Reset loading state when navigation is complete
+	useEffect(() => {
+		return () => {
+			setIsLoading(false);
+			onLoadingChange?.(false);
+		};
+	}, [query, category, onLoadingChange]);
 
 	return (
 		<div className="space-y-4">
@@ -63,15 +81,16 @@ export function VideoFilter() {
 				onSearch={handleSearch}
 			/>
 			<div className="flex flex-wrap gap-2">
-				{Object.entries(VIDEO_CATEGORIES).map(([key, value]) => (
+				{tags.map(({ tag, count }) => (
 					<Button
-						key={key}
-						variant={category === value ? "default" : "outline"}
+						key={tag}
+						variant={category === tag ? "default" : "outline"}
 						size="sm"
-						onClick={() => handleCategoryClick(value)}
-						aria-pressed={category === value}
+						onClick={() => handleCategoryClick(tag)}
+						aria-pressed={category === tag}
+						disabled={isLoading}
 					>
-						{key.toLowerCase().replace("_", " ")}
+						{tag.replace(/-/g, " ")} ({count})
 					</Button>
 				))}
 			</div>

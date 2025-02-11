@@ -8,7 +8,7 @@ import Link from "next/link";
 import { GlobalSearch } from "@/components/search/global-search";
 import {
 	getFeaturedChannels,
-	getLatestVideos,
+	getHomeLatestVideos,
 } from "@/lib/services/video-service";
 import {
 	FeaturedChannel,
@@ -28,7 +28,7 @@ export default async function HomePage() {
 	const [podcasts, videos, runClubs, featuredPodcasts, featuredChannels] =
 		await Promise.all([
 			getNewEpisodes(),
-			getLatestVideos(),
+			getHomeLatestVideos(),
 			getPopularRunClubs(),
 			getFeaturedPodcasts(3),
 			getFeaturedChannels(),

@@ -20,8 +20,8 @@ export async function getVideoById(videoId: string) {
 	return video;
 }
 
-// Get latest videos
-export const getLatestVideos = unstable_cache(
+// Get latest videos for home page
+export const getHomeLatestVideos = unstable_cache(
 	async (limit = 3) => {
 		return db
 			.select({
@@ -33,6 +33,42 @@ export const getLatestVideos = unstable_cache(
 				channelId: channels.id,
 				publishedAt: videos.publishedAt,
 				duration: videos.duration,
+			})
+			.from(videos)
+			.innerJoin(channels, eq(videos.channelId, channels.id))
+			.orderBy(desc(videos.publishedAt))
+			.limit(limit);
+	},
+	["home-latest-videos"],
+	{ tags: ["videos"], revalidate: 3600 }, // 60 minutes in seconds
+);
+
+// Get latest videos (full data)
+export const getLatestVideos = unstable_cache(
+	async (limit = 3) => {
+		return db
+			.select({
+				video: {
+					id: videos.id,
+					title: videos.title,
+					description: videos.description,
+					thumbnailUrl: videos.thumbnailUrl,
+					publishedAt: videos.publishedAt,
+					viewCount: videos.viewCount,
+					likeCount: videos.likeCount,
+					commentCount: videos.commentCount,
+					duration: videos.duration,
+					youtubeVideoId: videos.youtubeVideoId,
+					createdAt: videos.createdAt,
+					updatedAt: videos.updatedAt,
+					tags: videos.tags,
+					channelId: videos.channelId,
+				},
+				channel: {
+					id: channels.id,
+					title: channels.title,
+					thumbnailUrl: channels.thumbnailUrl,
+				},
 			})
 			.from(videos)
 			.innerJoin(channels, eq(videos.channelId, channels.id))
@@ -533,4 +569,105 @@ export async function updateVideos(
 		console.error("\nDetailed error in video update process:", error);
 		throw error;
 	}
+}
+
+// Get videos with filters and search
+export async function getFilteredVideos({
+	tag,
+	searchQuery,
+	limit = 30,
+	offset = 0,
+}: {
+	tag?: string;
+	searchQuery?: string;
+	limit?: number;
+	offset?: number;
+}) {
+	const baseQuery = db
+		.select({
+			video: {
+				id: videos.id,
+				title: videos.title,
+				description: videos.description,
+				thumbnailUrl: videos.thumbnailUrl,
+				publishedAt: videos.publishedAt,
+				viewCount: videos.viewCount,
+				likeCount: videos.likeCount,
+				commentCount: videos.commentCount,
+				duration: videos.duration,
+				youtubeVideoId: videos.youtubeVideoId,
+				createdAt: videos.createdAt,
+				updatedAt: videos.updatedAt,
+				tags: videos.tags,
+				channelId: videos.channelId,
+			},
+			channel: {
+				id: channels.id,
+				title: channels.title,
+				thumbnailUrl: channels.thumbnailUrl,
+			},
+		})
+		.from(videos)
+		.innerJoin(channels, eq(videos.channelId, channels.id))
+		.$dynamic();
+
+	// Build conditions array
+	const conditions = [];
+
+	// Add tag filter if provided
+	if (tag) {
+		conditions.push(sql`${videos.tags} @> ARRAY[${tag}]::text[]`);
+	}
+
+	// Add search filter if provided
+	if (searchQuery) {
+		conditions.push(sql`
+			(
+				to_tsvector('english', coalesce(${videos.title}, '') || ' ' || 
+				left(coalesce(${videos.description}, ''), 500))
+			) @@ websearch_to_tsquery('english', ${searchQuery})
+		`);
+	}
+
+	// Apply conditions if any exist
+	let query = baseQuery;
+	if (conditions.length > 0) {
+		query = query.where(sql.join(conditions, sql` AND `));
+	}
+
+	// Calculate a score based on views, recency, and search relevance
+	const viewScore = sql`log(CAST(NULLIF(${videos.viewCount}, '0') AS INTEGER) + 1)`;
+	// Recency score with gentler time decay - use 0.95 base for slower decay
+	const recencyScore = sql`pow(0.95, extract(days from now() - ${videos.publishedAt}))`;
+	const searchScore = searchQuery
+		? sql`ts_rank(
+				(
+					to_tsvector('english', coalesce(${videos.title}, '') || ' ' || 
+					left(coalesce(${videos.description}, ''), 500))
+				),
+				websearch_to_tsquery('english', ${searchQuery})
+			)`
+		: sql`1.0`;
+
+	// Combine scores with weights - adjust to give more weight to views (0.25) while keeping recency primary (0.6)
+	const finalScore = sql`
+		(${viewScore} * 0.25) + 
+		(${recencyScore} * 0.6) + 
+		(${searchScore} * 0.15)
+	`;
+
+	return query.orderBy(desc(finalScore)).limit(limit).offset(offset);
+}
+
+// Get top video tags
+export async function getTopVideoTags(limit = 10) {
+	return db
+		.select({
+			tag: sql<string>`lower(unnest(${videos.tags}))`,
+			count: sql<number>`count(1)`,
+		})
+		.from(videos)
+		.groupBy(sql`1`)
+		.orderBy(sql`2 desc`)
+		.limit(limit);
 }

@@ -637,7 +637,8 @@ export async function getFilteredVideos({
 
 	// Calculate a score based on views, recency, and search relevance
 	const viewScore = sql`log(CAST(NULLIF(${videos.viewCount}, '0') AS INTEGER) + 1)`;
-	const recencyScore = sql`extract(epoch from now() - ${videos.publishedAt})`;
+	// Recency score with gentler time decay - use 0.95 base for slower decay
+	const recencyScore = sql`pow(0.95, extract(days from now() - ${videos.publishedAt}))`;
 	const searchScore = searchQuery
 		? sql`ts_rank(
 				(
@@ -648,10 +649,10 @@ export async function getFilteredVideos({
 			)`
 		: sql`1.0`;
 
-	// Combine scores with weights - prioritize recency (0.7) over views (0.15) and search (0.15)
+	// Combine scores with weights - adjust to give more weight to views (0.25) while keeping recency primary (0.6)
 	const finalScore = sql`
-		(${viewScore} * 0.15) + 
-		(1.0 / (${recencyScore} + 1) * 0.7) + 
+		(${viewScore} * 0.25) + 
+		(${recencyScore} * 0.6) + 
 		(${searchScore} * 0.15)
 	`;
 

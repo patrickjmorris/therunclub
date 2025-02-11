@@ -249,3 +249,56 @@ export async function getAthleteCount() {
 		.from(athletes);
 	return count;
 }
+
+// Search athletes with improved scoring
+export async function searchAthletes(query: string, limit = 10) {
+	const formattedQuery = query
+		.trim()
+		.split(/\s+/)
+		.map((term) => `${term}:*`)
+		.join(" & ");
+
+	return db
+		.select({
+			athlete: {
+				id: athletes.id,
+				name: athletes.name,
+				imageUrl: athletes.imageUrl,
+				slug: athletes.slug,
+				bio: athletes.bio,
+			},
+			mentionCount: sql<number>`COUNT(DISTINCT ${athleteMentions.id})`,
+			resultCount: sql<number>`COUNT(DISTINCT ${athleteResults.id})`,
+			honorCount: sql<number>`COUNT(DISTINCT ${athleteHonors.id})`,
+			searchRank: sql<number>`ts_rank(
+				to_tsvector('english', 
+					${athletes.name} || ' ' || 
+					coalesce(${athletes.bio}, '')
+				),
+				to_tsquery('english', ${formattedQuery})
+			)`,
+		})
+		.from(athletes)
+		.leftJoin(athleteMentions, eq(athletes.id, athleteMentions.athleteId))
+		.leftJoin(athleteResults, eq(athletes.id, athleteResults.athleteId))
+		.leftJoin(athleteHonors, eq(athletes.id, athleteHonors.athleteId))
+		.where(
+			sql`to_tsvector('english', 
+				${athletes.name} || ' ' || 
+				coalesce(${athletes.bio}, '')
+			) @@ to_tsquery('english', ${formattedQuery})`,
+		)
+		.groupBy(athletes.id)
+		.orderBy(
+			desc(
+				sql`
+					(${sql.raw("searchRank")} * 0.4) + 
+					(log(COUNT(DISTINCT ${athleteMentions.id}) + 1) * 0.3) +
+					(log(COUNT(DISTINCT ${athleteResults.id}) + COUNT(DISTINCT ${
+						athleteHonors.id
+					}) + 1) * 0.3)
+				`,
+			),
+		)
+		.limit(limit);
+}

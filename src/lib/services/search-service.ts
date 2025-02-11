@@ -54,6 +54,7 @@ export async function globalSearch(
 				thumbnailUrl: videos.thumbnailUrl,
 				publishedAt: videos.publishedAt,
 				channelId: videos.channelId,
+				viewCount: videos.viewCount,
 			},
 			channel: channels,
 		})
@@ -62,10 +63,21 @@ export async function globalSearch(
 		.where(
 			sql`to_tsvector('english', ${videos.title} || ' ' || coalesce(regexp_replace(${videos.description}, '<[^>]*>', '', 'g'), '')) @@ to_tsquery('english', ${formattedQuery})`,
 		)
-		.orderBy(desc(videos.publishedAt))
+		.orderBy(
+			desc(
+				sql`
+					(log(CAST(NULLIF(${videos.viewCount}, '0') AS INTEGER) + 1) * 0.25) + 
+					(pow(0.95, extract(days from now() - ${videos.publishedAt})) * 0.6) + 
+					(ts_rank(
+						to_tsvector('english', ${videos.title} || ' ' || coalesce(regexp_replace(${videos.description}, '<[^>]*>', '', 'g'), '')),
+						to_tsquery('english', ${formattedQuery})
+					) * 0.15)
+				`,
+			),
+		)
 		.limit(limit);
 
-	// Search podcasts
+	// Search podcasts with improved scoring
 	const podcastResults = await db
 		.select({
 			id: podcasts.id,
@@ -79,10 +91,20 @@ export async function globalSearch(
 		.where(
 			sql`to_tsvector('english', ${podcasts.title} || ' ' || coalesce(substring(regexp_replace(${podcasts.description}, '<[^>]*>', '', 'g'), 1, 300), '')) @@ to_tsquery('english', ${formattedQuery})`,
 		)
-		.orderBy(desc(podcasts.lastBuildDate))
+		.orderBy(
+			desc(
+				sql`
+					(pow(0.95, extract(days from now() - ${podcasts.lastBuildDate})) * 0.7) + 
+					(ts_rank(
+						to_tsvector('english', ${podcasts.title} || ' ' || coalesce(regexp_replace(${podcasts.description}, '<[^>]*>', '', 'g'), '')),
+						to_tsquery('english', ${formattedQuery})
+					) * 0.3)
+				`,
+			),
+		)
 		.limit(limit);
 
-	// Search episodes
+	// Search episodes with improved scoring
 	const episodeResults = await db
 		.select({
 			episode: {
@@ -101,7 +123,17 @@ export async function globalSearch(
 		.where(
 			sql`to_tsvector('english', ${episodes.title} || ' ' || coalesce(substring(regexp_replace(${episodes.content}, '<[^>]*>', '', 'g'), 1, 300), '')) @@ to_tsquery('english', ${formattedQuery})`,
 		)
-		.orderBy(desc(episodes.pubDate))
+		.orderBy(
+			desc(
+				sql`
+					(pow(0.95, extract(days from now() - ${episodes.pubDate})) * 0.7) + 
+					(ts_rank(
+						to_tsvector('english', ${episodes.title} || ' ' || coalesce(regexp_replace(${episodes.content}, '<[^>]*>', '', 'g'), '')),
+						to_tsquery('english', ${formattedQuery})
+					) * 0.3)
+				`,
+			),
+		)
 		.limit(limit);
 
 	// Format video results

@@ -648,11 +648,11 @@ export async function getFilteredVideos({
 			)`
 		: sql`1.0`;
 
-	// Combine scores with weights - prioritize recency (0.6) over views (0.2)
+	// Combine scores with weights - prioritize recency (0.7) over views (0.15) and search (0.15)
 	const finalScore = sql`
-		(${viewScore} * 0.2) + 
-		(1.0 / (${recencyScore} + 1) * 0.6) + 
-		(${searchScore} * 0.2)
+		(${viewScore} * 0.15) + 
+		(1.0 / (${recencyScore} + 1) * 0.7) + 
+		(${searchScore} * 0.15)
 	`;
 
 	return query.orderBy(desc(finalScore)).limit(limit).offset(offset);

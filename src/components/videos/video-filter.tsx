@@ -66,6 +66,7 @@ export function VideoFilter({ tags, onLoadingChange }: VideoFilterProps) {
 	}, []);
 
 	// Reset loading state when navigation is complete
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		return () => {
 			setIsLoading(false);

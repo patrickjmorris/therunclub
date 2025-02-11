@@ -623,7 +623,8 @@ export async function getFilteredVideos({
 	if (searchQuery) {
 		conditions.push(sql`
 			(
-				to_tsvector('english', coalesce(${videos.title}, '') || ' ' || coalesce(${videos.description}, ''))
+				to_tsvector('english', coalesce(${videos.title}, '') || ' ' || 
+				left(coalesce(${videos.description}, ''), 500))
 			) @@ websearch_to_tsquery('english', ${searchQuery})
 		`);
 	}
@@ -640,16 +641,17 @@ export async function getFilteredVideos({
 	const searchScore = searchQuery
 		? sql`ts_rank(
 				(
-					to_tsvector('english', coalesce(${videos.title}, '') || ' ' || coalesce(${videos.description}, ''))
+					to_tsvector('english', coalesce(${videos.title}, '') || ' ' || 
+					left(coalesce(${videos.description}, ''), 500))
 				),
 				websearch_to_tsquery('english', ${searchQuery})
 			)`
 		: sql`1.0`;
 
-	// Combine scores with weights
+	// Combine scores with weights - prioritize recency (0.6) over views (0.2)
 	const finalScore = sql`
-		(${viewScore} * 0.4) + 
-		(1.0 / (${recencyScore} + 1) * 0.4) + 
+		(${viewScore} * 0.2) + 
+		(1.0 / (${recencyScore} + 1) * 0.6) + 
 		(${searchScore} * 0.2)
 	`;
 

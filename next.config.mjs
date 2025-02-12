@@ -317,6 +317,8 @@ const nextConfig = {
 			allowedOrigins: ["therunclub.xyz"],
 			bodySizeLimit: "3mb",
 		},
+		reactCompiler: true,
+		ppr: "incremental",
 	},
 };
 

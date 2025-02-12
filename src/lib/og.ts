@@ -1,4 +1,3 @@
-import { parse } from "node-html-parser";
 import { getLinkPreview } from "link-preview-js";
 
 const HEADERS = {

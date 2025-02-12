@@ -13,7 +13,6 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({ videoId, className, title }: VideoPlayerProps) {
-	const [isLoading, setIsLoading] = useState(true);
 	const [isMounted, setIsMounted] = useState(false);
 
 	useEffect(() => {
@@ -31,24 +30,16 @@ export function VideoPlayer({ videoId, className, title }: VideoPlayerProps) {
 	}
 
 	return (
-		<div className={cn("relative", className)}>
+		<div className={cn("relative [&_lite-youtube]:!max-w-none", className)}>
 			<AspectRatio ratio={16 / 9}>
-				{isLoading && <Skeleton className="absolute inset-0 z-10 bg-muted" />}
-				<iframe
-					src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
-					title={title || "YouTube video player"}
-					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-					allowFullScreen
-					className="absolute inset-0 h-full w-full"
-					onLoad={() => setIsLoading(false)}
-					loading="lazy"
-				/>
-				{/* <YouTubeEmbed
-					// className="absolute inset-0 h-full w-full"
-					// onLoad={() => setIsLoading(false)}
-					videoid={videoId}
-					style="position: absolute; inset: 0px; z-index: 10; height: 100%; width: 100%;"
-				/> */}
+				<div className="absolute inset-0 h-full w-full">
+					<YouTubeEmbed
+						videoid={videoId}
+						params="rel=0"
+						playlabel={title || "Play YouTube video"}
+						style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; max-width: none;"
+					/>
+				</div>
 			</AspectRatio>
 		</div>
 	);

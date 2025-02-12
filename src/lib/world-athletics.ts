@@ -1,7 +1,56 @@
-import { GraphQLClient } from "graphql-request";
+const WORLD_ATHLETICS_API = process.env.WORLD_ATHLETICS_API_URL as string;
 
-const WORLD_ATHLETICS_API =
-	"https://graphql-prod-4701.prod.aws.worldathletics.org/graphql";
+if (!WORLD_ATHLETICS_API) {
+	throw new Error("WORLD_ATHLETICS_API_URL is not defined");
+}
+
+const headers = {
+	"x-api-key": process.env.WORLD_ATHLETICS_API_KEY,
+	Accept: "application/json",
+	"Accept-Language": "en-US,en;q=0.9",
+	"Cache-Control": "no-cache",
+	Origin: "https://worldathletics.org",
+	Referer: "https://worldathletics.org/",
+	"User-Agent":
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+	accept: "*/*",
+	"content-type": "application/json",
+	"sec-ch-ua":
+		'"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+	"sec-ch-ua-mobile": "?0",
+	"sec-ch-ua-platform": '"macOS"',
+	"x-amz-user-agent": "aws-amplify/3.0.2",
+};
+
+// Create a reusable GraphQL client function to replace worldAthleticsClient
+export async function gqlClient<T>(
+	query: string,
+	variables?: Record<string, unknown>,
+): Promise<T> {
+	const response = await fetch(WORLD_ATHLETICS_API, {
+		method: "POST",
+		headers: {
+			...headers,
+			"x-api-key": headers["x-api-key"] ?? "",
+		},
+		body: JSON.stringify({ query, variables }),
+	});
+
+	if (!response.ok) {
+		throw new Error(`HTTP error! status: ${response.status}`);
+	}
+
+	const { data } = await response.json();
+	return data;
+}
+
+// Update the existing gqlRequest to use the new gqlClient
+async function gqlRequest<T>(
+	query: string,
+	variables?: Record<string, unknown>,
+): Promise<T> {
+	return gqlClient<T>(query, variables);
+}
 
 interface AthleteResult {
 	id: string;
@@ -64,26 +113,6 @@ interface Athlete {
 	honours?: Honor[];
 }
 
-export const worldAthleticsClient = new GraphQLClient(WORLD_ATHLETICS_API, {
-	headers: {
-		"x-api-key": "da2-igt3xszkrbgmhh7smwzz3sihri",
-		Accept: "application/json",
-		"Accept-Language": "en-US,en;q=0.9",
-		"Cache-Control": "no-cache",
-		Origin: "https://worldathletics.org",
-		Referer: "https://worldathletics.org/",
-		"User-Agent":
-			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-		accept: "*/*",
-		"content-type": "application/json",
-		"sec-ch-ua":
-			'"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-		"sec-ch-ua-mobile": "?0",
-		"sec-ch-ua-platform": '"macOS"',
-		"x-amz-user-agent": "aws-amplify/3.0.2",
-	},
-});
-
 function capitalizeWithHyphens(name: string): string {
 	return name
 		.toLowerCase()
@@ -100,57 +129,55 @@ function formatName(firstName: string, familyName: string): string {
 
 export async function getAthleteById(id: string): Promise<Athlete | null> {
 	const query = `
-    query GetSingleCompetitor($getSingleCompetitorId: Int) {
-      getSingleCompetitor(id: $getSingleCompetitorId) {
-        _id
-        basicData {
-          birthDate
-          countryCode
-          countryFullName
-          familyName
-          givenName
-        }
-        honours {
-          categoryName
-          results {
-            competition
-            mark
-            place
-            discipline
-          }
-        }
-        personalBests {
-          results {
-            date
-            discipline
-            eventName
-            records
-            mark
-            venue
-          }
-          withRecords
-        }
-      }
-    }
-  `;
+		query GetSingleCompetitor($getSingleCompetitorId: Int) {
+			getSingleCompetitor(id: $getSingleCompetitorId) {
+				_id
+				basicData {
+					birthDate
+					countryCode
+					countryFullName
+					familyName
+					givenName
+				}
+				honours {
+					categoryName
+					results {
+						competition
+						mark
+						place
+						discipline
+					}
+				}
+				personalBests {
+					results {
+						date
+						discipline
+						eventName
+						records
+						mark
+						venue
+					}
+					withRecords
+				}
+			}
+		}
+	`;
 
 	const MAX_RETRIES = 3;
 	let retries = 0;
 
 	while (retries < MAX_RETRIES) {
 		try {
-			const response = await worldAthleticsClient.request<CompetitorResponse>(
-				query,
-				{ getSingleCompetitorId: parseInt(id, 10) },
-			);
+			const data = await gqlRequest<CompetitorResponse>(query, {
+				getSingleCompetitorId: parseInt(id, 10),
+			});
 
-			if (!response.getSingleCompetitor) return null;
+			if (!data.getSingleCompetitor) return null;
 
-			const { basicData, personalBests, honours } =
-				response.getSingleCompetitor;
+			const { basicData, personalBests, honours } = data.getSingleCompetitor;
 
 			return {
-				id: response.getSingleCompetitor._id,
+				id: data.getSingleCompetitor._id,
 				name: formatName(basicData.givenName, basicData.familyName),
 				countryCode: basicData.countryCode,
 				countryName: basicData.countryFullName,

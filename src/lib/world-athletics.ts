@@ -22,7 +22,8 @@ const headers = {
 	"x-amz-user-agent": "aws-amplify/3.0.2",
 };
 
-async function gqlRequest<T>(
+// Create a reusable GraphQL client function to replace worldAthleticsClient
+export async function gqlClient<T>(
 	query: string,
 	variables?: Record<string, unknown>,
 ): Promise<T> {
@@ -41,6 +42,14 @@ async function gqlRequest<T>(
 
 	const { data } = await response.json();
 	return data;
+}
+
+// Update the existing gqlRequest to use the new gqlClient
+async function gqlRequest<T>(
+	query: string,
+	variables?: Record<string, unknown>,
+): Promise<T> {
+	return gqlClient<T>(query, variables);
 }
 
 interface AthleteResult {

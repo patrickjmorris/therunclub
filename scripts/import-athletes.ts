@@ -1,6 +1,6 @@
 import { db } from "../src/db/client";
 import { athletes, athleteResults, athleteHonors } from "@/db/schema";
-import { getAthleteById, worldAthleticsClient } from "@/lib/world-athletics";
+import { getAthleteById, gqlClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
 import { like, or, sql, and, eq } from "drizzle-orm";
 import { openai } from "../src/lib/openai";
@@ -102,6 +102,22 @@ interface CompetitorResponse {
 	} | null;
 }
 
+interface AthleteSearchChild {
+	athleteId: number;
+}
+
+interface AthleteSearchAthlete {
+	children: AthleteSearchChild[];
+}
+
+interface LeadingAthletesEvent {
+	results: Array<{
+		competitor: {
+			id: number;
+		};
+	}>;
+}
+
 function parseBirthDate(dateStr: string | undefined | null): string | null {
 	if (!dateStr) return null;
 
@@ -132,12 +148,11 @@ async function getAthleteIds(): Promise<string[]> {
 	`;
 
 	try {
-		const response =
-			await worldAthleticsClient.request<AthleteSearchResponse>(query);
+		const response = await gqlClient<AthleteSearchResponse>(query);
 		// Flatten the nested structure and convert numbers to strings
 		return response.getAthleteRepresentativeAthleteSearch.athletes
-			.flatMap((athlete) => athlete.children)
-			.map((child) => child.athleteId.toString());
+			.flatMap((athlete: AthleteSearchAthlete) => athlete.children)
+			.map((child: AthleteSearchChild) => child.athleteId.toString());
 	} catch (error) {
 		console.error("Error fetching athlete IDs:", error);
 		return [];
@@ -160,16 +175,17 @@ async function getAthleteIdsByCountry(countryCode: string): Promise<string[]> {
 	`;
 
 	try {
-		const response =
-			await worldAthleticsClient.request<LeadingAthletesResponse>(query, {
-				all: true,
-				preferredCountry: countryCode,
-			});
+		const response = await gqlClient<LeadingAthletesResponse>(query, {
+			all: true,
+			preferredCountry: countryCode,
+		});
 
 		// Flatten the nested structure and convert numbers to strings
 		return response.getLeadingAthletes.eventResults
-			.flatMap((event) => event.results)
-			.map((result) => result.competitor.id.toString());
+			.flatMap((event: LeadingAthletesEvent) => event.results)
+			.map((result: { competitor: { id: number } }) =>
+				result.competitor.id.toString(),
+			);
 	} catch (error) {
 		console.error(`Error fetching athletes for country ${countryCode}:`, error);
 		return [];

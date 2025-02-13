@@ -168,10 +168,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
 					<h1 className="text-2xl font-bold">{videoData.title}</h1>
 
 					{/* Channel and date info */}
-					<div className="mt-2 flex items-center gap-2 text-muted-foreground">
+					<div className="mt-2 flex items-center gap-2">
 						<Link
 							href={`/videos/channels/${videoData.channelId}`}
-							className="hover:text-foreground transition-colors"
+							className="hover:text-foreground transition-colors font-bold"
 						>
 							{videoData.channelTitle}
 						</Link>

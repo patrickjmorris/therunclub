@@ -3,14 +3,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateVideos } from "@/lib/services/video-service";
 import { updatePodcastData } from "@/lib/podcast-service";
 import { updateChannelColors } from "../../../../scripts/update-channel-colors";
+import {
+	importAthleteData,
+	processEpisodeAthletes,
+	updateExistingAthletes,
+} from "@/lib/services/athlete-service";
+import { db } from "@/db/client";
+import { episodes } from "@/db/schema";
+import { and, sql, not, eq, desc } from "drizzle-orm";
 
-type ContentType = "videos" | "podcasts" | "channel-colors" | "channel-videos";
+type ContentType =
+	| "videos"
+	| "podcasts"
+	| "channel-colors"
+	| "channel-videos"
+	| "athletes"
+	| "athlete-detection";
 
 const isUpdating = {
 	videos: false,
 	podcasts: false,
 	"channel-colors": false,
 	"channel-videos": false,
+	athletes: false,
+	"athlete-detection": false,
 };
 
 const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -228,6 +244,93 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 			});
 		}
 
+		if (type === "athletes") {
+			try {
+				const limit = parseInt(
+					request.nextUrl.searchParams.get("limit") || "50",
+					10,
+				);
+				const updateMode = request.nextUrl.searchParams.get("mode");
+
+				const results =
+					updateMode === "existing"
+						? await updateExistingAthletes(limit)
+						: await importAthleteData(limit);
+
+				return NextResponse.json({
+					message: "Athletes updated successfully",
+					results,
+				});
+			} catch (error) {
+				console.error("Error updating athletes:", error);
+				return NextResponse.json(
+					{
+						message: "Error updating athletes",
+						error: error instanceof Error ? error.message : String(error),
+					},
+					{ status: 500 },
+				);
+			}
+		}
+
+		if (type === "athlete-detection") {
+			try {
+				// Get episodes updated in the last 24 hours by default
+				const minHoursSinceUpdate = parseInt(
+					request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
+					10,
+				);
+				const batchSize = parseInt(
+					request.nextUrl.searchParams.get("batchSize") || "10",
+					10,
+				);
+
+				// Query for recently updated episodes
+				const recentEpisodes = await db
+					.select({ id: episodes.id })
+					.from(episodes)
+					.where(
+						and(
+							sql`${episodes.updatedAt} >= NOW() - (${minHoursSinceUpdate} * INTERVAL '1 hour')`,
+							not(eq(episodes.athleteMentionsProcessed, true)),
+						),
+					)
+					.orderBy(desc(episodes.updatedAt))
+					.limit(batchSize);
+
+				const results = {
+					processed: 0,
+					errors: 0,
+					totalEpisodes: recentEpisodes.length,
+				};
+
+				// Process each episode
+				for (const episode of recentEpisodes) {
+					try {
+						await processEpisodeAthletes(episode.id);
+						results.processed++;
+					} catch (error) {
+						console.error(`Error processing episode ${episode.id}:`, error);
+						results.errors++;
+					}
+				}
+
+				return NextResponse.json({
+					message: "Athlete detection completed successfully",
+					results,
+				});
+			} catch (error) {
+				console.error("Error in athlete detection:", error);
+				return NextResponse.json(
+					{
+						message: "Error in athlete detection",
+						error: error instanceof Error ? error.message : String(error),
+					},
+					{ status: 500 },
+				);
+			}
+		}
+
 		return NextResponse.json(
 			{ message: "Invalid content type" },
 			{ status: 400 },
@@ -253,12 +356,19 @@ export async function GET(request: NextRequest) {
 
 	if (
 		!type ||
-		!["videos", "podcasts", "channel-colors", "channel-videos"].includes(type)
+		![
+			"videos",
+			"podcasts",
+			"channel-colors",
+			"channel-videos",
+			"athletes",
+			"athlete-detection",
+		].includes(type)
 	) {
 		return NextResponse.json(
 			{
 				message:
-					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', or 'channel-videos'",
+					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', 'channel-videos', 'athletes', or 'athlete-detection'",
 			},
 			{ status: 400 },
 		);

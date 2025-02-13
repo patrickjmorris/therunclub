@@ -1,47 +1,90 @@
+// Default to the known working URL if environment variable is not set
 const WORLD_ATHLETICS_API = process.env.WORLD_ATHLETICS_API_URL as string;
 
-if (!WORLD_ATHLETICS_API) {
-	throw new Error("WORLD_ATHLETICS_API_URL is not defined");
+if (!process.env.WORLD_ATHLETICS_API_KEY) {
+	throw new Error("WORLD_ATHLETICS_API_KEY is not defined");
 }
 
+// Log the API URL being used during initialization
+// console.log("[World Athletics API] Using API URL:", WORLD_ATHLETICS_API);
+
 const headers = {
-	"x-api-key": process.env.WORLD_ATHLETICS_API_KEY,
-	Accept: "application/json",
-	"Accept-Language": "en-US,en;q=0.9",
+	Accept: "*/*",
+	"Accept-Language": "en-US,en;q=0.9,da;q=0.8",
 	"Cache-Control": "no-cache",
+	Connection: "keep-alive",
 	Origin: "https://worldathletics.org",
+	Pragma: "no-cache",
 	Referer: "https://worldathletics.org/",
+	"Sec-Fetch-Dest": "empty",
+	"Sec-Fetch-Mode": "cors",
+	"Sec-Fetch-Site": "same-site",
 	"User-Agent":
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-	accept: "*/*",
+		"Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
 	"content-type": "application/json",
-	"sec-ch-ua":
-		'"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-	"sec-ch-ua-mobile": "?0",
-	"sec-ch-ua-platform": '"macOS"',
 	"x-amz-user-agent": "aws-amplify/3.0.2",
+	"x-api-key": process.env.WORLD_ATHLETICS_API_KEY || "",
 };
+
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 // Create a reusable GraphQL client function to replace worldAthleticsClient
 export async function gqlClient<T>(
 	query: string,
 	variables?: Record<string, unknown>,
 ): Promise<T> {
-	const response = await fetch(WORLD_ATHLETICS_API, {
-		method: "POST",
-		headers: {
-			...headers,
-			"x-api-key": headers["x-api-key"] ?? "",
-		},
-		body: JSON.stringify({ query, variables }),
-	});
+	let lastError: Error | null = null;
 
-	if (!response.ok) {
-		throw new Error(`HTTP error! status: ${response.status}`);
+	for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+		try {
+			console.log("[World Athletics API] Attempt", attempt, "of", MAX_RETRIES);
+			console.log("[World Athletics API] URL:", WORLD_ATHLETICS_API);
+			console.log(`[World Athletics API] Query: ${query.slice(0, 100)}...`);
+			console.log("[World Athletics API] Variables:", variables);
+
+			const response = await fetch(WORLD_ATHLETICS_API, {
+				method: "POST",
+				headers,
+				body: JSON.stringify({ query, variables }),
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(
+					`HTTP error! status: ${response.status}, body: ${errorText}`,
+				);
+			}
+
+			const json = await response.json();
+
+			if (json.errors) {
+				console.error("[World Athletics API] GraphQL Errors:", json.errors);
+				throw new Error(`GraphQL Error: ${JSON.stringify(json.errors)}`);
+			}
+
+			console.log("[World Athletics API] Success on attempt", attempt);
+			return json.data;
+		} catch (error) {
+			lastError = error as Error;
+			console.error(
+				"[World Athletics API] Attempt",
+				attempt,
+				"of",
+				MAX_RETRIES,
+				"failed:",
+				error,
+			);
+
+			if (attempt < MAX_RETRIES) {
+				const delay = INITIAL_RETRY_DELAY * 2 ** (attempt - 1);
+				console.log("[World Athletics API] Retrying in", delay, "ms");
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
+		}
 	}
 
-	const { data } = await response.json();
-	return data;
+	throw lastError || new Error("All retry attempts failed");
 }
 
 // Update the existing gqlRequest to use the new gqlClient
@@ -129,7 +172,7 @@ function formatName(firstName: string, familyName: string): string {
 
 export async function getAthleteById(id: string): Promise<Athlete | null> {
 	const query = `
-		query GetSingleCompetitor($getSingleCompetitorId: Int) {
+		query GetSingleCompetitor($getSingleCompetitorId: Int!) {
 			getSingleCompetitor(id: $getSingleCompetitorId) {
 				_id
 				basicData {

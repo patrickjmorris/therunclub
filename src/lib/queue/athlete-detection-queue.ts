@@ -47,7 +47,7 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 let lastCacheUpdate = 0;
 
 // Maximum text length to process (100KB)
-const MAX_TEXT_LENGTH = 100 * 1024;
+const MAX_TEXT_LENGTH = 1024;
 
 // Chunk size for fuzzy matching
 const FUZZY_CHUNK_SIZE = 1000;

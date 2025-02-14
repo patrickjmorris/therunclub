@@ -28,36 +28,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
-          cache: 'npm'
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Setup test database
-        run: |
-          npm run db:migrate
+        run: bun run db:migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
 
       - name: Run unit tests
-        run: npm run test
+        run: bun test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
 
       - name: Run integration tests
-        run: npm run test:integration
+        run: bun test integration
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: bunx playwright install --with-deps
 
       - name: Run E2E tests
-        run: npm run test:e2e
+        run: bun test:e2e
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
 

@@ -3,10 +3,15 @@ import { athletes, athleteMentions, episodes, type Episode } from "@/db/schema";
 import { eq, isNull, desc, and, sql, not } from "drizzle-orm";
 import { createFuzzyMatcher } from "./fuzzy-matcher";
 
-interface DetectedAthlete {
+export interface DetectedAthlete {
 	athleteId: string;
 	confidence: number;
 	context: string;
+}
+
+export interface ProcessEpisodeResult {
+	titleMatches: number;
+	contentMatches: number;
 }
 
 interface AthleteRecord {

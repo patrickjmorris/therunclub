@@ -6,7 +6,7 @@
 	"scripts": {
 		"docker:up": "docker-compose up -d",
 		"docker:down": "docker-compose down",
-		"db:migrate": "bunx drizzle-kit push --config=drizzle-dev.config.ts",
+		"db:migrate": "drizzle-kit push:pg",
 		"db:generate": "bunx drizzle-kit generate --config=drizzle-dev.config.ts",
 		"db:migrate:prod": "NODE_ENV=production bunx drizzle-kit push --config=drizzle-prod.config.ts --verbose",
 		"db:reset": "npx tsx src/db/reset.ts",
@@ -28,7 +28,15 @@
 		"check:supabase": "bun run scripts/check-supabase-config.ts",
 		"process:episode": "NODE_ENV=production bun run scripts/process-episode.ts",
 		"clear:queue": "bun run scripts/clear-queue.ts",
-		"athlete-detection": "concurrently \"bun run worker\" \"bun run queue\""
+		"athlete-detection": "concurrently \"bun run worker\" \"bun run queue\"",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:integration": "vitest integration",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui",
+		"test:e2e:debug": "playwright test --debug",
+		"test:e2e:report": "playwright show-report"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {
@@ -113,11 +121,19 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.5.3",
+		"@playwright/test": "^1.50.1",
+		"@testing-library/dom": "^10.4.0",
+		"@testing-library/react": "^16.2.0",
 		"@types/dompurify": "^3.0.5",
 		"@types/jimp": "^0.2.28",
 		"@types/node-cron": "^3.0.11",
+		"@vitejs/plugin-react": "^4.3.4",
 		"drizzle-kit": "0.28.0",
+		"jsdom": "^26.0.0",
+		"playwright": "^1.50.1",
 		"supabase": "^1.219.2",
-		"ts-node": "^10.9.2"
+		"ts-node": "^10.9.2",
+		"vite-tsconfig-paths": "^5.1.4",
+		"vitest": "^3.0.5"
 	}
 }

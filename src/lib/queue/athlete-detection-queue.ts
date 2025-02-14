@@ -1,61 +1,33 @@
 import Queue from "bull";
-import { createClient } from "@supabase/supabase-js";
 import { createFuzzyMatcher } from "../fuzzy-matcher";
 import { config } from "dotenv";
+import { db } from "@/db/client";
+import { athletes, episodes, athleteMentions } from "@/db/schema";
+import { eq, gt, desc, and, isNull, gte } from "drizzle-orm";
 
 // Load environment variables
 config();
 
-// Check required environment variables
-if (
-	!process.env.NEXT_PUBLIC_SUPABASE_URL ||
-	!process.env.SUPABASE_SERVICE_ROLE_KEY
-) {
-	throw new Error("Missing required Supabase environment variables");
-}
+// Create a new queue instance with better error handling
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+console.log("[Athlete Detection] Using Redis URL:", REDIS_URL);
 
-const supabase = createClient(
-	process.env.NEXT_PUBLIC_SUPABASE_URL,
-	process.env.SUPABASE_SERVICE_ROLE_KEY,
-	{
-		auth: {
-			autoRefreshToken: false,
-			persistSession: false,
+const athleteDetectionQueue = new Queue("athlete-detection", REDIS_URL, {
+	defaultJobOptions: {
+		attempts: 3,
+		backoff: {
+			type: "exponential",
+			delay: 1000,
 		},
+		removeOnComplete: true,
+		removeOnFail: false,
 	},
-);
-
-// Test the connection
-async function testSupabaseConnection() {
-	try {
-		console.log("Testing connection to Supabase...");
-		const { data, error } = await supabase
-			.from("episodes")
-			.select("id")
-			.limit(1);
-		if (error) {
-			console.error("Supabase connection test failed:", error);
-			console.error("Error details:", {
-				code: error.code,
-				message: error.message,
-				details: error.details,
-				hint: error.hint,
-			});
-			return false;
-		}
-		console.log("✅ Supabase connection test successful");
-		return true;
-	} catch (error) {
-		console.error("Supabase connection test threw an error:", error);
-		return false;
-	}
-}
-
-// Create a new queue instance
-const athleteDetectionQueue = new Queue(
-	"athlete-detection",
-	process.env.REDIS_URL || "redis://localhost:6379",
-);
+	settings: {
+		lockDuration: 30000, // 30 seconds
+		stalledInterval: 30000, // Check for stalled jobs every 30 seconds
+		maxStalledCount: 1, // Only try to process a stalled job once
+	},
+});
 
 interface DetectedAthlete {
 	athleteId: string;
@@ -63,147 +35,269 @@ interface DetectedAthlete {
 	context: string;
 }
 
-async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
-	console.time("detectAthletes");
+// Cache for athlete data and compiled regex patterns
+interface CachedAthlete {
+	id: string;
+	name: string;
+	pattern: RegExp;
+}
 
-	// Get all athletes from Supabase
-	const { data: allAthletes, error } = await supabase
-		.from("athletes")
-		.select("id, name");
+let athleteCache: Map<string, CachedAthlete> | null = null;
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+let lastCacheUpdate = 0;
 
-	if (error || !allAthletes) {
-		console.error("Error fetching athletes:", error);
-		return [];
+// Maximum text length to process (100KB)
+const MAX_TEXT_LENGTH = 1024;
+
+// Chunk size for fuzzy matching
+const FUZZY_CHUNK_SIZE = 1000;
+
+async function getAthletes() {
+	const now = Date.now();
+
+	// Return cached data if valid
+	if (athleteCache && now - lastCacheUpdate < CACHE_TTL) {
+		return athleteCache;
 	}
 
-	const detectedAthletes: DetectedAthlete[] = [];
-	const athleteMap = new Map(
-		allAthletes.map((athlete) => [athlete.name.toLowerCase(), athlete.id]),
-	);
+	console.log("[Athlete Detection] Refreshing athlete cache...");
 
-	// First try exact matches (faster)
-	console.time("exactMatches");
-	for (const [name, id] of athleteMap.entries()) {
-		const regex = new RegExp(`\\b${name}\\b`, "gi");
-		const matches = Array.from(text.matchAll(regex));
+	// Fetch all athletes in batches to reduce memory usage
+	const BATCH_SIZE = 1000;
+	const athletesMap = new Map<string, CachedAthlete>();
 
-		for (const match of matches) {
-			if (match.index !== undefined) {
-				const start = Math.max(0, match.index - 50);
-				const end = Math.min(text.length, match.index + name.length + 50);
-				const context = text.slice(start, end).toString();
+	let hasMore = true;
+	let lastId = "";
 
-				detectedAthletes.push({
-					athleteId: id,
-					confidence: 1.0,
-					context,
-				});
-			}
+	while (hasMore) {
+		const batch = await db.query.athletes.findMany({
+			columns: {
+				id: true,
+				name: true,
+			},
+			where: gt(athletes.id, lastId),
+			orderBy: athletes.id,
+			limit: BATCH_SIZE,
+		});
+
+		if (!batch || batch.length === 0) {
+			hasMore = false;
+			break;
+		}
+
+		for (const athlete of batch) {
+			const nameLower = athlete.name.toLowerCase();
+			// Pre-compile regex pattern for each athlete
+			athletesMap.set(nameLower, {
+				id: athlete.id,
+				name: athlete.name,
+				pattern: new RegExp(
+					`\\b${athlete.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+					"gi",
+				),
+			});
+		}
+
+		lastId = batch[batch.length - 1].id;
+
+		if (batch.length < BATCH_SIZE) {
+			hasMore = false;
 		}
 	}
-	console.timeEnd("exactMatches");
 
-	// Then try fuzzy matches
-	console.time("fuzzyMatches");
-	const fuzzyMatcher = createFuzzyMatcher(Array.from(athleteMap.keys()));
-	const words = text.split(/\s+/);
+	athleteCache = athletesMap;
+	lastCacheUpdate = now;
 
-	for (let i = 0; i < words.length; i++) {
-		const phrase = words.slice(i, i + 3).join(" ");
-		const matches = fuzzyMatcher.search(phrase);
+	console.log(
+		`[Athlete Detection] Cached ${athletesMap.size} athletes with compiled patterns`,
+	);
+	return athletesMap;
+}
 
-		for (const match of matches) {
-			if (match.score >= 0.8) {
-				const athleteId = athleteMap.get(match.target.toLowerCase());
-				if (athleteId) {
-					const start = Math.max(0, text.indexOf(phrase) - 50);
-					const end = Math.min(
-						text.length,
-						text.indexOf(phrase) + phrase.length + 50,
-					);
-					const context = text.slice(start, end).toString();
+function extractContext(
+	text: string,
+	matchIndex: number,
+	matchLength: number,
+): string {
+	const start = Math.max(0, matchIndex - 50);
+	const end = Math.min(text.length, matchIndex + matchLength + 50);
+	return text.slice(start, end).toString();
+}
 
-					detectedAthletes.push({
-						athleteId,
-						confidence: match.score,
-						context,
-					});
+async function detectAthletes(inputText: string): Promise<DetectedAthlete[]> {
+	console.time("detectAthletes");
+
+	try {
+		// Early return for empty or very long text
+		if (!inputText || inputText.length === 0) {
+			return [];
+		}
+
+		// Truncate very long text
+		const text =
+			inputText.length > MAX_TEXT_LENGTH
+				? inputText.slice(0, MAX_TEXT_LENGTH)
+				: inputText;
+
+		if (inputText.length > MAX_TEXT_LENGTH) {
+			console.log(
+				`[Athlete Detection] Truncating text from ${inputText.length} to ${MAX_TEXT_LENGTH} characters`,
+			);
+		}
+
+		// Get athletes from cache
+		const athleteMap = await getAthletes();
+		const detectedAthletes: DetectedAthlete[] = [];
+
+		// First try exact matches using pre-compiled patterns (faster)
+		console.time("exactMatches");
+		for (const athlete of athleteMap.values()) {
+			const matches = Array.from(text.matchAll(athlete.pattern));
+
+			if (matches.length > 0) {
+				// Take only first 5 matches per athlete to avoid overloading
+				const limitedMatches = matches.slice(0, 5);
+				for (const match of limitedMatches) {
+					if (match.index !== undefined) {
+						detectedAthletes.push({
+							athleteId: athlete.id,
+							confidence: 1.0,
+							context: extractContext(text, match.index, match[0].length),
+						});
+					}
 				}
 			}
 		}
-	}
-	console.timeEnd("fuzzyMatches");
+		console.timeEnd("exactMatches");
 
-	// Remove duplicates, keeping highest confidence match
-	const uniqueAthletes = new Map<string, DetectedAthlete>();
-	for (const athlete of detectedAthletes) {
-		const existing = uniqueAthletes.get(athlete.athleteId);
-		if (!existing || existing.confidence < athlete.confidence) {
-			uniqueAthletes.set(athlete.athleteId, athlete);
+		// If we have exact matches, skip fuzzy matching
+		if (detectedAthletes.length > 0) {
+			console.log(
+				`[Athlete Detection] Found ${detectedAthletes.length} exact matches, skipping fuzzy matching`,
+			);
+			return Array.from(
+				new Map(detectedAthletes.map((a) => [a.athleteId, a])).values(),
+			);
 		}
-	}
 
-	console.timeEnd("detectAthletes");
-	return Array.from(uniqueAthletes.values());
+		// Then try fuzzy matches in chunks
+		console.time("fuzzyMatches");
+		const fuzzyMatcher = createFuzzyMatcher(Array.from(athleteMap.keys()));
+		const words = text.split(/\s+/);
+
+		// Process in chunks of 3 words at a time, with overlap
+		for (let i = 0; i < words.length; i += 2) {
+			const phrase = words.slice(i, i + 3).join(" ");
+			const matches = fuzzyMatcher.search(phrase);
+
+			for (const match of matches) {
+				if (match.score >= 0.85) {
+					// Increased threshold for better accuracy
+					const athlete = athleteMap.get(match.target.toLowerCase());
+					if (athlete) {
+						const phraseIndex = text.indexOf(phrase);
+						if (phraseIndex !== -1) {
+							detectedAthletes.push({
+								athleteId: athlete.id,
+								confidence: match.score,
+								context: extractContext(text, phraseIndex, phrase.length),
+							});
+						}
+					}
+				}
+			}
+
+			// Early return if we've found enough matches
+			if (detectedAthletes.length >= 50) {
+				console.log(
+					"[Athlete Detection] Reached maximum matches, stopping early",
+				);
+				break;
+			}
+		}
+		console.timeEnd("fuzzyMatches");
+
+		// Remove duplicates, keeping highest confidence match
+		const uniqueAthletes = new Map<string, DetectedAthlete>();
+		for (const athlete of detectedAthletes) {
+			const existing = uniqueAthletes.get(athlete.athleteId);
+			if (!existing || existing.confidence < athlete.confidence) {
+				uniqueAthletes.set(athlete.athleteId, athlete);
+			}
+		}
+
+		console.timeEnd("detectAthletes");
+		return Array.from(uniqueAthletes.values());
+	} catch (error) {
+		console.error("[Athlete Detection] Error detecting athletes:", error);
+		throw error;
+	}
 }
 
-// Process jobs one at a time
+// Process jobs with batched database operations
 athleteDetectionQueue.process(async (job) => {
 	const { episodeId } = job.data;
 	console.time(`processEpisode:${episodeId}`);
 
 	try {
-		// Get episode data from Supabase
-		const { data: episode, error: episodeError } = await supabase
-			.from("episodes")
-			.select("id, title, content")
-			.eq("id", episodeId)
-			.single();
+		console.log(`[Athlete Detection] Processing episode: ${episodeId}`);
 
-		if (episodeError || !episode) {
+		// Get episode data using Drizzle
+		const episode = await db.query.episodes.findFirst({
+			where: eq(episodes.id, episodeId),
+			columns: {
+				id: true,
+				title: true,
+				content: true,
+			},
+		});
+
+		if (!episode) {
+			console.error("[Athlete Detection] Episode not found in database:", {
+				episodeId,
+			});
 			throw new Error(`Episode not found: ${episodeId}`);
 		}
 
-		// Process title
+		console.log("[Athlete Detection] Successfully fetched episode:", {
+			id: episode.id,
+			titleLength: episode.title?.length || 0,
+			hasContent: !!episode.content,
+		});
+
+		// Process title and content
 		const titleAthletes = await detectAthletes(episode.title);
-		for (const athlete of titleAthletes) {
-			const { error } = await supabase.from("athlete_mentions").upsert({
+		const contentAthletes = episode.content
+			? await detectAthletes(episode.content)
+			: [];
+
+		// Batch insert all mentions with proper typing
+		const mentions = [
+			...titleAthletes.map((athlete) => ({
 				athleteId: athlete.athleteId,
 				episodeId: episode.id,
-				source: "title",
+				source: "title" as const,
 				confidence: athlete.confidence.toString(),
 				context: athlete.context,
-			});
+			})),
+			...contentAthletes.map((athlete) => ({
+				athleteId: athlete.athleteId,
+				episodeId: episode.id,
+				source: "description" as const,
+				confidence: athlete.confidence.toString(),
+				context: athlete.context,
+			})),
+		];
 
-			if (error) {
-				console.error("Error inserting title mention:", error);
-			}
-		}
-
-		// Process description/content if available
-		let contentAthletes: DetectedAthlete[] = [];
-		if (episode.content) {
-			contentAthletes = await detectAthletes(episode.content);
-			for (const athlete of contentAthletes) {
-				const { error } = await supabase.from("athlete_mentions").upsert({
-					athleteId: athlete.athleteId,
-					episodeId: episode.id,
-					source: "description",
-					confidence: athlete.confidence.toString(),
-					context: athlete.context,
-				});
-
-				if (error) {
-					console.error("Error inserting content mention:", error);
-				}
-			}
+		if (mentions.length > 0) {
+			await db.insert(athleteMentions).values(mentions);
 		}
 
 		// Mark episode as processed
-		await supabase
-			.from("episodes")
-			.update({ athleteMentionsProcessed: true })
-			.eq("id", episodeId);
+		await db
+			.update(episodes)
+			.set({ athleteMentionsProcessed: true })
+			.where(eq(episodes.id, episodeId));
 
 		console.timeEnd(`processEpisode:${episodeId}`);
 		return {
@@ -213,20 +307,39 @@ athleteDetectionQueue.process(async (job) => {
 		};
 	} catch (error) {
 		console.error(`Error processing episode ${episodeId}:`, error);
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "Unknown error",
-		};
+		throw error;
 	}
 });
 
-// Add monitoring
+// Add more detailed queue event handlers
+athleteDetectionQueue.on("error", (error) => {
+	console.error("[Athlete Detection] Queue error:", error);
+});
+
+athleteDetectionQueue.on("waiting", (jobId) => {
+	console.log(`[Athlete Detection] Job ${jobId} is waiting`);
+});
+
+athleteDetectionQueue.on("active", (job) => {
+	console.log(
+		`[Athlete Detection] Processing job ${job.id} for episode ${job.data.episodeId}`,
+	);
+});
+
+athleteDetectionQueue.on("stalled", (job) => {
+	console.warn(`[Athlete Detection] Job ${job.id} has stalled`);
+});
+
 athleteDetectionQueue.on("completed", (job, result) => {
-	console.log(`✅ Processed episode ${job.data.episodeId}:`, result);
+	console.log(`[Athlete Detection] ✅ Job ${job.id} completed:`, result);
 });
 
 athleteDetectionQueue.on("failed", (job, error) => {
-	console.error(`❌ Failed to process episode ${job.data.episodeId}:`, error);
+	console.error(`[Athlete Detection] ❌ Job ${job.id} failed:`, {
+		episodeId: job.data.episodeId,
+		error: error.message,
+		stack: error.stack,
+	});
 });
 
 /**
@@ -235,41 +348,43 @@ athleteDetectionQueue.on("failed", (job, error) => {
 export async function queueUnprocessedEpisodes() {
 	console.log("\nQueuing unprocessed episodes...");
 
-	// Test connection first
-	const isConnected = await testSupabaseConnection();
-	if (!isConnected) {
-		console.error("Cannot proceed: Supabase connection test failed");
-		return { queued: 0 };
-	}
+	// Calculate date 2 weeks ago
+	const twoWeeksAgo = new Date();
+	twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-	// Get all unprocessed episodes from Supabase
-	const { data: unprocessedEpisodes, error } = await supabase
-		.from("episodes")
-		.select("id, title")
-		.is("athleteMentionsProcessed", null)
-		.order("pubDate", { ascending: false });
+	const MAX_QUEUE_SIZE = 100; // Limit number of episodes to process
 
-	if (error) {
-		console.error("Error fetching unprocessed episodes:", error);
-		console.error("Error details:", {
-			code: error.code,
-			message: error.message,
-			details: error.details,
-			hint: error.hint,
-		});
-		return { queued: 0 };
-	}
+	// Get recent unprocessed episodes using Drizzle
+	const unprocessedEpisodes = await db.query.episodes.findMany({
+		columns: {
+			id: true,
+			title: true,
+			pubDate: true,
+		},
+		where: and(
+			isNull(episodes.athleteMentionsProcessed),
+			gte(episodes.pubDate, twoWeeksAgo),
+		),
+		orderBy: desc(episodes.pubDate),
+		limit: MAX_QUEUE_SIZE,
+	});
 
 	console.log(
-		`Found ${unprocessedEpisodes?.length || 0} episodes to process\n`,
+		`Found ${unprocessedEpisodes?.length || 0} recent episodes to process\n`,
+		`(Limited to last 2 weeks, max ${MAX_QUEUE_SIZE} episodes)`,
 	);
 
-	// Add each episode to the queue
+	// Add episodes to the queue with priority based on publish date
 	let queued = 0;
-	for (const episode of unprocessedEpisodes || []) {
+	for (const episode of unprocessedEpisodes) {
+		const priority = episode.pubDate
+			? new Date(episode.pubDate).getTime()
+			: Date.now();
+
 		await athleteDetectionQueue.add(
 			{ episodeId: episode.id },
 			{
+				priority,
 				attempts: 3,
 				backoff: {
 					type: "exponential",
@@ -282,7 +397,12 @@ export async function queueUnprocessedEpisodes() {
 		queued++;
 	}
 
-	return { queued };
+	return {
+		queued,
+		maxAge: "2 weeks",
+		maxQueueSize: MAX_QUEUE_SIZE,
+		totalFound: unprocessedEpisodes?.length || 0,
+	};
 }
 
 /**
@@ -297,15 +417,15 @@ export async function getQueueStatus() {
 		athleteDetectionQueue.getDelayedCount(),
 	]);
 
-	// Get processing stats from Supabase
-	const { data: stats, error } = await supabase
-		.from("episodes")
-		.select("athleteMentionsProcessed", { count: "exact" })
-		.or("athleteMentionsProcessed.is.true,athleteMentionsProcessed.is.null");
-
-	const processed =
-		stats?.filter((e) => e.athleteMentionsProcessed)?.length || 0;
-	const total = stats?.length || 0;
+	// Get processing stats using Drizzle
+	const [processed, total] = await Promise.all([
+		db
+			.select({ count: episodes.id })
+			.from(episodes)
+			.where(eq(episodes.athleteMentionsProcessed, true))
+			.execute(),
+		db.select({ count: episodes.id }).from(episodes).execute(),
+	]);
 
 	return {
 		queue: {
@@ -317,9 +437,9 @@ export async function getQueueStatus() {
 			total: waiting + active + completed + failed + delayed,
 		},
 		processing: {
-			total,
-			processed,
-			remaining: total - processed,
+			total: total.length,
+			processed: processed.length,
+			remaining: total.length - processed.length,
 		},
 	};
 }

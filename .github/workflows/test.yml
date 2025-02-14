@@ -63,10 +63,11 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: |
             playwright-report/
             coverage/
-          retention-days: 30 
+          retention-days: 30
+          compression-level: 9 

@@ -84,6 +84,7 @@ export const getNewEpisodes = unstable_cache(
 				episodeDuration: episodes.duration,
 				episodeSlug: episodes.episodeSlug,
 				pubDate: episodes.pubDate,
+				enclosureUrl: episodes.enclosureUrl,
 			})
 			.from(podcasts)
 			.innerJoin(episodes, eq(podcasts.id, episodes.podcastId))

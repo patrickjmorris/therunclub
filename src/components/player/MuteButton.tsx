@@ -1,6 +1,7 @@
 import { type PlayerAPI } from "@/components/AudioProvider";
 import { forwardRef } from "react";
-import { Slot } from "@radix-ui/react-slot";
+import { Button } from "@/components/ui/button";
+import type { ButtonProps } from "@/components/ui/button";
 
 function MuteIcon({
 	muted,
@@ -37,24 +38,22 @@ function MuteIcon({
 	);
 }
 
-interface MuteButtonProps {
+type MuteButtonProps = Omit<ButtonProps, "size"> & {
 	player: PlayerAPI;
-	size?: "base" | "lg";
-	asChild?: boolean;
-	onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-}
+	size?: ButtonProps["size"];
+};
 
 export const MuteButton = forwardRef<HTMLButtonElement, MuteButtonProps>(
-	({ player, size = "base", onClick, asChild = false }, ref) => {
-		const Comp = asChild ? Slot : "span";
-
+	({ player, size = "default", className, ...props }, ref) => {
 		return (
-			<Comp ref={ref}>
+			<Button ref={ref} size={size} className={className} {...props}>
 				<MuteIcon
 					muted={player.muted}
-					className="h-6 w-6 text-foreground group-hover:text-foreground/90"
+					className="h-6 w-6 stroke-current text-foreground group-hover:text-foreground/90"
 				/>
-			</Comp>
+			</Button>
 		);
 	},
 );
+
+MuteButton.displayName = "MuteButton";

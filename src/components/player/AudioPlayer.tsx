@@ -20,6 +20,7 @@ import { PlayButton } from "@/components/player/PlayButton";
 import { RewindButton } from "@/components/player/RewindButton";
 import { MiniPlayer } from "@/components/player/MiniPlayer";
 import { ExpandedPlayer } from "@/components/player/ExpandedPlayer";
+import { Slider } from "@/components/player/Slider";
 
 function formatTime(totalSeconds: number): [number, number, number] {
 	const hours = Math.floor(totalSeconds / 3600);
@@ -72,6 +73,22 @@ export function AudioPlayer() {
 	const player = useAudioPlayer();
 	const miniPlayerRef = useRef<HTMLDivElement>(null);
 	const [isOpen, setIsOpen] = useState(false);
+	const [currentTime, setCurrentTime] = useState<number | null>(null);
+	const wasPlayingRef = useRef(false);
+	const isDraggingRef = useRef(false);
+
+	// Reset currentTime when episode changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: It's ok as it's a dependency of the player
+	useEffect(() => {
+		setCurrentTime(null);
+	}, [player.episode]);
+
+	// Update currentTime when playback progresses
+	useEffect(() => {
+		if (!isDraggingRef.current) {
+			setCurrentTime(player.currentTime);
+		}
+	}, [player.currentTime]);
 
 	// Handle media session
 	useEffect(() => {
@@ -147,91 +164,121 @@ export function AudioPlayer() {
 		<>
 			{/* Desktop Player */}
 			<div className="fixed bottom-6 right-6 z-50 hidden md:block">
-				<div className="flex items-center gap-4 rounded-xl bg-background p-3 shadow-xl ring-1 ring-border">
-					<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-						{player.episode.image && (
-							/* eslint-disable-next-line @next/next/no-img-element */
-							<img
-								src={player.episode.image}
-								alt={player.episode.title}
-								className="h-full w-full rounded-lg object-cover"
+				<div className="flex flex-col gap-1 rounded-xl bg-background p-3 shadow-xl ring-1 ring-border">
+					<div className="flex items-center gap-4">
+						<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+							{player.episode.image && (
+								/* eslint-disable-next-line @next/next/no-img-element */
+								<img
+									src={player.episode.image}
+									alt={player.episode.title}
+									className="h-full w-full rounded-lg object-cover"
+								/>
+							)}
+						</div>
+						<div
+							className="flex min-w-0 flex-col gap-0.5"
+							style={{ maxWidth: "200px" }}
+						>
+							<Link
+								href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
+								className="truncate text-sm font-medium text-foreground hover:text-foreground/90"
+								title={player.episode.title}
+							>
+								{player.episode.title}
+							</Link>
+							<p className="truncate text-xs text-muted-foreground">
+								{player.episode.podcastTitle}
+							</p>
+						</div>
+						<div className="flex items-center gap-6 pl-4">
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									player.seekBy(-15);
+								}}
+								className="p-0"
+							>
+								<div className="flex items-center justify-center">
+									<RewindButton player={player} />
+								</div>
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									player.toggle();
+								}}
+								className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 active:bg-primary p-0"
+							>
+								<div className="flex items-center justify-center">
+									<PlayButton player={player} size="base" />
+								</div>
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									player.seekBy(15);
+								}}
+								className="p-0"
+							>
+								<div className="flex items-center justify-center">
+									<ForwardButton player={player} />
+								</div>
+							</Button>
+						</div>
+						<div className="flex items-center gap-3 border-l border-slate-200 pl-4">
+							<PlaybackRateButton player={player} />
+							<MuteButton
+								player={player}
+								variant="ghost"
+								size="icon"
+								className="group relative rounded-md focus:outline-none"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									player.toggleMute();
+								}}
+								aria-label={player.muted ? "Unmute" : "Mute"}
 							/>
-						)}
+						</div>
 					</div>
-					<div
-						className="flex min-w-0 flex-col gap-0.5"
-						style={{ maxWidth: "200px" }}
-					>
-						<Link
-							href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
-							className="truncate text-sm font-medium text-foreground hover:text-foreground/90"
-							title={player.episode.title}
-						>
-							{player.episode.title}
-						</Link>
-						<p className="truncate text-xs text-muted-foreground">
-							{player.episode.podcastTitle}
-						</p>
-					</div>
-					<div className="flex items-center gap-6 pl-4">
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								player.seekBy(-15);
-							}}
-							className="p-0"
-						>
-							<div className="flex items-center justify-center">
-								<RewindButton player={player} />
-							</div>
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								player.toggle();
-							}}
-							className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 active:bg-primary p-0"
-						>
-							<div className="flex items-center justify-center">
-								<PlayButton player={player} size="base" />
-							</div>
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								player.seekBy(15);
-							}}
-							className="p-0"
-						>
-							<div className="flex items-center justify-center">
-								<ForwardButton player={player} />
-							</div>
-						</Button>
-					</div>
-					<div className="flex items-center gap-3 border-l border-slate-200 pl-4">
-						<PlaybackRateButton player={player} />
-						<Button
-							variant="ghost"
-							size="icon"
-							className="group relative rounded-md focus:outline-none"
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								player.toggleMute();
-							}}
-							aria-label={player.muted ? "Unmute" : "Mute"}
-						>
-							<MuteButton player={player} asChild />
-						</Button>
+					<div className="pt-1">
+						<div className="relative w-full touch-none select-none">
+							<Slider
+								label="Current time"
+								maxValue={player.duration}
+								step={1}
+								value={[currentTime ?? player.currentTime]}
+								onChange={([value]) => {
+									setCurrentTime(value);
+								}}
+								onChangeEnd={([value]) => {
+									isDraggingRef.current = false;
+									setCurrentTime(value);
+									player.seek(value);
+									if (wasPlayingRef.current) {
+										player.play();
+									}
+								}}
+								onChangeStart={() => {
+									isDraggingRef.current = true;
+									wasPlayingRef.current = player.playing;
+									player.pause();
+								}}
+								numberFormatter={
+									{ format: formatTimelineTime } as Intl.NumberFormat
+								}
+							/>
+						</div>
 					</div>
 				</div>
 			</div>

@@ -15,6 +15,7 @@ import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";
 import { PodcastFilter } from "@/components/podcasts/podcast-filter";
 import AddContentWrapper from "@/components/content/AddContentWrapper";
+import { ListenNowButton } from "@/components/ListenNowButton";
 
 export const metadata: Metadata = {
 	title: "Running Podcasts | The Run Club",
@@ -137,10 +138,26 @@ export default async function PodcastList({ searchParams }: PageProps) {
 											className="text-sm text-muted-foreground"
 										/>
 									)}
-									<Button variant="secondary" className="w-full">
-										<Headphones className="mr-2 h-4 w-4" />
-										Listen Now
-									</Button>
+									<ListenNowButton
+										episode={{
+											id: podcast.episodeId,
+											title: podcast.episodeTitle || podcast.podcastTitle || "",
+											pubDate: podcast.pubDate,
+											content: null,
+											podcastId: podcast.podcastId ?? null,
+											podcastTitle: podcast.podcastTitle || "",
+											podcastAuthor: null,
+											podcastImage: podcast.podcastImage,
+											enclosureUrl: podcast.enclosureUrl,
+											duration: null,
+											explicit: null,
+											image: podcast.itunesImage,
+											episodeSlug: podcast.episodeSlug || null,
+											podcastSlug: podcast.podcastSlug || null,
+											link: null,
+										}}
+										className="w-full"
+									/>
 								</CardContent>
 							</Link>
 						</Card>

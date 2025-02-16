@@ -320,6 +320,7 @@ const nextConfig = {
 		reactCompiler: true,
 		ppr: "incremental",
 	},
+	serverExternalPackages: ["whatwg-url"],
 };
 
 export default nextConfig;

@@ -21,6 +21,7 @@ import {
 	getNewEpisodes,
 } from "@/lib/services/podcast-service";
 import { getPopularRunClubs } from "@/lib/services/club-service";
+import { ListenNowButton } from "@/components/ListenNowButton";
 
 export const revalidate = 3600;
 
@@ -134,10 +135,27 @@ export default async function HomePage() {
 												? new Date(podcast.pubDate).toLocaleDateString()
 												: ""}
 										</p>
-										<Button className="mt-4" variant="outline">
-											<Headphones className="mr-2 h-4 w-4" />
-											Listen Now
-										</Button>
+										<ListenNowButton
+											episode={{
+												id: podcast.episodeId,
+												title: podcast.episodeTitle,
+												pubDate: podcast.pubDate,
+												content: null,
+												podcastId: podcast.podcastId,
+												podcastTitle: podcast.podcastTitle,
+												podcastAuthor: null,
+												podcastImage: podcast.podcastImage,
+												enclosureUrl: podcast.enclosureUrl,
+												duration: podcast.episodeDuration,
+												explicit: null,
+												image: podcast.episodeImage,
+												episodeSlug: podcast.episodeSlug,
+												podcastSlug: podcast.podcastSlug,
+												link: null,
+											}}
+											variant="outline"
+											className="mt-4"
+										/>
 									</CardContent>
 								</Card>
 							</Link>

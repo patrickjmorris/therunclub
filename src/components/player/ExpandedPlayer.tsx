@@ -188,29 +188,28 @@ export function ExpandedPlayer({
 						<ForwardButton player={player} size="base" />
 					</Button>
 				</div>
-				{/* <div className="flex justify-between px-4">
-					<Button
-						variant="ghost"
+				<div className="flex justify-between px-4">
+					<MuteButton
+						player={player}
 						size="icon"
+						variant="ghost"
 						className="group relative rounded-md focus:outline-none"
-						onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+						onClick={(e) => {
 							e.stopPropagation();
 							player.toggleMute();
 						}}
-						onTouchEnd={(e: React.TouchEvent<HTMLButtonElement>) => {
+						onTouchEnd={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
 							player.toggleMute();
 						}}
 						aria-label={player.muted ? "Unmute" : "Mute"}
-					>
-						<MuteButton player={player} asChild />
-					</Button>
+					/>
 					<PlaybackRateButton
 						player={player}
 						className="group relative rounded-md focus:outline-none text-foreground hover:text-foreground/90"
 					/>
-				</div> */}
+				</div>
 			</div>
 		</div>
 	);

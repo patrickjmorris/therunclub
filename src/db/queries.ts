@@ -21,6 +21,7 @@ export const searchEpisodesWithPodcasts = async (query: string) => {
 			pubDate: episodes.pubDate,
 			episodeSlug: episodes.episodeSlug,
 			podcastSlug: podcasts.podcastSlug,
+			enclosureUrl: episodes.enclosureUrl,
 		})
 		.from(episodes)
 		.leftJoin(podcasts, eq(episodes.podcastId, podcasts.id))

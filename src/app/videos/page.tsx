@@ -3,11 +3,9 @@ import { VideoFilter } from "@/components/videos/video-filter";
 import { VideoGrid } from "@/components/videos/video-grid";
 import { Metadata } from "next";
 import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
-import { Card, CardContent } from "@/components/ui/card";
-import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import {
 	getFeaturedChannels,
 	getFilteredVideos,
@@ -16,6 +14,7 @@ import {
 } from "@/lib/services/video-service";
 import { parseAsString } from "nuqs/server";
 import AddContentWrapper from "@/components/content/AddContentWrapper";
+import { FeaturedChannelsRow } from "@/components/videos/FeaturedChannelsRow";
 
 export const metadata: Metadata = {
 	title: "Running Videos | The Run Club",
@@ -48,7 +47,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 
 	// Get featured channels and top tags
 	const [featuredChannels, topTags] = await Promise.all([
-		getFeaturedChannels(4),
+		getFeaturedChannels(10),
 		getTopVideoTags(10),
 	]);
 
@@ -71,6 +70,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 			<div className="flex items-center justify-between mb-8">
 				<AddContentWrapper defaultTab="channel" />
 			</div>
+
 			{/* Featured Channels Section */}
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
@@ -82,40 +82,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 						</Link>
 					</Button>
 				</div>
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-					{featuredChannels.map((channel) => (
-						<Link
-							key={channel.id}
-							href={`/videos/channels/${channel.id}`}
-							className="transition-opacity hover:opacity-80"
-						>
-							<Card>
-								<CardContent className="p-4">
-									<div className="flex flex-col items-center text-center gap-4">
-										<div className="relative w-20 h-20">
-											<div className="absolute inset-0">
-												<Image
-													src={
-														channel.thumbnailUrl || "/images/placeholder.png"
-													}
-													alt={channel.title}
-													width={80}
-													height={80}
-													className="rounded-lg object-cover w-full h-full"
-												/>
-											</div>
-										</div>
-										<div>
-											<h3 className="font-semibold line-clamp-1">
-												{channel.title}
-											</h3>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						</Link>
-					))}
-				</div>
+				<FeaturedChannelsRow channels={featuredChannels} />
 			</div>
 
 			{/* Videos Section */}

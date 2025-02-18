@@ -22,6 +22,7 @@ import {
 } from "@/lib/services/podcast-service";
 import { getPopularRunClubs } from "@/lib/services/club-service";
 import { ListenNowButton } from "@/components/ListenNowButton";
+import { EpisodeCard } from "@/components/podcasts/EpisodeCard";
 
 export const revalidate = 3600;
 
@@ -110,55 +111,21 @@ export default async function HomePage() {
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{podcasts.map((podcast) => (
-							<Link
-								key={podcast.episodeSlug}
-								href={`/podcasts/${podcast.podcastSlug}/${podcast.episodeSlug}`}
-								className="block transition-transform hover:scale-[1.02]"
-							>
-								<Card>
-									<CardHeader>
-										<CardTitle>{podcast.podcastTitle}</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<Image
-											src={podcast.podcastImage ?? ""}
-											alt={podcast.podcastTitle}
-											width={192}
-											height={192}
-											className="w-48 h-48 object-cover mb-4 rounded-md mx-auto"
-										/>
-										<p className="text-muted-foreground">
-											{podcast.episodeTitle}
-										</p>
-										<p className="text-sm text-muted-foreground mb-2">
-											{podcast.pubDate
-												? new Date(podcast.pubDate).toLocaleDateString()
-												: ""}
-										</p>
-										<ListenNowButton
-											episode={{
-												id: podcast.episodeId,
-												title: podcast.episodeTitle,
-												pubDate: podcast.pubDate,
-												content: null,
-												podcastId: podcast.podcastId,
-												podcastTitle: podcast.podcastTitle,
-												podcastAuthor: null,
-												podcastImage: podcast.podcastImage,
-												enclosureUrl: podcast.enclosureUrl,
-												duration: podcast.episodeDuration,
-												explicit: null,
-												image: podcast.episodeImage,
-												episodeSlug: podcast.episodeSlug,
-												podcastSlug: podcast.podcastSlug,
-												link: null,
-											}}
-											variant="outline"
-											className="mt-4"
-										/>
-									</CardContent>
-								</Card>
-							</Link>
+							<EpisodeCard
+								key={podcast.episodeId}
+								episode={{
+									episodeId: podcast.episodeId,
+									episodeTitle: podcast.episodeTitle,
+									episodeSlug: podcast.episodeSlug,
+									podcastId: podcast.podcastId,
+									podcastTitle: podcast.podcastTitle,
+									podcastSlug: podcast.podcastSlug,
+									podcastImage: podcast.podcastImage,
+									itunesImage: podcast.episodeImage,
+									enclosureUrl: podcast.enclosureUrl,
+									pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,
+								}}
+							/>
 						))}
 					</div>
 				</div>

@@ -126,7 +126,7 @@ export const podcasts = pgTable(
 		episodeCount: integer("episode_count"),
 		isDead: integer("is_dead").default(0),
 		hasParseErrors: integer("has_parse_errors").default(0),
-		iTunesId: text("itunes_id").unique(),
+		iTunesId: text("itunes_id"),
 		updatedAt: timestamp("updated_at").defaultNow(),
 	},
 	(table) => ({
@@ -542,3 +542,45 @@ export const websubSubscriptionsRelations = relations(
 
 // Add to types
 export type WebSubSubscription = typeof websubSubscriptions.$inferSelect;
+
+// Content Tags table for AI-generated tags
+export const contentTags = pgTable(
+	"content_tags",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		contentId: uuid("content_id").notNull(),
+		contentType: text("content_type").notNull(), // 'video', 'podcast', 'episode'
+		tag: text("tag").notNull(),
+		createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+	},
+	(table) => ({
+		contentTagIdx: uniqueIndex("content_tag_idx").on(
+			table.contentId,
+			table.contentType,
+			table.tag,
+		),
+	}),
+);
+
+// Define relations for content tags
+export const contentTagsRelations = relations(contentTags, ({ one }) => ({
+	video: one(videos, {
+		fields: [contentTags.contentId],
+		references: [videos.id],
+		relationName: "video_tags",
+	}),
+	podcast: one(podcasts, {
+		fields: [contentTags.contentId],
+		references: [podcasts.id],
+		relationName: "podcast_tags",
+	}),
+	episode: one(episodes, {
+		fields: [contentTags.contentId],
+		references: [episodes.id],
+		relationName: "episode_tags",
+	}),
+}));
+
+// Add to types
+export type ContentTag = typeof contentTags.$inferSelect;
+export type NewContentTag = typeof contentTags.$inferInsert;

@@ -18,7 +18,8 @@ type ContentType =
 	| "channel-colors"
 	| "channel-videos"
 	| "athletes"
-	| "athlete-detection";
+	| "athlete-detection"
+	| "tagging";
 
 const isUpdating = {
 	videos: false,
@@ -27,6 +28,7 @@ const isUpdating = {
 	"channel-videos": false,
 	athletes: false,
 	"athlete-detection": false,
+	tagging: false,
 };
 
 const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -363,12 +365,13 @@ export async function GET(request: NextRequest) {
 			"channel-videos",
 			"athletes",
 			"athlete-detection",
+			"tagging",
 		].includes(type)
 	) {
 		return NextResponse.json(
 			{
 				message:
-					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', 'channel-videos', 'athletes', or 'athlete-detection'",
+					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', 'channel-videos', 'athletes', 'athlete-detection', or 'tagging'",
 			},
 			{ status: 400 },
 		);

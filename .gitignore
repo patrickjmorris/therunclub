@@ -35,6 +35,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# batch processing
+/tmp
+
 # scripts
 scripts/athletes-with-bios.json
 scripts/transfer-athletes.load
+
+.trigger

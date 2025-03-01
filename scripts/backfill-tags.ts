@@ -200,7 +200,7 @@ const COMMON_TAGS = [
 function question(query: string): Promise<string> {
 	return openai.chat.completions
 		.create({
-			model: "gpt-4o",
+			model: "gpt-4o-mini",
 			messages: [{ role: "user", content: query }],
 		})
 		.then((response) => response.choices[0].message.content || "");
@@ -295,7 +295,7 @@ Remember: Quality over quantity. Provide only 3-5 highly relevant tags.`;
 
 		// Create the request body
 		const body = {
-			model: "gpt-3.5-turbo",
+			model: "gpt-4o-mini",
 			messages: [
 				{ role: "system", content: system },
 				{ role: "user", content: prompt },
@@ -816,7 +816,7 @@ async function processBatchWithOpenAI(
 		console.log("Waiting for batch completion...");
 		let batchStatus = await openai.batches.retrieve(batch.id);
 		let attempts = 0;
-		const maxAttempts = 30; // 15 minutes max wait time
+		const maxAttempts = 60; // 30 minutes max wait time
 
 		while (batchStatus.status !== "completed" && attempts < maxAttempts) {
 			await sleep(30000); // Wait 30 seconds between checks

@@ -396,7 +396,7 @@ async function saveTags(
 // Generate tags for a content item
 async function generateTags(
 	item: ContentItem,
-	model = "gpt-3.5-turbo",
+	model = "gpt-4o-mini",
 ): Promise<string[]> {
 	// Enhanced system prompt for tag generation
 	const system = `You are a content tagging specialist for a running and athletics website. Your task is to generate relevant tags for content based on its title and description.
@@ -717,7 +717,7 @@ export async function GET(request: NextRequest) {
 	const batchSize = parseInt(searchParams.get("batchSize") || "50", 10);
 	const skipTagged = searchParams.get("skipTagged") !== "false"; // Default to true
 	const forceTag = searchParams.get("forceTag") === "true"; // Default to false
-	const model = searchParams.get("model") || "gpt-3.5-turbo";
+	const model = searchParams.get("model") || "gpt-4o-mini";
 
 	try {
 		console.log(

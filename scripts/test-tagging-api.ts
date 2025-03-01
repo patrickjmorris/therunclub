@@ -11,6 +11,7 @@
  *   bun run scripts/test-tagging-api.ts --batch-size 10 # Process 10 items at a time
  *   bun run scripts/test-tagging-api.ts --force-tag # Force tag content that already has tags
  *   bun run scripts/test-tagging-api.ts --model gpt-4o # Use GPT-4o model for tagging
+ *   bun run scripts/test-tagging-api.ts --url https://your-preview-url.vercel.app # Test against a specific URL
  */
 
 import { parseArgs } from "util";
@@ -24,15 +25,23 @@ const args = parseArgs({
 		"force-tag": { type: "boolean" },
 		model: { type: "string" },
 		"skip-tagged": { type: "boolean" },
+		url: { type: "string" },
 	},
 	strict: false,
 });
 
 // Configuration
-const API_URL =
-	process.env.NODE_ENV === "production"
-		? "https://therunclub.vercel.app/api/tagging"
-		: "http://localhost:3000/api/tagging";
+let API_URL =
+	args.values.url && typeof args.values.url === "string"
+		? `${args.values.url}/api/tagging`
+		: process.env.NODE_ENV === "production"
+		  ? "https://therunclub.vercel.app/api/tagging"
+		  : "http://localhost:3000/api/tagging";
+
+// Ensure API_URL doesn't have double /api
+if (API_URL.includes("/api/api/")) {
+	API_URL = API_URL.replace("/api/api/", "/api/");
+}
 
 const API_KEY = process.env.UPDATE_API_KEY;
 

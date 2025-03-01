@@ -28,7 +28,7 @@ Generate tags for content items.
 | batchSize   | number  | 50          | Maximum number of items to process in a single request       |
 | skipTagged  | boolean | true        | Whether to skip content that already has tags                |
 | forceTag    | boolean | false       | Whether to force tagging of content that already has tags    |
-| model       | string  | "gpt-3.5-turbo" | OpenAI model to use for tag generation                   |
+| model       | string  | "gpt-4o-mini" | OpenAI model to use for tag generation                   |
 
 #### Response
 
@@ -46,7 +46,7 @@ Generate tags for content items.
     "batchSize": 50,
     "skipTagged": true,
     "forceTag": false,
-    "model": "gpt-3.5-turbo"
+    "model": "gpt-4o-mini"
   }
 }
 ```
@@ -81,6 +81,11 @@ curl -X GET "https://therunclub.vercel.app/api/tagging?model=gpt-4o" \
   -H "x-api-key: YOUR_API_KEY"
 ```
 
+```bash
+curl -X GET "https://therunclub.vercel.app/api/tagging?model=gpt-3.5-turbo" \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
 ## Testing
 
 You can test the tagging API using the provided test script:
@@ -103,7 +108,29 @@ bun run scripts/test-tagging-api.ts --force-tag
 
 # Use GPT-4o model for tagging
 bun run scripts/test-tagging-api.ts --model gpt-4o
+
+# Use GPT-3.5 Turbo model for tagging
+bun run scripts/test-tagging-api.ts --model gpt-3.5-turbo
+
+# Test against a Vercel preview URL
+bun run scripts/test-tagging-api.ts --url https://your-preview-url.vercel.app
 ```
+
+### Testing Against Vercel Preview Deployments
+
+When testing against Vercel preview deployments, you can use the `--url` parameter to specify the preview URL:
+
+```bash
+# Test against a specific Vercel preview URL
+bun run scripts/test-tagging-api.ts --url https://therunclub-git-feature-tagging-your-username.vercel.app
+
+# Combine with other parameters
+bun run scripts/test-tagging-api.ts --url https://your-preview-url.vercel.app --type video --hours 48
+bun run scripts/test-tagging-api.ts --url https://therunclub-beor-mymhy5n6l-patrickjohnmorris-projects.vercel.app --type video --hours 4
+
+```
+
+This is particularly useful for testing changes to the tagging API in a preview environment before merging to production.
 
 ## Tag Generation Process
 
@@ -128,4 +155,4 @@ For regular tagging of new content, it's recommended to set up a cron job that c
 
 ```bash
 0 * * * * curl -X GET "https://therunclub.vercel.app/api/tagging?hours=1" -H "Authorization: Bearer YOUR_CRON_SECRET"
-``` 
+```

@@ -432,7 +432,7 @@ class WebSubManager {
 
 // Create a singleton instance for use throughout the application
 const webSubManager = new WebSubManager(
-	process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
+	process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000",
 );
 
 export { webSubManager, WebSubManager };

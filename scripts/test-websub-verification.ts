@@ -11,10 +11,10 @@ const env = envArg ? envArg.split("=")[1] : "development";
 
 // Set environment variables based on environment
 if (env === "production") {
-	process.env.NEXT_PUBLIC_APP_URL;
+	process.env.NEXT_PUBLIC_VERCEL_URL;
 	process.env.DATABASE_URL;
 } else {
-	process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+	process.env.NEXT_PUBLIC_VERCEL_URL = "http://localhost:3000";
 }
 
 // Create database client based on environment
@@ -40,8 +40,10 @@ async function testWebSubVerification() {
 				const challenge = crypto.randomBytes(32).toString("hex");
 
 				// Construct the verification URL with required parameters
-				const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-				const verificationUrl = new URL(`${baseUrl}/api/websub/callback`);
+				const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL;
+				const verificationUrl = new URL(
+					`https://${baseUrl}/api/websub/callback`,
+				);
 				verificationUrl.searchParams.append("hub.mode", "subscribe");
 				verificationUrl.searchParams.append("hub.topic", subscription.topic);
 				verificationUrl.searchParams.append("hub.challenge", challenge);
@@ -94,7 +96,7 @@ async function testWebSubVerification() {
 console.log(`Starting WebSub verification test in ${env} environment...`);
 console.log(`Using database: ${process.env.DATABASE_URL}`);
 console.log(
-	`Using endpoint: ${process.env.NEXT_PUBLIC_APP_URL}/api/websub/callback`,
+	`Using endpoint: ${process.env.NEXT_PUBLIC_VERCEL_URL}/api/websub/callback`,
 );
 
 testWebSubVerification();

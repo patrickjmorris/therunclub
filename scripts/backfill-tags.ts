@@ -816,7 +816,7 @@ async function processBatchWithOpenAI(
 		console.log("Waiting for batch completion...");
 		let batchStatus = await openai.batches.retrieve(batch.id);
 		let attempts = 0;
-		const maxAttempts = 60; // 30 minutes max wait time
+		const maxAttempts = 1200; // 60 minutes max wait time
 
 		while (batchStatus.status !== "completed" && attempts < maxAttempts) {
 			await sleep(30000); // Wait 30 seconds between checks

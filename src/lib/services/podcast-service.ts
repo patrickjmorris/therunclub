@@ -298,7 +298,8 @@ export const getEpisodeTitles = unstable_cache(
 // Get episode by slug
 export const getEpisode = unstable_cache(
 	async (episodeSlug: string) => {
-		return db
+		console.log("getEpisode - Input slug:", episodeSlug);
+		const results = await db
 			.select({
 				id: episodes.id,
 				title: episodes.title,
@@ -319,16 +320,22 @@ export const getEpisode = unstable_cache(
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
 			.where(eq(episodes.episodeSlug, episodeSlug))
-			.then((results) => results[0] || null);
+			.limit(1);
+
+		console.log("getEpisode - Query results:", results);
+		const episode = results[0] || null;
+		console.log("getEpisode - Returning episode:", episode);
+		return episode;
 	},
 	["episode"],
-	{ tags: ["episodes"] },
+	{ tags: ["episodes"], revalidate: 60 }, // Revalidate every minute
 );
 
 // Get podcast by slug
 export const getPodcastBySlug = unstable_cache(
 	async (podcastSlug: string) => {
-		return db
+		console.log("getPodcastBySlug - Input slug:", podcastSlug);
+		const results = await db
 			.select({
 				id: podcasts.id,
 				title: podcasts.title,
@@ -340,11 +347,15 @@ export const getPodcastBySlug = unstable_cache(
 				vibrantColor: podcasts.vibrantColor,
 			})
 			.from(podcasts)
-			.where(eq(podcasts.podcastSlug, podcastSlug))
-			.then((results) => results[0] || null);
+			.where(eq(podcasts.podcastSlug, podcastSlug));
+
+		console.log("getPodcastBySlug - Query results:", results);
+		const podcast = results[0] || null;
+		console.log("getPodcastBySlug - Returning podcast:", podcast);
+		return podcast;
 	},
-	["podcast-by-slug"],
-	{ tags: ["podcasts"] },
+	["podcast-by-slug", "podcast"],
+	{ tags: ["podcasts"], revalidate: 60 }, // Revalidate every minute
 );
 
 // Get last ten episodes by podcast slug

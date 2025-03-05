@@ -122,7 +122,9 @@ export async function generateMetadata({
 	const resolvedParams = await params;
 	const episode = await getEpisode(resolvedParams.episode);
 
-	if (!episode) return {};
+	if (!episode || episode.podcastSlug !== resolvedParams.podcast) {
+		return {};
+	}
 
 	const imageUrl = episode.image || episode.podcastImage || "";
 	const description =
@@ -175,10 +177,13 @@ function addLinkStyles(html: string): string {
 }
 
 export default async function EpisodePage({ params }: EpisodePageProps) {
+	console.log("Episode Page - Params:", params);
 	const { podcast: podcastSlug, episode: episodeSlug } = await params;
 	const episode = await getEpisode(episodeSlug);
+	console.log("Episode Page - Episode Data:", episode);
 
-	if (!episode) {
+	if (!episode || episode.podcastSlug !== podcastSlug) {
+		console.log("Episode Page - No matching episode found, returning 404");
 		notFound();
 	}
 

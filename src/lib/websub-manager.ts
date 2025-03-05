@@ -21,7 +21,11 @@ class WebSubManager {
 	private callbackUrl: string;
 
 	constructor(baseUrl: string) {
-		this.callbackUrl = `${baseUrl}/api/websub/callback`;
+		// Ensure the base URL has a protocol
+		const url = new URL(
+			baseUrl.startsWith("http") ? baseUrl : `https://${baseUrl}`,
+		);
+		this.callbackUrl = new URL("/api/websub/callback", url).toString();
 		this.startSubscriptionCleanup();
 	}
 
@@ -432,7 +436,8 @@ class WebSubManager {
 
 // Create a singleton instance for use throughout the application
 const webSubManager = new WebSubManager(
-	process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000",
+	process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ||
+		"http://localhost:3000",
 );
 
 export { webSubManager, WebSubManager };

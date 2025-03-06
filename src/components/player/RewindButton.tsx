@@ -44,14 +44,20 @@ export const RewindButton = forwardRef<HTMLDivElement, RewindButtonProps>(
 		return (
 			<div
 				ref={ref}
-				className={`group relative flex h-${size === "sm" ? "8" : size === "lg" ? "12" : "10"} w-${size === "sm" ? "8" : size === "lg" ? "12" : "10"} items-center justify-center rounded-full focus:outline-none ${className}`}
+				className={`group relative flex h-${
+					size === "sm" ? "8" : size === "lg" ? "12" : "10"
+				} w-${
+					size === "sm" ? "8" : size === "lg" ? "12" : "10"
+				} items-center justify-center rounded-full focus:outline-none ${className}`}
 				onClick={() => player.seekBy(-amount)}
 				aria-label={`Rewind ${amount} seconds`}
 				{...props}
 			>
 				<div className="absolute -inset-4 -right-2 md:hidden" />
-				<RewindIcon className={`${iconSize} text-foreground group-hover:text-foreground/90`} />
+				<RewindIcon
+					className={`${iconSize} text-foreground group-hover:text-foreground/90 dark:text-foreground dark:group-hover:text-foreground/90`}
+				/>
 			</div>
 		);
-	}
+	},
 );

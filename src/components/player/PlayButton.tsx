@@ -32,7 +32,7 @@ export const PlayButton = forwardRef<HTMLDivElement, PlayButtonProps>(
 				<span className="relative">
 					<div className="absolute -inset-3 md:hidden" />
 					<Icon
-						className={`${iconSize} fill-white group-active:fill-white/80`}
+						className={`${iconSize} fill-background dark:fill-background group-active:fill-background/80 dark:group-active:fill-background/80`}
 					/>
 				</span>
 			</Comp>

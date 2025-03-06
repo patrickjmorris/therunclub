@@ -50,8 +50,10 @@ export const ForwardButton = forwardRef<HTMLDivElement, ForwardButtonProps>(
 				aria-label={`Fast-forward ${amount} seconds`}
 			>
 				<div className="absolute -inset-4 -left-2 md:hidden" />
-				<ForwardIcon className={`${iconSize} text-foreground group-hover:text-foreground/90`} />
+				<ForwardIcon
+					className={`${iconSize} text-foreground group-hover:text-foreground/90 dark:text-foreground dark:group-hover:text-foreground/90`}
+				/>
 			</div>
 		);
-	}
+	},
 );

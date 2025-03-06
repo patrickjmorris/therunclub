@@ -85,6 +85,7 @@
 		"link-preview-js": "^3.0.13",
 		"lite-youtube-embed": "^0.3.3",
 		"lucide-react": "^0.378.0",
+		"motion": "^12.4.10",
 		"nanoid": "^5.0.9",
 		"next": "^15.2.0-canary.53",
 		"next-safe-action": "^7.9.9",

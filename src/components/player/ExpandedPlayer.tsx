@@ -72,7 +72,7 @@ export function ExpandedPlayer({
 			role="presentation"
 		>
 			<div
-				className="relative mx-auto aspect-square w-full max-w-[280px] rounded-lg bg-slate-50 transition-all duration-300"
+				className="relative mx-auto aspect-square w-full max-w-[280px] rounded-lg bg-muted transition-all duration-300"
 				style={{
 					transformOrigin: "bottom left",
 					animation: isOpen ? "scaleUp 300ms ease forwards" : "none",
@@ -154,7 +154,7 @@ export function ExpandedPlayer({
 					<Button
 						variant="ghost"
 						size="icon"
-						className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-primary hover:bg-primary/90 active:bg-primary focus:outline-none"
+						className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-primary hover:bg-primary/90 active:bg-primary focus:outline-none text-primary-foreground"
 						onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
 							console.log("Play/Pause button clicked", {
 								isPlaying: player.playing,

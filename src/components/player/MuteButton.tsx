@@ -49,7 +49,7 @@ export const MuteButton = forwardRef<HTMLButtonElement, MuteButtonProps>(
 			<Button ref={ref} size={size} className={className} {...props}>
 				<MuteIcon
 					muted={player.muted}
-					className="h-6 w-6 stroke-current text-foreground group-hover:text-foreground/90"
+					className="h-6 w-6 stroke-current text-foreground group-hover:text-foreground/90 dark:text-foreground dark:group-hover:text-foreground/90"
 				/>
 			</Button>
 		);

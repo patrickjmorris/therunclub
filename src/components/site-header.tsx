@@ -44,6 +44,7 @@ export async function SiteHeader() {
 
 					<div className="ml-auto flex items-center space-x-4">
 						<UserNav user={profile} />
+						<ModeToggle />
 					</div>
 				</div>
 			</div>

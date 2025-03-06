@@ -11,6 +11,7 @@ import {
 	DrawerDescription,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "motion/react";
 
 import { useAudioPlayer } from "@/components/AudioProvider";
 import { ForwardButton } from "@/components/player/ForwardButton";
@@ -76,6 +77,7 @@ export function AudioPlayer() {
 	const [currentTime, setCurrentTime] = useState<number | null>(null);
 	const wasPlayingRef = useRef(false);
 	const isDraggingRef = useRef(false);
+	const [isVisible, setIsVisible] = useState(false);
 
 	// Reset currentTime when episode changes
 	// biome-ignore lint/correctness/useExhaustiveDependencies: It's ok as it's a dependency of the player
@@ -89,6 +91,15 @@ export function AudioPlayer() {
 			setCurrentTime(player.currentTime);
 		}
 	}, [player.currentTime]);
+
+	// Animation effect when episode changes
+	useEffect(() => {
+		if (player.episode) {
+			setIsVisible(true);
+		} else {
+			setIsVisible(false);
+		}
+	}, [player.episode]);
 
 	// Handle media session
 	useEffect(() => {
@@ -163,166 +174,202 @@ export function AudioPlayer() {
 	return (
 		<>
 			{/* Desktop Player */}
-			<div className="fixed bottom-6 right-6 z-50 hidden md:block">
-				<div className="flex flex-col gap-1 rounded-xl bg-background p-3 shadow-xl ring-1 ring-border">
-					<div className="flex items-center gap-4">
-						<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-							{player.episode.image && (
-								/* eslint-disable-next-line @next/next/no-img-element */
-								<img
-									src={player.episode.image}
-									alt={player.episode.title}
-									className="h-full w-full rounded-lg object-cover"
-								/>
-							)}
-						</div>
-						<div
-							className="flex min-w-0 flex-col gap-0.5"
-							style={{ maxWidth: "200px" }}
+			<AnimatePresence>
+				{isVisible && (
+					<motion.div
+						className="fixed bottom-6 right-6 z-50 hidden md:block"
+						initial={{ opacity: 0, y: 20, scale: 0.95 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: 20, scale: 0.95 }}
+						transition={{
+							duration: 0.4,
+							ease: [0.22, 1, 0.36, 1],
+							scale: { duration: 0.35 },
+						}}
+					>
+						<motion.div
+							className="flex flex-col gap-1 rounded-xl bg-background p-3 shadow-xl ring-1 ring-border dark:ring-border"
+							whileHover={{ y: -2 }}
+							transition={{ duration: 0.2 }}
 						>
-							<Link
-								href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
-								className="truncate text-sm font-medium text-foreground hover:text-foreground/90"
-								title={player.episode.title}
-							>
-								{player.episode.title}
-							</Link>
-							<p className="truncate text-xs text-muted-foreground">
-								{player.episode.podcastTitle}
-							</p>
-						</div>
-						<div className="flex items-center gap-6 pl-4">
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									player.seekBy(-15);
-								}}
-								className="p-0"
-							>
-								<div className="flex items-center justify-center">
-									<RewindButton player={player} />
+							<div className="flex items-center gap-4">
+								<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+									{player.episode.image && (
+										/* eslint-disable-next-line @next/next/no-img-element */
+										<img
+											src={player.episode.image}
+											alt={player.episode.title}
+											className="h-full w-full rounded-lg object-cover"
+										/>
+									)}
 								</div>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									player.toggle();
-								}}
-								className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 active:bg-primary p-0"
-							>
-								<div className="flex items-center justify-center">
-									<PlayButton player={player} size="base" />
+								<div
+									className="flex min-w-0 flex-col gap-0.5"
+									style={{ maxWidth: "200px" }}
+								>
+									<Link
+										href={`/podcasts/${player.episode.podcastSlug}/${player.episode.episodeSlug}`}
+										className="truncate text-sm font-medium text-foreground hover:text-foreground/90"
+										title={player.episode.title}
+									>
+										{player.episode.title}
+									</Link>
+									<p className="truncate text-xs text-muted-foreground">
+										{player.episode.podcastTitle}
+									</p>
 								</div>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									player.seekBy(15);
-								}}
-								className="p-0"
-							>
-								<div className="flex items-center justify-center">
-									<ForwardButton player={player} />
+								<div className="flex items-center gap-6 pl-4">
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											player.seekBy(-15);
+										}}
+										className="p-0 text-foreground hover:text-foreground/90"
+									>
+										<div className="flex items-center justify-center">
+											<RewindButton player={player} />
+										</div>
+									</Button>
+									<motion.div
+										whileTap={{ scale: 0.95 }}
+										transition={{ duration: 0.1 }}
+									>
+										<Button
+											variant="ghost"
+											size="icon"
+											onClick={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												player.toggle();
+											}}
+											className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 active:bg-primary p-0 text-primary-foreground"
+										>
+											<div className="flex items-center justify-center">
+												<PlayButton player={player} size="base" />
+											</div>
+										</Button>
+									</motion.div>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											player.seekBy(15);
+										}}
+										className="p-0 text-foreground hover:text-foreground/90"
+									>
+										<div className="flex items-center justify-center">
+											<ForwardButton player={player} />
+										</div>
+									</Button>
 								</div>
-							</Button>
-						</div>
-						<div className="flex items-center gap-3 border-l border-slate-200 pl-4">
-							<PlaybackRateButton player={player} />
-							<MuteButton
-								player={player}
-								variant="ghost"
-								size="icon"
-								className="group relative rounded-md focus:outline-none"
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									player.toggleMute();
-								}}
-								aria-label={player.muted ? "Unmute" : "Mute"}
-							/>
-						</div>
-					</div>
-					<div className="pt-1">
-						<div className="relative w-full touch-none select-none">
-							<Slider
-								label="Current time"
-								maxValue={player.duration}
-								step={1}
-								value={[currentTime ?? player.currentTime]}
-								onChange={([value]) => {
-									setCurrentTime(value);
-								}}
-								onChangeEnd={([value]) => {
-									isDraggingRef.current = false;
-									setCurrentTime(value);
-									player.seek(value);
-									if (wasPlayingRef.current) {
-										player.play();
-									}
-								}}
-								onChangeStart={() => {
-									isDraggingRef.current = true;
-									wasPlayingRef.current = player.playing;
-									player.pause();
-								}}
-								numberFormatter={
-									{ format: formatTimelineTime } as Intl.NumberFormat
-								}
-							/>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{/* Mobile Player with Drawer */}
-			<div className="md:hidden">
-				<Drawer
-					open={isOpen}
-					onOpenChange={setIsOpen}
-					shouldScaleBackground={false}
-				>
-					<DrawerTrigger asChild>
-						<div ref={miniPlayerRef} className="touch-none">
-							<MiniPlayer
-								player={player}
-								isDrawerTrigger
-								onPlayPause={(e) => {
-									e.stopPropagation();
-									player.toggle();
-								}}
-							/>
-						</div>
-					</DrawerTrigger>
-
-					<DrawerPortal>
-						<DrawerContent className="fixed inset-x-0 bottom-0 z-50">
-							<DrawerTitle className="sr-only">Audio Player</DrawerTitle>
-							<DrawerDescription className="sr-only">
-								Audio Player
-							</DrawerDescription>
-							<div className="bg-background">
-								<div className="mx-auto max-w-2xl">
-									<ExpandedPlayer
+								<div className="flex items-center gap-3 border-l border-border pl-4">
+									<PlaybackRateButton player={player} />
+									<MuteButton
 										player={player}
-										miniPlayerRef={miniPlayerRef}
-										isOpen={isOpen}
-										onClose={() => setIsOpen(false)}
+										variant="ghost"
+										size="icon"
+										className="group relative rounded-md focus:outline-none"
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											player.toggleMute();
+										}}
+										aria-label={player.muted ? "Unmute" : "Mute"}
 									/>
 								</div>
 							</div>
-						</DrawerContent>
-					</DrawerPortal>
-				</Drawer>
-			</div>
+							<div className="pt-1">
+								<div className="relative w-full touch-none select-none">
+									<Slider
+										label="Current time"
+										maxValue={player.duration}
+										step={1}
+										value={[currentTime ?? player.currentTime]}
+										onChange={([value]) => {
+											setCurrentTime(value);
+										}}
+										onChangeEnd={([value]) => {
+											isDraggingRef.current = false;
+											setCurrentTime(value);
+											player.seek(value);
+											if (wasPlayingRef.current) {
+												player.play();
+											}
+										}}
+										onChangeStart={() => {
+											isDraggingRef.current = true;
+											wasPlayingRef.current = player.playing;
+											player.pause();
+										}}
+										numberFormatter={
+											{ format: formatTimelineTime } as Intl.NumberFormat
+										}
+									/>
+								</div>
+							</div>
+						</motion.div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+
+			{/* Mobile Player with Drawer */}
+			<AnimatePresence>
+				{isVisible && (
+					<motion.div
+						className="md:hidden"
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: 20 }}
+						transition={{
+							duration: 0.4,
+							ease: [0.22, 1, 0.36, 1],
+						}}
+					>
+						<Drawer
+							open={isOpen}
+							onOpenChange={setIsOpen}
+							shouldScaleBackground={false}
+						>
+							<DrawerTrigger asChild>
+								<div ref={miniPlayerRef} className="touch-none">
+									<MiniPlayer
+										player={player}
+										isDrawerTrigger
+										onPlayPause={(e) => {
+											e.stopPropagation();
+											player.toggle();
+										}}
+									/>
+								</div>
+							</DrawerTrigger>
+
+							<DrawerPortal>
+								<DrawerContent className="fixed inset-x-0 bottom-0 z-50">
+									<DrawerTitle className="sr-only">Audio Player</DrawerTitle>
+									<DrawerDescription className="sr-only">
+										Audio Player
+									</DrawerDescription>
+									<div className="bg-background">
+										<div className="mx-auto max-w-2xl">
+											<ExpandedPlayer
+												player={player}
+												miniPlayerRef={miniPlayerRef}
+												isOpen={isOpen}
+												onClose={() => setIsOpen(false)}
+											/>
+										</div>
+									</div>
+								</DrawerContent>
+							</DrawerPortal>
+						</Drawer>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</>
 	);
 }

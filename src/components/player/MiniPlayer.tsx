@@ -48,7 +48,7 @@ export function MiniPlayer({
 								e.stopPropagation();
 								player.toggle();
 							}}
-							className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 active:bg-primary p-0"
+							className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 active:bg-primary p-0 text-primary-foreground"
 						>
 							<PlayButton player={player} size="base" />
 						</Button>

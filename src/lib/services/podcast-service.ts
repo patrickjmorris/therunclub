@@ -123,7 +123,7 @@ export const getLastTenEpisodes = unstable_cache(
 			.limit(10);
 	},
 	["last-ten-episodes"],
-	{ tags: ["episodes"] },
+	{ tags: ["episodes"], revalidate: 3600 },
 );
 
 // Get last episode
@@ -139,7 +139,7 @@ export const getLastEpisode = unstable_cache(
 			.then((results) => results[0] || null);
 	},
 	["last-episode"],
-	{ tags: ["episodes"] },
+	{ tags: ["episodes"], revalidate: 3600 },
 );
 
 // Get last episodes by podcast
@@ -179,7 +179,7 @@ export const getLastEpisodesByPodcast = unstable_cache(
 			.where(sql`${rankedEpisodes.rowNum} = 1`);
 	},
 	["last-episodes-by-podcast"],
-	{ tags: ["podcasts", "episodes"] },
+	{ tags: ["podcasts", "episodes"], revalidate: 3600 },
 );
 
 // Get podcast metadata
@@ -237,7 +237,7 @@ export const getPodcastAndLastEpisodes = unstable_cache(
 			.orderBy(desc(lastEpisode.rowNum));
 	},
 	["podcasts-and-last-episodes"],
-	{ tags: ["podcasts", "episodes"] },
+	{ tags: ["podcasts", "episodes"], revalidate: 3600 },
 );
 
 // Get all podcasts and last episodes
@@ -292,7 +292,7 @@ export const getEpisodeTitles = unstable_cache(
 			.orderBy(desc(episodes.pubDate));
 	},
 	["episode-titles"],
-	{ tags: ["episodes"] },
+	{ tags: ["episodes"], revalidate: 3600 },
 );
 
 // Get episode by slug
@@ -328,7 +328,7 @@ export const getEpisode = unstable_cache(
 		return episode;
 	},
 	["episode"],
-	{ tags: ["episodes"], revalidate: 60 }, // Revalidate every minute
+	{ tags: ["episodes"], revalidate: 3600 }, // Revalidate every minute
 );
 
 // Get podcast by slug
@@ -355,7 +355,7 @@ export const getPodcastBySlug = unstable_cache(
 		return podcast;
 	},
 	["podcast-by-slug", "podcast"],
-	{ tags: ["podcasts"], revalidate: 60 }, // Revalidate every minute
+	{ tags: ["podcasts"], revalidate: 3600 }, // Revalidate every minute
 );
 
 // Get last ten episodes by podcast slug
@@ -386,7 +386,7 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 			.offset(offset);
 	},
 	["last-ten-episodes-by-slug"],
-	{ tags: ["episodes"] },
+	{ tags: ["episodes"], revalidate: 3600 },
 );
 
 // Get featured podcasts

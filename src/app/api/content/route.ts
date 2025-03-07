@@ -9,7 +9,7 @@ import {
 	updateExistingAthletes,
 } from "@/lib/services/athlete-service";
 import { db } from "@/db/client";
-import { episodes } from "@/db/schema";
+import { episodes, podcasts, videos, channels, athletes } from "@/db/schema";
 import { and, sql, not, eq, desc } from "drizzle-orm";
 
 type ContentType =
@@ -59,6 +59,49 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 	);
 }
 
+// Helper function to update the updated_at column for a specific table
+async function updateTimestamp(type: ContentType) {
+	try {
+		switch (type) {
+			case "podcasts":
+				// Update all podcasts' updated_at column
+				await db.execute(
+					sql`UPDATE ${podcasts} SET updated_at = NOW() WHERE TRUE`,
+				);
+				break;
+			case "videos":
+			case "channel-videos":
+				// Update all videos' updated_at column
+				await db.execute(
+					sql`UPDATE ${videos} SET updated_at = NOW() WHERE TRUE`,
+				);
+				break;
+			case "channel-colors":
+				// Update all channels' updated_at column
+				await db.execute(
+					sql`UPDATE ${channels} SET updated_at = NOW() WHERE TRUE`,
+				);
+				break;
+			case "athletes":
+				// Update all athletes' updated_at column
+				await db.execute(
+					sql`UPDATE ${athletes} SET updated_at = NOW() WHERE TRUE`,
+				);
+				break;
+			case "athlete-detection":
+				// Update all episodes' updated_at column
+				await db.execute(
+					sql`UPDATE ${episodes} SET updated_at = NOW() WHERE TRUE`,
+				);
+				break;
+			default:
+				break;
+		}
+	} catch (error) {
+		console.error(`Error updating timestamp for ${type}:`, error);
+	}
+}
+
 async function handleUpdate(request: NextRequest, type: ContentType) {
 	if (!(await isAuthorized(request))) {
 		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -78,6 +121,9 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 		lockTimeouts[type] = setTimeout(() => {
 			isUpdating[type] = false;
 		}, LOCK_TIMEOUT);
+
+		// Update the updated_at column for the corresponding table
+		await updateTimestamp(type);
 
 		if (type === "videos") {
 			try {

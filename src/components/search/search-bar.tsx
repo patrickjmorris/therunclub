@@ -11,6 +11,7 @@ interface SearchBarProps {
 	className?: string;
 	onSearch?: (query: string) => void;
 	defaultValue?: string;
+	disableUrlUpdate?: boolean;
 }
 
 export function SearchBar({
@@ -18,6 +19,7 @@ export function SearchBar({
 	className = "",
 	onSearch,
 	defaultValue = "",
+	disableUrlUpdate = false,
 }: SearchBarProps) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -28,26 +30,29 @@ export function SearchBar({
 
 	const handleSearch = useCallback(
 		(query: string) => {
-			const searchParams = new URLSearchParams(window.location.search);
+			// Only update URL if not disabled
+			if (!disableUrlUpdate) {
+				const searchParams = new URLSearchParams(window.location.search);
 
-			if (query) {
-				searchParams.set("q", query);
-			} else {
-				searchParams.delete("q");
-			}
+				if (query) {
+					searchParams.set("q", query);
+				} else {
+					searchParams.delete("q");
+				}
 
-			const newPath = searchParams.toString()
-				? `${window.location.pathname}?${searchParams.toString()}`
-				: window.location.pathname;
+				const newPath = searchParams.toString()
+					? `${window.location.pathname}?${searchParams.toString()}`
+					: window.location.pathname;
 
-			// Only update if the path has changed
-			if (newPath !== window.location.pathname + window.location.search) {
-				router.push(newPath);
+				// Only update if the path has changed
+				if (newPath !== window.location.pathname + window.location.search) {
+					router.push(newPath);
+				}
 			}
 
 			onSearch?.(query);
 		},
-		[onSearch, router],
+		[onSearch, router, disableUrlUpdate],
 	);
 
 	const handleClear = useCallback(() => {

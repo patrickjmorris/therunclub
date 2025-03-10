@@ -27,16 +27,24 @@ import {
 	CommandList,
 	CommandSeparator,
 } from "@/components/ui/command";
-import { search } from "@/app/search/actions";
-import type { SearchResult } from "@/lib/services/search-service";
+import { useSearch } from "@/lib/hooks/use-search";
 
 export function CommandMenu({ ...props }: DialogProps) {
 	const router = useRouter();
 	const [open, setOpen] = React.useState(false);
 	const { setTheme } = useTheme();
-	const [searchQuery, setSearchQuery] = useState("");
-	const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-	const [isSearching, setIsSearching] = useState(false);
+
+	// Use the same search hook as GlobalSearch but with different options
+	const {
+		query: searchQuery,
+		results: searchResults,
+		isLoading: isSearching,
+		handleSearch,
+		clearSearch,
+	} = useSearch({
+		debounceMs: 300,
+		updateUrl: false, // Don't update URL in command menu
+	});
 
 	useEffect(() => {
 		const down = (e: KeyboardEvent) => {
@@ -59,27 +67,12 @@ export function CommandMenu({ ...props }: DialogProps) {
 		return () => document.removeEventListener("keydown", down);
 	}, []);
 
-	const handleSearch = useCallback(async (value: string) => {
-		setSearchQuery(value);
-		if (!value.trim()) {
-			setSearchResults([]);
-			return;
+	// Clear search when dialog closes
+	useEffect(() => {
+		if (!open) {
+			clearSearch();
 		}
-
-		setIsSearching(true);
-		try {
-			const { results, error } = await search(value);
-			if (error) {
-				console.error("Search error:", error);
-				return;
-			}
-			setSearchResults(results);
-		} catch (error) {
-			console.error("Failed to search:", error);
-		} finally {
-			setIsSearching(false);
-		}
-	}, []);
+	}, [open, clearSearch]);
 
 	const runCommand = React.useCallback((command: () => unknown) => {
 		setOpen(false);
@@ -94,6 +87,8 @@ export function CommandMenu({ ...props }: DialogProps) {
 				return <SpeakerLoudIcon className="mr-2 h-4 w-4" />;
 			case "episode":
 				return <SpeakerLoudIcon className="mr-2 h-4 w-4" />;
+			case "channel":
+				return <CircleIcon className="mr-2 h-4 w-4" />;
 			default:
 				return <FileIcon className="mr-2 h-4 w-4" />;
 		}

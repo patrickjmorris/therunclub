@@ -3,6 +3,7 @@ import { videos, channels, podcasts, episodes } from "@/db/schema";
 import { desc, sql, asc } from "drizzle-orm";
 import DOMPurify from "isomorphic-dompurify";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 
 export type SearchResult = {
 	type: "video" | "podcast" | "episode" | "channel";
@@ -17,6 +18,7 @@ export type SearchResult = {
 	podcastTitle?: string | null;
 	// For ranking and filtering
 	priority?: number;
+	rank?: number;
 };
 
 export type PodcastSearchResult = SearchResult & {
@@ -38,15 +40,52 @@ function processContent(
 
 // Format the query for PostgreSQL full-text search
 function formatSearchQuery(query: string): string {
-	return query
+	// Normalize the query: remove special characters, convert to lowercase
+	const normalizedQuery = query
 		.trim()
+		.toLowerCase()
+		.replace(/[^\w\s]/g, " ");
+
+	// Split into words and apply prefix matching
+	return normalizedQuery
 		.split(/\s+/)
+		.filter((term) => term.length > 0)
 		.map((term) => `${term}:*`)
 		.join(" & ");
 }
 
-// Cache search results for 5 minutes
-export const globalSearch = cache(
+// Create a more efficient search query using the GIN indexes
+function createSearchCondition(
+	tableName: string,
+	titleField: string,
+	contentField: string,
+	formattedQuery: string,
+) {
+	return sql`to_tsvector('english', ${sql.raw(tableName)}.${sql.raw(
+		titleField,
+	)} || ' ' || coalesce(substring(${sql.raw(tableName)}.${sql.raw(
+		contentField,
+	)}, 1, 1000), '')) @@ to_tsquery('english', ${formattedQuery})`;
+}
+
+// Create a rank calculation function that uses substring
+function createRankExpression(
+	tableName: string,
+	titleField: string,
+	contentField: string,
+	formattedQuery: string,
+) {
+	return sql<number>`ts_rank(to_tsvector('english', ${sql.raw(
+		tableName,
+	)}.${sql.raw(titleField)} || ' ' || coalesce(substring(${sql.raw(
+		tableName,
+	)}.${sql.raw(
+		contentField,
+	)}, 1, 1000), '')), to_tsquery('english', ${formattedQuery}))`;
+}
+
+// Server-side cache with longer TTL (10 minutes)
+export const globalSearch = unstable_cache(
 	async (query: string, limit = 10): Promise<SearchResult[]> => {
 		// Skip empty queries
 		if (!query.trim()) {
@@ -55,7 +94,7 @@ export const globalSearch = cache(
 
 		const formattedQuery = formatSearchQuery(query);
 
-		// Create a unified search query that prioritizes channels and podcasts
+		// Reduce the number of fields we're selecting to improve performance
 		const results = await Promise.all([
 			// Search channels - highest priority
 			db
@@ -63,18 +102,35 @@ export const globalSearch = cache(
 					type: sql<string>`'channel'`,
 					id: channels.id,
 					title: channels.title,
-					description: sql<string>`substring(coalesce(${channels.description}, ''), 1, 250)`,
+					description: sql<string>`substring(coalesce(${channels.description}, ''), 1, 150)`, // Reduced length
 					thumbnailUrl: channels.thumbnailUrl,
 					publishedAt: channels.createdAt,
 					priority: sql<number>`1`, // Highest priority
-					rank: sql<number>`ts_rank(
-				to_tsvector('english', ${channels.title} || ' ' || coalesce(${channels.description}, '')),
-				to_tsquery('english', ${formattedQuery})
-			)`,
+					rank: createRankExpression(
+						"channels",
+						"title",
+						"description",
+						formattedQuery,
+					),
 				})
 				.from(channels)
 				.where(
-					sql`to_tsvector('english', ${channels.title} || ' ' || coalesce(${channels.description}, '')) @@ to_tsquery('english', ${formattedQuery})`,
+					createSearchCondition(
+						"channels",
+						"title",
+						"description",
+						formattedQuery,
+					),
+				)
+				.orderBy(
+					desc(
+						createRankExpression(
+							"channels",
+							"title",
+							"description",
+							formattedQuery,
+						),
+					),
 				)
 				.limit(limit),
 
@@ -84,19 +140,36 @@ export const globalSearch = cache(
 					type: sql<string>`'podcast'`,
 					id: podcasts.id,
 					title: podcasts.title,
-					description: sql<string>`substring(regexp_replace(${podcasts.description}, '<[^>]*>', '', 'g'), 1, 250)`,
+					description: sql<string>`substring(${podcasts.description}, 1, 150)`, // Simplified and reduced length
 					thumbnailUrl: podcasts.image,
 					publishedAt: podcasts.lastBuildDate,
 					podcastSlug: podcasts.podcastSlug,
 					priority: sql<number>`2`, // High priority
-					rank: sql<number>`ts_rank(
-				to_tsvector('english', ${podcasts.title} || ' ' || coalesce(regexp_replace(${podcasts.description}, '<[^>]*>', '', 'g'), '')),
-				to_tsquery('english', ${formattedQuery})
-			)`,
+					rank: createRankExpression(
+						"podcasts",
+						"title",
+						"description",
+						formattedQuery,
+					),
 				})
 				.from(podcasts)
 				.where(
-					sql`to_tsvector('english', ${podcasts.title} || ' ' || coalesce(regexp_replace(${podcasts.description}, '<[^>]*>', '', 'g'), '')) @@ to_tsquery('english', ${formattedQuery})`,
+					createSearchCondition(
+						"podcasts",
+						"title",
+						"description",
+						formattedQuery,
+					),
+				)
+				.orderBy(
+					desc(
+						createRankExpression(
+							"podcasts",
+							"title",
+							"description",
+							formattedQuery,
+						),
+					),
 				)
 				.limit(limit),
 
@@ -106,21 +179,38 @@ export const globalSearch = cache(
 					type: sql<string>`'video'`,
 					id: videos.id,
 					title: videos.title,
-					description: sql<string>`substring(regexp_replace(${videos.description}, '<[^>]*>', '', 'g'), 1, 250)`,
+					description: sql<string>`substring(${videos.description}, 1, 150)`, // Simplified and reduced length
 					thumbnailUrl: videos.thumbnailUrl,
 					publishedAt: videos.publishedAt,
 					channelId: videos.channelId,
 					channelTitle: channels.title,
 					priority: sql<number>`3`, // Medium priority
-					rank: sql<number>`ts_rank(
-				to_tsvector('english', ${videos.title} || ' ' || coalesce(regexp_replace(${videos.description}, '<[^>]*>', '', 'g'), '')),
-				to_tsquery('english', ${formattedQuery})
-			)`,
+					rank: createRankExpression(
+						"videos",
+						"title",
+						"description",
+						formattedQuery,
+					),
 				})
 				.from(videos)
 				.leftJoin(channels, sql`${videos.channelId} = ${channels.id}`)
 				.where(
-					sql`to_tsvector('english', ${videos.title} || ' ' || coalesce(regexp_replace(${videos.description}, '<[^>]*>', '', 'g'), '')) @@ to_tsquery('english', ${formattedQuery})`,
+					createSearchCondition(
+						"videos",
+						"title",
+						"description",
+						formattedQuery,
+					),
+				)
+				.orderBy(
+					desc(
+						createRankExpression(
+							"videos",
+							"title",
+							"description",
+							formattedQuery,
+						),
+					),
 				)
 				.limit(limit),
 
@@ -130,7 +220,7 @@ export const globalSearch = cache(
 					type: sql<string>`'episode'`,
 					id: episodes.id,
 					title: episodes.title,
-					description: sql<string>`substring(regexp_replace(${episodes.content}, '<[^>]*>', '', 'g'), 1, 250)`,
+					description: sql<string>`substring(${episodes.content}, 1, 150)`, // Simplified and reduced length
 					thumbnailUrl: sql<string>`coalesce(${episodes.image}, ${podcasts.image})`,
 					publishedAt: episodes.pubDate,
 					episodeSlug: episodes.episodeSlug,
@@ -138,15 +228,27 @@ export const globalSearch = cache(
 					podcastSlug: podcasts.podcastSlug,
 					podcastTitle: podcasts.title,
 					priority: sql<number>`4`, // Lowest priority
-					rank: sql<number>`ts_rank(
-				to_tsvector('english', ${episodes.title} || ' ' || coalesce(regexp_replace(${episodes.content}, '<[^>]*>', '', 'g'), '')),
-				to_tsquery('english', ${formattedQuery})
-			)`,
+					rank: createRankExpression(
+						"episodes",
+						"title",
+						"content",
+						formattedQuery,
+					),
 				})
 				.from(episodes)
 				.leftJoin(podcasts, sql`${episodes.podcastId} = ${podcasts.id}`)
 				.where(
-					sql`to_tsvector('english', ${episodes.title} || ' ' || coalesce(regexp_replace(${episodes.content}, '<[^>]*>', '', 'g'), '')) @@ to_tsquery('english', ${formattedQuery})`,
+					createSearchCondition("episodes", "title", "content", formattedQuery),
+				)
+				.orderBy(
+					desc(
+						createRankExpression(
+							"episodes",
+							"title",
+							"content",
+							formattedQuery,
+						),
+					),
 				)
 				.limit(limit),
 		]);
@@ -163,6 +265,7 @@ export const globalSearch = cache(
 				publishedAt: channel.publishedAt,
 				url: `/videos/channels/${channel.id}`,
 				priority: channel.priority,
+				rank: channel.rank,
 			})),
 
 			// Format podcast results
@@ -175,6 +278,7 @@ export const globalSearch = cache(
 				publishedAt: podcast.publishedAt,
 				url: `/podcasts/${podcast.podcastSlug}`,
 				priority: podcast.priority,
+				rank: podcast.rank,
 			})),
 
 			// Format video results
@@ -188,6 +292,7 @@ export const globalSearch = cache(
 				url: `/videos/${video.id}`,
 				channelTitle: video.channelTitle,
 				priority: video.priority,
+				rank: video.rank,
 			})),
 
 			// Format episode results
@@ -201,16 +306,22 @@ export const globalSearch = cache(
 				url: `/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`,
 				podcastTitle: episode.podcastTitle,
 				priority: episode.priority,
+				rank: episode.rank,
 			})),
 		];
 
-		// Sort by priority first (lower number = higher priority), then by rank
+		// Improved sorting algorithm that considers both priority and rank
 		formattedResults.sort((a, b) => {
 			// First sort by priority
 			const priorityDiff = (a.priority || 999) - (b.priority || 999);
 			if (priorityDiff !== 0) return priorityDiff;
 
-			// If same priority, sort by date (newer first)
+			// If same priority, sort by rank (higher rank first)
+			if (a.rank !== undefined && b.rank !== undefined) {
+				return b.rank - a.rank;
+			}
+
+			// If rank not available, sort by date (newer first)
 			if (a.publishedAt && b.publishedAt) {
 				return b.publishedAt.getTime() - a.publishedAt.getTime();
 			}
@@ -221,4 +332,6 @@ export const globalSearch = cache(
 		// Return limited results
 		return formattedResults.slice(0, limit);
 	},
+	["global-search"], // Cache key
+	{ revalidate: 600 }, // 10 minutes TTL
 );

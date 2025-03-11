@@ -11,11 +11,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function LogDetailPage({
-	params,
-}: {
-	params: { id: string };
+// This function is needed to satisfy the PageProps constraint
+export async function generateStaticParams() {
+	return [];
+}
+
+export default async function LogDetailPage(props: {
+	params: Promise<{ id: string }>;
 }) {
+	const params = await props.params;
 	const id = parseInt(params.id, 10);
 	if (Number.isNaN(id)) {
 		notFound();

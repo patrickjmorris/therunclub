@@ -85,8 +85,8 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 			{} as Record<string, string>,
 		);
 
-	console.log("Final personal bests object:", personalBests);
-	console.log("Number of personal bests:", Object.keys(personalBests).length);
+	// console.log("Final personal bests object:", personalBests);
+	// console.log("Number of personal bests:", Object.keys(personalBests).length);
 
 	// Filter major championship honors
 	const majorHonors = athlete.honors

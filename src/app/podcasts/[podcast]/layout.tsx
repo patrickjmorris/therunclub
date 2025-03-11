@@ -12,10 +12,10 @@ export default async function PodcastLayout({
 	params: Promise<{ podcast: string }>;
 }) {
 	const resolvedParams = await params;
-	console.log("Podcast Layout - Resolved Params:", resolvedParams);
+	// console.log("Podcast Layout - Resolved Params:", resolvedParams);
 	const data = await getPodcastBySlug(resolvedParams.podcast);
-	console.log("Podcast Layout - Podcast Data:", data);
-	console.log("Podcast Layout - Podcast Slug:", resolvedParams.podcast);
+	// console.log("Podcast Layout - Podcast Data:", data);
+	// console.log("Podcast Layout - Podcast Slug:", resolvedParams.podcast);
 
 	if (!data) {
 		console.log("Podcast Layout - No data found, returning 404");

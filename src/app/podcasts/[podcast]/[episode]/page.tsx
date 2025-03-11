@@ -177,10 +177,10 @@ function addLinkStyles(html: string): string {
 }
 
 export default async function EpisodePage({ params }: EpisodePageProps) {
-	console.log("Episode Page - Params:", params);
+	// console.log("Episode Page - Params:", params);
 	const { podcast: podcastSlug, episode: episodeSlug } = await params;
 	const episode = await getEpisode(episodeSlug);
-	console.log("Episode Page - Episode Data:", episode);
+	// console.log("Episode Page - Episode Data:", episode);
 
 	if (!episode || episode.podcastSlug !== podcastSlug) {
 		console.log("Episode Page - No matching episode found, returning 404");

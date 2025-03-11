@@ -43,7 +43,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 	const query = parseAsString.withDefault("").parseServerSide(q);
 	const tag = parseAsString.withDefault("").parseServerSide(category);
 
-	console.log("Search params:", { query, tag });
+	// console.log("Search params:", { query, tag });
 
 	// Get featured channels and top tags
 	const [featuredChannels, topTags] = await Promise.all([
@@ -61,8 +61,8 @@ export default async function VideosPage({ searchParams }: PageProps) {
 			  })
 			: await getLatestVideos(30);
 
-	console.log("Videos count:", videos.length);
-	console.log("First video:", videos[0]);
+	// console.log("Videos count:", videos.length);
+	// console.log("First video:", videos[0]);
 
 	return (
 		<div className="container py-8">

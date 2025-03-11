@@ -521,17 +521,17 @@ export const athleteMentionsRelations = relations(
 export const websubSubscriptions = pgTable(
 	"websub_subscriptions",
 	{
-		id: serial("id").primaryKey(),
-		topic: text("topic").notNull().unique(),
-		hub: text("hub").notNull(),
-		secret: text("secret").notNull(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		topic: text("topic").notNull().unique(), // The feed URL
+		hub: text("hub").notNull(), // The WebSub hub URL
+		secret: text("secret").notNull(), // Secret for verifying notifications
 		leaseSeconds: integer("lease_seconds").notNull(),
 		expiresAt: timestamp("expires_at").notNull(),
-		status: text("status", { enum: ["pending", "active", "expired"] })
-			.notNull()
-			.default("pending"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+		status: text("status", {
+			enum: ["pending", "active", "expired"],
+		}).notNull(),
+		createdAt: timestamp("created_at").defaultNow(),
+		updatedAt: timestamp("updated_at").defaultNow(),
 	},
 	(table) => {
 		return {

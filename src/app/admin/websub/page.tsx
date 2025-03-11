@@ -18,6 +18,12 @@ import {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+// Helper function to safely format dates
+function formatDate(date: Date | null | undefined): string {
+	if (!date) return "N/A";
+	return formatDistanceToNow(date, { addSuffix: true });
+}
+
 export default async function WebSubPage() {
 	// Get all subscriptions
 	const subscriptions = await db
@@ -129,16 +135,8 @@ export default async function WebSubPage() {
 								<TableCell>
 									<StatusBadge status={subscription.status} />
 								</TableCell>
-								<TableCell>
-									{formatDistanceToNow(subscription.expiresAt, {
-										addSuffix: true,
-									})}
-								</TableCell>
-								<TableCell>
-									{formatDistanceToNow(subscription.updatedAt, {
-										addSuffix: true,
-									})}
-								</TableCell>
+								<TableCell>{formatDate(subscription.expiresAt)}</TableCell>
+								<TableCell>{formatDate(subscription.updatedAt)}</TableCell>
 								<TableCell>
 									<Link
 										href={`/api/websub/manage?feedUrl=${encodeURIComponent(
@@ -203,11 +201,7 @@ export default async function WebSubPage() {
 								<TableCell>
 									<StatusCodeBadge code={log.responseStatus} />
 								</TableCell>
-								<TableCell>
-									{formatDistanceToNow(log.createdAt, {
-										addSuffix: true,
-									})}
-								</TableCell>
+								<TableCell>{formatDate(log.createdAt)}</TableCell>
 								<TableCell>
 									<Link href={`/admin/websub/logs/${log.id}`}>
 										<Button variant="outline" size="sm">

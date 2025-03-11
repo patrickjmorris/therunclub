@@ -1,7 +1,10 @@
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { updateVideos } from "@/lib/services/video-service";
-import { updatePodcastData } from "@/lib/podcast-service";
+import {
+	updatePodcastData,
+	updatePodcastByFeedUrl,
+} from "@/lib/podcast-service";
 import { updateChannelColors } from "../../../../scripts/update-channel-colors";
 import {
 	importAthleteData,
@@ -9,8 +12,16 @@ import {
 	updateExistingAthletes,
 } from "@/lib/services/athlete-service";
 import { db } from "@/db/client";
-import { episodes, podcasts, videos, channels, athletes } from "@/db/schema";
+import {
+	episodes,
+	podcasts,
+	videos,
+	channels,
+	athletes,
+	websubSubscriptions,
+} from "@/db/schema";
 import { and, sql, not, eq, desc } from "drizzle-orm";
+import { webSubManager } from "@/lib/websub-manager";
 
 type ContentType =
 	| "videos"
@@ -260,13 +271,65 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 			);
 			const randomSample =
 				request.nextUrl.searchParams.get("randomSample") === "true";
+			const podcastId = request.nextUrl.searchParams.get("podcastId");
 
 			console.log("Podcast update parameters:", {
 				minHoursSinceUpdate,
 				limit,
 				randomSample,
+				podcastId,
 			});
 
+			// If a specific podcast ID is provided, update just that podcast
+			if (podcastId) {
+				const podcast = await db.query.podcasts.findFirst({
+					where: eq(podcasts.id, podcastId),
+				});
+
+				if (!podcast) {
+					return NextResponse.json(
+						{ message: "Podcast not found" },
+						{ status: 404 },
+					);
+				}
+
+				// Process the single podcast
+				const result = await updatePodcastByFeedUrl(podcast.feedUrl);
+
+				// Try to discover and subscribe to WebSub hub if not already subscribed
+				const existingSubscription =
+					await db.query.websubSubscriptions.findFirst({
+						where: eq(websubSubscriptions.topic, podcast.feedUrl),
+					});
+
+				let subscriptionResult = null;
+				if (!existingSubscription) {
+					const hubUrl = await webSubManager.discoverWebSubHub(podcast.feedUrl);
+					if (hubUrl) {
+						subscriptionResult = await webSubManager.subscribe(
+							podcast.feedUrl,
+							hubUrl,
+						);
+					}
+				}
+
+				return NextResponse.json({
+					message: "Podcast updated successfully",
+					podcast: {
+						id: podcast.id,
+						title: podcast.title,
+						feedUrl: podcast.feedUrl,
+					},
+					updateResult: result,
+					subscriptionResult: existingSubscription
+						? { status: "existing", subscription: existingSubscription }
+						: subscriptionResult
+						  ? { status: "created", success: subscriptionResult }
+						  : { status: "none", reason: "No hub discovered" },
+				});
+			}
+
+			// Otherwise, update multiple podcasts based on the parameters
 			const results = await updatePodcastData({
 				minHoursSinceUpdate,
 				limit,

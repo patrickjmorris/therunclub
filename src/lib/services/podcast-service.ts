@@ -298,7 +298,7 @@ export const getEpisodeTitles = unstable_cache(
 // Get episode by slug
 export const getEpisode = unstable_cache(
 	async (episodeSlug: string) => {
-		// console.log("getEpisode - Input slug:", episodeSlug);
+		console.log("getEpisode - Input slug:", episodeSlug);
 		const results = await db
 			.select({
 				id: episodes.id,
@@ -322,9 +322,9 @@ export const getEpisode = unstable_cache(
 			.where(eq(episodes.episodeSlug, episodeSlug))
 			.limit(1);
 
-		// console.log("getEpisode - Query results:", results);
+		console.log("getEpisode - Query results:", results);
 		const episode = results[0] || null;
-		// console.log("getEpisode - Returning episode:", episode);
+		console.log("getEpisode - Returning episode:", episode);
 		return episode;
 	},
 	["episode"],
@@ -334,7 +334,7 @@ export const getEpisode = unstable_cache(
 // Get podcast by slug
 export const getPodcastBySlug = unstable_cache(
 	async (podcastSlug: string) => {
-		// console.log("getPodcastBySlug - Input slug:", podcastSlug);
+		console.log("getPodcastBySlug - Input slug:", podcastSlug);
 		const results = await db
 			.select({
 				id: podcasts.id,
@@ -349,9 +349,9 @@ export const getPodcastBySlug = unstable_cache(
 			.from(podcasts)
 			.where(eq(podcasts.podcastSlug, podcastSlug));
 
-		// console.log("getPodcastBySlug - Query results:", results);
+		console.log("getPodcastBySlug - Query results:", results);
 		const podcast = results[0] || null;
-		// console.log("getPodcastBySlug - Returning podcast:", podcast);
+		console.log("getPodcastBySlug - Returning podcast:", podcast);
 		return podcast;
 	},
 	["podcast-by-slug", "podcast"],

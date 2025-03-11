@@ -13,7 +13,7 @@ async function generateSlugs() {
 		.from(athletes)
 		.where(sql`${athletes.slug} IS NULL`);
 
-	// console.log(`Found ${athletesWithoutSlugs.length} athletes without slugs`);
+	console.log(`Found ${athletesWithoutSlugs.length} athletes without slugs`);
 
 	// Update each athlete with a slug
 	for (const athlete of athletesWithoutSlugs) {
@@ -30,7 +30,7 @@ async function generateSlugs() {
 			.where(sql`${athletes.id} = ${athlete.id}`);
 	}
 
-	// console.log("✅ Slug generation completed successfully");
+	console.log("✅ Slug generation completed successfully");
 }
 
 // Run the script

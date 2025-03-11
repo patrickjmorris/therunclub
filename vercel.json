@@ -1,8 +1,12 @@
 {
 	"crons": [
 		{
-			"path": "/api/websub/manage?renewAll=true&expiringOnly=true&action=renew",
-			"schedule": "0 */12 * * *"
+			"path": "/api/content?type=podcasts",
+			"schedule": "15 12 * * *"
+		},
+		{
+			"path": "/api/content?type=videos",
+			"schedule": "15 12 * * *"
 		}
 	]
 }

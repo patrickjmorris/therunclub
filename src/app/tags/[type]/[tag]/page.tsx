@@ -88,17 +88,17 @@ export default async function TagPage(props: TagPageProps) {
 							href={`/videos/${video.id}`}
 							className="block transition-transform hover:scale-[1.02]"
 						>
-							<Card>
+							<Card className="border dark:border-slate-800 hover:shadow-md transition-shadow">
 								<CardHeader>
 									<CardTitle className="line-clamp-2">{video.title}</CardTitle>
 								</CardHeader>
 								<CardContent>
-									<div className="relative aspect-video mb-4">
+									<div className="relative aspect-video mb-4 rounded-md overflow-hidden">
 										<Image
 											src={video.thumbnailUrl ?? ""}
 											alt={video.title}
 											fill
-											className="object-cover rounded-md"
+											className="object-cover"
 										/>
 									</div>
 									<p className="text-sm text-muted-foreground mb-2">

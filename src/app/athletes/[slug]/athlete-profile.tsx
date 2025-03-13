@@ -74,10 +74,10 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 		.reduce(
 			(acc, result) => {
 				if (result.performance && result.discipline) {
-					console.log("Adding result:", {
-						discipline: result.discipline,
-						time: result.performance,
-					});
+					// console.log("Adding result:", {
+					// 	discipline: result.discipline,
+					// 	time: result.performance,
+					// });
 					acc[result.discipline] = result.performance;
 				}
 				return acc;

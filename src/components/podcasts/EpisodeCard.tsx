@@ -42,7 +42,7 @@ export function EpisodeCard({ episode, className = "" }: EpisodeCardProps) {
 
 	return (
 		<Card
-			className={`group hover:shadow-lg transition-all h-full ${className}`}
+			className={`group hover:shadow-md transition-all h-full border dark:border-slate-800 ${className}`}
 		>
 			<Link
 				href={`/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`}

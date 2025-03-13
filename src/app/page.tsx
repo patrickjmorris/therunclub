@@ -66,9 +66,17 @@ export default async function HomePage() {
 			{/* Videos Section */}
 			<section className="w-full py-12 md:py-24">
 				<div className="container px-4 md:px-6">
-					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
-						Latest Videos
-					</h2>
+					<div className="flex items-center justify-between mb-8">
+						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
+							Latest Videos
+						</h2>
+						<Button variant="ghost" asChild>
+							<Link href={"/videos"} className="group">
+								View All Videos
+								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+							</Link>
+						</Button>
+					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						{videos.map((video) => (
 							<Link
@@ -76,19 +84,19 @@ export default async function HomePage() {
 								href={`/videos/${video.id}`}
 								className="block transition-transform hover:scale-[1.02]"
 							>
-								<Card>
+								<Card className="border dark:border-slate-800 hover:shadow-md transition-shadow">
 									<CardHeader>
 										<CardTitle className="line-clamp-2">
 											{video.title}
 										</CardTitle>
 									</CardHeader>
 									<CardContent>
-										<div className="relative aspect-video mb-4">
+										<div className="relative aspect-video mb-4 rounded-md overflow-hidden">
 											<Image
 												src={video.thumbnailUrl ?? ""}
 												alt={video.title}
 												fill
-												className="object-cover rounded-md"
+												className="object-cover"
 											/>
 										</div>
 										<p className="text-sm text-muted-foreground mb-2">
@@ -118,9 +126,46 @@ export default async function HomePage() {
 				</div>
 			</section>
 
+			{/* Podcasts Row */}
+			<section className="w-full py-12 md:py-24 bg-slate-50/50 dark:bg-slate-800/10">
+				<div className="container px-4 md:px-6">
+					<div className="flex items-center justify-between mb-8">
+						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
+							Latest Episodes
+						</h2>
+						<Button variant="ghost" asChild>
+							<Link href={"/podcasts"} className="group">
+								View All Episodes
+								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+							</Link>
+						</Button>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						{podcasts.map((podcast) => (
+							<EpisodeCard
+								key={podcast.episodeId}
+								episode={{
+									episodeId: podcast.episodeId,
+									episodeTitle: podcast.episodeTitle,
+									episodeSlug: podcast.episodeSlug,
+									podcastId: podcast.podcastId,
+									podcastTitle: podcast.podcastTitle,
+									podcastSlug: podcast.podcastSlug,
+									podcastImage: podcast.podcastImage,
+									itunesImage: podcast.episodeImage,
+									enclosureUrl: podcast.enclosureUrl,
+									pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,
+								}}
+							/>
+						))}
+					</div>
+				</div>
+			</section>
+
 			{/* Top Tagged Videos Section */}
 			{topVideoTag && taggedVideos.length > 0 && (
-				<section className="w-full py-12 md:py-24 bg-slate-50">
+				<section className="w-full py-12 md:py-24 bg-slate-50 dark:bg-slate-800/20">
 					<div className="container px-4 md:px-6">
 						<div className="flex items-center justify-between mb-8">
 							<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl flex items-center">
@@ -144,19 +189,19 @@ export default async function HomePage() {
 									href={`/videos/${video.id}`}
 									className="block transition-transform hover:scale-[1.02]"
 								>
-									<Card>
+									<Card className="border dark:border-slate-800 hover:shadow-md transition-shadow">
 										<CardHeader>
 											<CardTitle className="line-clamp-2">
 												{video.title}
 											</CardTitle>
 										</CardHeader>
 										<CardContent>
-											<div className="relative aspect-video mb-4">
+											<div className="relative aspect-video mb-4 rounded-md overflow-hidden">
 												<Image
 													src={video.thumbnailUrl ?? ""}
 													alt={video.title}
 													fill
-													className="object-cover rounded-md"
+													className="object-cover"
 												/>
 											</div>
 											<p className="text-sm text-muted-foreground mb-2">
@@ -189,7 +234,7 @@ export default async function HomePage() {
 
 			{/* Top Tagged Episodes Section */}
 			{topEpisodeTag && taggedEpisodes.length > 0 && (
-				<section className="w-full py-12 md:py-24">
+				<section className="w-full py-12 md:py-24 bg-white dark:bg-background">
 					<div className="container px-4 md:px-6">
 						<div className="flex items-center justify-between mb-8">
 							<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl flex items-center">
@@ -231,36 +276,8 @@ export default async function HomePage() {
 				</section>
 			)}
 
-			{/* Podcasts Row */}
-			<section className="w-full py-12 md:py-24">
-				<div className="container px-4 md:px-6">
-					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
-						Latest Episodes
-					</h2>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{podcasts.map((podcast) => (
-							<EpisodeCard
-								key={podcast.episodeId}
-								episode={{
-									episodeId: podcast.episodeId,
-									episodeTitle: podcast.episodeTitle,
-									episodeSlug: podcast.episodeSlug,
-									podcastId: podcast.podcastId,
-									podcastTitle: podcast.podcastTitle,
-									podcastSlug: podcast.podcastSlug,
-									podcastImage: podcast.podcastImage,
-									itunesImage: podcast.episodeImage,
-									enclosureUrl: podcast.enclosureUrl,
-									pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,
-								}}
-							/>
-						))}
-					</div>
-				</div>
-			</section>
-
 			{/* Featured Channels Section */}
-			<section className="w-full py-12 md:py-24 bg-slate-50">
+			<section className="w-full py-12 md:py-24 bg-white dark:bg-background">
 				<div className="container px-4 md:px-6">
 					<div className="flex items-center justify-between mb-8">
 						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
@@ -293,7 +310,7 @@ export default async function HomePage() {
 			</section>
 
 			{/* Featured Podcasts Section */}
-			<section className="w-full py-12 md:py-24">
+			<section className="w-full py-12 md:py-24 bg-slate-50/50 dark:bg-slate-800/10">
 				<div className="container px-4 md:px-6">
 					<div className="flex items-center justify-between mb-8">
 						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">

@@ -230,7 +230,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
 			/>
-			<Card>
+			<Card className="border dark:border-slate-800">
 				<CardHeader className="flex flex-col lg:flex-row lg:items-start lg:gap-8 px-6">
 					<div className="w-full lg:w-[350px] lg:flex-shrink-0">
 						<Image

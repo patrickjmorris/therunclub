@@ -36,11 +36,11 @@ export default async function TagsPage() {
 							variant="outline"
 							size="lg"
 							asChild
-							className="flex items-center gap-2"
+							className="flex items-center gap-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
 						>
 							<Link href={`/tags/video/${encodeURIComponent(tag.tag)}`}>
 								{tag.tag}
-								<span className="text-xs bg-muted px-2 py-1 rounded-full">
+								<span className="text-xs bg-muted px-2 py-1 rounded-full dark:bg-slate-700">
 									{tag.count}
 								</span>
 							</Link>
@@ -69,11 +69,11 @@ export default async function TagsPage() {
 							variant="outline"
 							size="lg"
 							asChild
-							className="flex items-center gap-2"
+							className="flex items-center gap-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
 						>
 							<Link href={`/tags/episode/${encodeURIComponent(tag.tag)}`}>
 								{tag.tag}
-								<span className="text-xs bg-muted px-2 py-1 rounded-full">
+								<span className="text-xs bg-muted px-2 py-1 rounded-full dark:bg-slate-700">
 									{tag.count}
 								</span>
 							</Link>

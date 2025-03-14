@@ -40,19 +40,19 @@ export function MoreContent({ title, items }: MoreContentProps) {
 							}
 							className="block transition-transform hover:scale-[1.02]"
 						>
-							<Card>
+							<Card className="border dark:border-slate-800 hover:shadow-md transition-shadow">
 								<CardHeader>
 									<CardTitle className="line-clamp-2">{item.title}</CardTitle>
 								</CardHeader>
 								<CardContent>
 									{item.type === "video" ? (
 										<>
-											<div className="relative aspect-video mb-4">
+											<div className="relative aspect-video mb-4 rounded-md overflow-hidden">
 												<Image
 													src={item.thumbnailUrl ?? ""}
 													alt={item.title}
 													fill
-													className="object-cover rounded-md"
+													className="object-cover"
 												/>
 											</div>
 											{item.channelTitle && (
@@ -73,20 +73,22 @@ export function MoreContent({ title, items }: MoreContentProps) {
 										</>
 									) : (
 										<>
-											<Image
-												src={item.thumbnailUrl ?? ""}
-												alt={item.title}
-												width={192}
-												height={192}
-												className="w-48 h-48 object-cover mb-4 rounded-md mx-auto"
-											/>
+											<div className="rounded-md overflow-hidden mb-4 mx-auto w-48 h-48">
+												<Image
+													src={item.thumbnailUrl ?? ""}
+													alt={item.title}
+													width={192}
+													height={192}
+													className="w-full h-full object-cover"
+												/>
+											</div>
 											{item.publishedAt && item.publishedAt instanceof Date && (
 												<FormattedDate
 													date={item.publishedAt}
 													className="text-sm text-muted-foreground mb-2 block"
 												/>
 											)}
-											<Button className="mt-4" variant="outline">
+											<Button className="mt-4 w-full" variant="outline">
 												<Headphones className="mr-2 h-4 w-4" />
 												Listen Now
 											</Button>

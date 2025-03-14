@@ -1,17 +1,41 @@
 "use client";
 
-import { SearchBar } from "@/components/search/search-bar";
-import { useQueryState } from "nuqs";
+import { ContentFilter } from "@/components/shared/content-filter";
+import { useState, useEffect } from "react";
 
-export function PodcastFilter() {
-  const [query, setQuery] = useQueryState("q");
+interface PodcastFilterProps {
+	tags?: Array<{ tag: string; count: number }>;
+	onLoadingChange?: (isLoading: boolean) => void;
+}
 
-  return (
-    <div className="space-y-4">
-      <SearchBar
-        placeholder="Search podcasts and episodes..."
-        defaultValue={query ?? ""}
-      />
-    </div>
-  );
+export function PodcastFilter({
+	tags = [],
+	onLoadingChange,
+}: PodcastFilterProps) {
+	const [isLoading, setIsLoading] = useState(false);
+
+	// Handle loading state changes
+	const handleLoadingChange = (loading: boolean) => {
+		setIsLoading(loading);
+		onLoadingChange?.(loading);
+	};
+
+	// Reset loading state when component unmounts
+	useEffect(() => {
+		return () => {
+			setIsLoading(false);
+			onLoadingChange?.(false);
+		};
+	}, [onLoadingChange]);
+
+	return (
+		<ContentFilter
+			tags={tags}
+			onLoadingChange={handleLoadingChange}
+			placeholder="Search podcasts & episodes (min. 3 characters)..."
+			emptyTagsMessage="No podcast tags available"
+			contentType="podcast"
+			showSearch={false}
+		/>
+	);
 }

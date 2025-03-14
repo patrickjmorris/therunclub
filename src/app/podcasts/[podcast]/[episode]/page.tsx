@@ -177,10 +177,10 @@ function addLinkStyles(html: string): string {
 }
 
 export default async function EpisodePage({ params }: EpisodePageProps) {
-	console.log("Episode Page - Params:", params);
+	// console.log("Episode Page - Params:", params);
 	const { podcast: podcastSlug, episode: episodeSlug } = await params;
 	const episode = await getEpisode(episodeSlug);
-	console.log("Episode Page - Episode Data:", episode);
+	// console.log("Episode Page - Episode Data:", episode);
 
 	if (!episode || episode.podcastSlug !== podcastSlug) {
 		console.log("Episode Page - No matching episode found, returning 404");
@@ -230,7 +230,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
 			/>
-			<Card>
+			<Card className="border dark:border-slate-800">
 				<CardHeader className="flex flex-col lg:flex-row lg:items-start lg:gap-8 px-6">
 					<div className="w-full lg:w-[350px] lg:flex-shrink-0">
 						<Image

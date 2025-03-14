@@ -1,9 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { useQueryState, parseAsString } from "nuqs";
-import { SearchBar } from "@/components/search/search-bar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ContentFilter } from "@/components/shared/content-filter";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface VideoFilterProps {
@@ -12,89 +10,31 @@ interface VideoFilterProps {
 }
 
 export function VideoFilter({ tags, onLoadingChange }: VideoFilterProps) {
-	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
-	const [query, setQuery] = useQueryState("q", parseAsString.withDefault(""));
-	const [category, setCategory] = useQueryState(
-		"category",
-		parseAsString.withDefault(""),
-	);
-	const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+	const router = useRouter();
 
-	const handleSearch = useCallback(
-		async (searchQuery: string) => {
-			if (searchTimeoutRef.current) {
-				clearTimeout(searchTimeoutRef.current);
-			}
+	// Handle loading state changes
+	const handleLoadingChange = (loading: boolean) => {
+		setIsLoading(loading);
+		onLoadingChange?.(loading);
+	};
 
-			if (searchQuery === query) return;
-
-			setIsLoading(true);
-			onLoadingChange?.(true);
-
-			searchTimeoutRef.current = setTimeout(async () => {
-				if (searchQuery.length === 0 || searchQuery.length >= 3) {
-					await setQuery(searchQuery || null);
-					router.refresh();
-				}
-			}, 300);
-		},
-		[query, setQuery, router, onLoadingChange],
-	);
-
-	const handleCategoryClick = useCallback(
-		async (value: string) => {
-			setIsLoading(true);
-			onLoadingChange?.(true);
-
-			if (value === category) {
-				await setCategory(null);
-			} else if (category === null || value !== category) {
-				await setCategory(value);
-			}
-			router.refresh();
-		},
-		[category, setCategory, router, onLoadingChange],
-	);
-
-	useEffect(() => {
-		return () => {
-			if (searchTimeoutRef.current) {
-				clearTimeout(searchTimeoutRef.current);
-			}
-		};
-	}, []);
-
-	// Reset loading state when navigation is complete
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	// Reset loading state when component unmounts or when navigation completes
 	useEffect(() => {
 		return () => {
 			setIsLoading(false);
 			onLoadingChange?.(false);
 		};
-	}, [query, category, onLoadingChange]);
+	}, [onLoadingChange]);
 
 	return (
-		<div className="space-y-4">
-			<SearchBar
-				placeholder="Search videos (min. 3 characters)..."
-				defaultValue={query ?? ""}
-				onSearch={handleSearch}
-			/>
-			<div className="flex flex-wrap gap-2">
-				{tags.map(({ tag, count }) => (
-					<Button
-						key={tag}
-						variant={category === tag ? "default" : "outline"}
-						size="sm"
-						onClick={() => handleCategoryClick(tag)}
-						aria-pressed={category === tag}
-						disabled={isLoading}
-					>
-						{tag.replace(/-/g, " ")} ({count})
-					</Button>
-				))}
-			</div>
-		</div>
+		<ContentFilter
+			tags={tags}
+			onLoadingChange={handleLoadingChange}
+			placeholder="Search videos (min. 3 characters)..."
+			emptyTagsMessage="No video tags available"
+			contentType="video"
+			showSearch={false}
+		/>
 	);
 }

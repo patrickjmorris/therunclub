@@ -58,15 +58,15 @@ export function ExpandedPlayer({
 		<div
 			className="flex h-full flex-col space-y-4 bg-background px-4 pb-4 pt-4"
 			onClick={(e: React.MouseEvent<HTMLDivElement>) => {
-				console.log("Container clicked");
+				// console.log("Container clicked");
 				e.stopPropagation();
 			}}
 			onTouchStart={(e: React.TouchEvent<HTMLDivElement>) => {
-				console.log("Container touch start");
+				// console.log("Container touch start");
 				e.stopPropagation();
 			}}
 			onTouchEnd={(e: React.TouchEvent<HTMLDivElement>) => {
-				console.log("Container touch end");
+				// console.log("Container touch end");
 				e.stopPropagation();
 			}}
 			role="presentation"

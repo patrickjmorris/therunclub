@@ -89,7 +89,7 @@ async function AthletesList({ athletes, hasMore, page }: AthletesListProps) {
 }
 
 async function getAthletes(page = 1) {
-	console.log(`Getting athletes for page ${page}`);
+	// console.log(`Getting athletes for page ${page}`);
 
 	// First, get athletes with Olympic gold medals (excluding youth olympics)
 	const olympicGoldMedalists = await getOlympicGoldMedalists();

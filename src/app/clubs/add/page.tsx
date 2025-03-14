@@ -12,7 +12,7 @@ export default function AddClubPage() {
 
 	const { execute, status, result } = useAction(extractClubInfo_Action, {
 		onSuccess: (data) => {
-			console.log("Success:", data);
+			// console.log("Success:", data);
 			toast.success("Club information extracted successfully");
 			router.push("/clubs");
 		},
@@ -21,7 +21,7 @@ export default function AddClubPage() {
 			toast.error(error.error?.serverError || "Something went wrong");
 		},
 		onExecute: () => {
-			console.log("Executing action...");
+			// console.log("Executing action...");
 		},
 	});
 

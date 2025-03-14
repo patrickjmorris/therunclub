@@ -31,7 +31,7 @@ export function EpisodeList({
 
 	return (
 		<InfiniteScroll hasMore={hasMore} onLoadMore={loadMore}>
-			<div className="divide-y divide-slate-100 sm:mt-4 lg:mt-8 lg:border-t lg:border-slate-100">
+			<div className="divide-y divide-slate-100 dark:divide-slate-800 sm:mt-4 lg:mt-8 lg:border-t lg:border-slate-100 dark:lg:border-slate-800">
 				{episodes.map((episode) => (
 					<EpisodeEntry key={episode.episodeSlug} episode={episode} />
 				))}

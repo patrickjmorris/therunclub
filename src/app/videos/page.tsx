@@ -43,7 +43,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
 	const query = parseAsString.withDefault("").parseServerSide(q);
 	const tag = parseAsString.withDefault("").parseServerSide(category);
 
-	console.log("Search params:", { query, tag });
+	// console.log("Search params:", { query, tag });
 
 	// Get featured channels and top tags
 	const [featuredChannels, topTags] = await Promise.all([
@@ -61,11 +61,11 @@ export default async function VideosPage({ searchParams }: PageProps) {
 			  })
 			: await getLatestVideos(30);
 
-	console.log("Videos count:", videos.length);
-	console.log("First video:", videos[0]);
+	// console.log("Videos count:", videos.length);
+	// console.log("First video:", videos[0]);
 
 	return (
-		<div className="container py-8">
+		<div className="container py-8 md:py-12">
 			{/* Search Section */}
 			<div className="flex items-center justify-between mb-8">
 				<AddContentWrapper defaultTab="channel" />
@@ -88,9 +88,17 @@ export default async function VideosPage({ searchParams }: PageProps) {
 			{/* Videos Section */}
 			<div>
 				<h2 className="text-2xl font-bold mb-6">Latest Videos</h2>
-				<VideoFilter tags={topTags} />
+
+				{/* The key prop on Suspense ensures it re-renders when query/tag changes */}
+				<Suspense key={`filter-${query}-${tag}`} fallback={null}>
+					<VideoFilter tags={topTags} />
+				</Suspense>
+
 				<div className="mt-8">
-					<Suspense key={`${query}-${tag}`} fallback={<LoadingGridSkeleton />}>
+					<Suspense
+						key={`videos-${query}-${tag}`}
+						fallback={<LoadingGridSkeleton />}
+					>
 						<VideoGrid
 							videos={videos.map((item) => {
 								// Handle both filtered and latest videos formats

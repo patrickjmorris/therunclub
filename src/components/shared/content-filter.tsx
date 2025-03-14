@@ -37,6 +37,9 @@ export function ContentFilter({
 	);
 	const [localQuery, setLocalQuery] = useState(searchQuery || "");
 	const debouncedQuery = useDebounce(localQuery, 500);
+	const resetLoadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	);
 
 	// Determine content type based on pathname if not explicitly provided
 	const determinedContentType =
@@ -51,6 +54,21 @@ export function ContentFilter({
 	const shouldShowSearch =
 		showSearch !== undefined ? showSearch : determinedContentType !== "podcast"; // Default: show search for everything except podcasts
 
+	// Helper function to reset loading state with a small delay
+	const resetLoadingWithDelay = useCallback(
+		(delay = 300) => {
+			if (resetLoadingTimeoutRef.current) {
+				clearTimeout(resetLoadingTimeoutRef.current);
+			}
+
+			resetLoadingTimeoutRef.current = setTimeout(() => {
+				setIsLoading(false);
+				onLoadingChange?.(false);
+			}, delay);
+		},
+		[onLoadingChange],
+	);
+
 	// Update the query parameter when the debounced query changes
 	useEffect(() => {
 		const updateQuery = async () => {
@@ -63,11 +81,19 @@ export function ContentFilter({
 				onLoadingChange?.(true);
 				await setSearchQuery(debouncedQuery || null);
 				router.refresh();
+				resetLoadingWithDelay();
 			}
 		};
 
 		updateQuery();
-	}, [debouncedQuery, searchQuery, setSearchQuery, router, onLoadingChange]);
+	}, [
+		debouncedQuery,
+		searchQuery,
+		setSearchQuery,
+		router,
+		onLoadingChange,
+		resetLoadingWithDelay,
+	]);
 
 	const handleSearch = useCallback((newQuery: string) => {
 		setLocalQuery(newQuery);
@@ -85,9 +111,25 @@ export function ContentFilter({
 				await setCategory(value);
 			}
 			router.refresh();
+
+			// Reset loading state after a short delay to allow the UI to update
+			resetLoadingWithDelay();
 		},
-		[category, setCategory, router, onLoadingChange],
+		[category, setCategory, router, onLoadingChange, resetLoadingWithDelay],
 	);
+
+	// Clean up timeouts when component unmounts
+	useEffect(() => {
+		return () => {
+			if (resetLoadingTimeoutRef.current) {
+				clearTimeout(resetLoadingTimeoutRef.current);
+			}
+
+			// Reset loading state on unmount
+			setIsLoading(false);
+			onLoadingChange?.(false);
+		};
+	}, [onLoadingChange]);
 
 	// Generate appropriate placeholder based on content type
 	const getPlaceholder = () => {

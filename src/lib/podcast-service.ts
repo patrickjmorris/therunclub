@@ -495,6 +495,16 @@ export async function addNewPodcast(feedUrl: string) {
 
 		if (existingPodcast) {
 			console.log(`[INFO] Podcast with feed URL ${feedUrl} already exists`);
+
+			// Even if the podcast already exists, revalidate the caches
+			// to ensure it appears correctly in the UI
+			try {
+				const { revalidatePodcastsAndEpisodes } = await import("@/db/queries");
+				revalidatePodcastsAndEpisodes();
+			} catch (error) {
+				console.error("[ERROR] Failed to revalidate caches:", error);
+			}
+
 			return {
 				success: false,
 				error: "Podcast already exists",
@@ -663,6 +673,14 @@ export async function addNewPodcast(feedUrl: string) {
 			);
 		} else {
 			console.log(`[WARNING] No episodes found for new podcast ${feedUrl}`);
+		}
+
+		// Revalidate all podcast-related caches
+		try {
+			const { revalidatePodcastsAndEpisodes } = await import("@/db/queries");
+			revalidatePodcastsAndEpisodes();
+		} catch (error) {
+			console.error("[ERROR] Failed to revalidate caches:", error);
 		}
 
 		return {

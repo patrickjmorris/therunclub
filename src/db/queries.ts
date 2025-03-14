@@ -5,8 +5,23 @@ import { podcasts, episodes } from "./schema";
 
 // Function to revalidate cache
 export function revalidatePodcastsAndEpisodes() {
+	// Revalidate main tags
 	revalidateTag("podcasts");
 	revalidateTag("episodes");
+
+	// Revalidate specific podcast-related tags
+	revalidateTag("podcast");
+	revalidateTag("podcast-by-slug");
+	revalidateTag("last-ten-episodes");
+	revalidateTag("last-ten-episodes-by-slug");
+	revalidateTag("last-episode");
+	revalidateTag("podcasts-and-last-episodes");
+	revalidateTag("all-podcasts-with-last-episodes");
+	revalidateTag("episode-titles");
+	revalidateTag("episode");
+	revalidateTag("featured-podcasts");
+	revalidateTag("podcast-tags");
+	revalidateTag("new-episodes");
 }
 
 export const searchEpisodesWithPodcasts = async (query: string) => {

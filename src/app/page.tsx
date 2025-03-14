@@ -23,6 +23,9 @@ import {
 import { getPopularRunClubs } from "@/lib/services/club-service";
 import { ListenNowButton } from "@/components/ListenNowButton";
 import { EpisodeCard } from "@/components/podcasts/EpisodeCard";
+import { CompactEpisodeCard } from "@/components/podcasts/CompactEpisodeCard";
+import { CompactVideoCard } from "@/components/videos/CompactVideoCard";
+import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
 import {
 	getTopTags,
 	getVideosByTag,
@@ -34,8 +37,8 @@ export const revalidate = 3600;
 export default async function HomePage() {
 	const [podcasts, videos, runClubs, featuredPodcasts, featuredChannels] =
 		await Promise.all([
-			getNewEpisodes(),
-			getHomeLatestVideos(),
+			getNewEpisodes(16),
+			getHomeLatestVideos(16),
 			getPopularRunClubs(),
 			getFeaturedPodcasts(3),
 			getFeaturedChannels(),
@@ -46,9 +49,11 @@ export default async function HomePage() {
 	const [topEpisodeTag] = await getTopTags("episode", 14, 1);
 
 	// Get content for top tags if they exist
-	const taggedVideos = topVideoTag ? await getVideosByTag(topVideoTag.tag) : [];
+	const taggedVideos = topVideoTag
+		? await getVideosByTag(topVideoTag.tag, 16)
+		: [];
 	const taggedEpisodes = topEpisodeTag
-		? await getEpisodesByTag(topEpisodeTag.tag)
+		? await getEpisodesByTag(topEpisodeTag.tag, 16)
 		: [];
 
 	return (
@@ -67,7 +72,7 @@ export default async function HomePage() {
 			<section className="w-full py-12 md:py-24">
 				<div className="container px-4 md:px-6">
 					<div className="flex items-center justify-between mb-8">
-						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
+						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
 							Latest Videos
 						</h2>
 						<Button variant="ghost" asChild>
@@ -77,52 +82,20 @@ export default async function HomePage() {
 							</Link>
 						</Button>
 					</div>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					<HorizontalScroll>
 						{videos.map((video) => (
-							<Link
+							<CompactVideoCard
 								key={video.id}
-								href={`/videos/${video.id}`}
-								className="block transition-transform hover:scale-[1.02]"
-							>
-								<Card className="border dark:border-slate-800 hover:shadow-md transition-shadow">
-									<CardHeader>
-										<CardTitle className="line-clamp-2">
-											{video.title}
-										</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<div className="relative aspect-video mb-4 rounded-md overflow-hidden">
-											<Image
-												src={video.thumbnailUrl ?? ""}
-												alt={video.title}
-												fill
-												className="object-cover"
-											/>
-										</div>
-										<p className="text-sm text-muted-foreground mb-2">
-											{video.channelTitle}
-										</p>
-										<div className="flex items-center gap-4 text-sm text-muted-foreground">
-											<span className="flex items-center">
-												<Clock className="w-4 h-4 mr-1" />
-												{formatDistanceToNow(
-													new Date(video.publishedAt ?? ""),
-													{
-														addSuffix: true,
-													},
-												)}
-											</span>
-											<span>
-												{video.publishedAt
-													? new Date(video.publishedAt).toLocaleDateString()
-													: ""}
-											</span>
-										</div>
-									</CardContent>
-								</Card>
-							</Link>
+								video={{
+									id: video.id,
+									title: video.title,
+									thumbnailUrl: video.thumbnailUrl,
+									publishedAt: video.publishedAt,
+									channelTitle: video.channelTitle,
+								}}
+							/>
 						))}
-					</div>
+					</HorizontalScroll>
 				</div>
 			</section>
 
@@ -130,7 +103,7 @@ export default async function HomePage() {
 			<section className="w-full py-12 md:py-24 bg-slate-50/50 dark:bg-slate-800/10">
 				<div className="container px-4 md:px-6">
 					<div className="flex items-center justify-between mb-8">
-						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
+						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
 							Latest Episodes
 						</h2>
 						<Button variant="ghost" asChild>
@@ -141,9 +114,9 @@ export default async function HomePage() {
 						</Button>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					<HorizontalScroll>
 						{podcasts.map((podcast) => (
-							<EpisodeCard
+							<CompactEpisodeCard
 								key={podcast.episodeId}
 								episode={{
 									episodeId: podcast.episodeId,
@@ -159,7 +132,7 @@ export default async function HomePage() {
 								}}
 							/>
 						))}
-					</div>
+					</HorizontalScroll>
 				</div>
 			</section>
 
@@ -182,52 +155,20 @@ export default async function HomePage() {
 								</Link>
 							</Button>
 						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						<HorizontalScroll>
 							{taggedVideos.map((video) => (
-								<Link
+								<CompactVideoCard
 									key={video.id}
-									href={`/videos/${video.id}`}
-									className="block transition-transform hover:scale-[1.02]"
-								>
-									<Card className="border dark:border-slate-800 hover:shadow-md transition-shadow">
-										<CardHeader>
-											<CardTitle className="line-clamp-2">
-												{video.title}
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<div className="relative aspect-video mb-4 rounded-md overflow-hidden">
-												<Image
-													src={video.thumbnailUrl ?? ""}
-													alt={video.title}
-													fill
-													className="object-cover"
-												/>
-											</div>
-											<p className="text-sm text-muted-foreground mb-2">
-												{video.channelTitle}
-											</p>
-											<div className="flex items-center gap-4 text-sm text-muted-foreground">
-												<span className="flex items-center">
-													<Clock className="w-4 h-4 mr-1" />
-													{formatDistanceToNow(
-														new Date(video.publishedAt ?? ""),
-														{
-															addSuffix: true,
-														},
-													)}
-												</span>
-												<span>
-													{video.publishedAt
-														? new Date(video.publishedAt).toLocaleDateString()
-														: ""}
-												</span>
-											</div>
-										</CardContent>
-									</Card>
-								</Link>
+									video={{
+										id: video.id,
+										title: video.title,
+										thumbnailUrl: video.thumbnailUrl,
+										publishedAt: video.publishedAt,
+										channelTitle: video.channelTitle,
+									}}
+								/>
 							))}
-						</div>
+						</HorizontalScroll>
 					</div>
 				</section>
 			)}
@@ -253,9 +194,9 @@ export default async function HomePage() {
 								</Link>
 							</Button>
 						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						<HorizontalScroll>
 							{taggedEpisodes.map((episode) => (
-								<EpisodeCard
+								<CompactEpisodeCard
 									key={episode.id}
 									episode={{
 										episodeId: episode.id,
@@ -271,7 +212,7 @@ export default async function HomePage() {
 									}}
 								/>
 							))}
-						</div>
+						</HorizontalScroll>
 					</div>
 				</section>
 			)}

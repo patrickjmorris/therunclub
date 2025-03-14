@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -27,6 +27,7 @@ export function SearchBar({
 		defaultValue || searchParams?.get("q") || "",
 	);
 	const debouncedQuery = useDebounce(query, 300);
+	const inputRef = useRef<HTMLInputElement>(null);
 
 	const handleSearch = useCallback(
 		(query: string) => {
@@ -58,6 +59,8 @@ export function SearchBar({
 	const handleClear = useCallback(() => {
 		setQuery("");
 		handleSearch("");
+		// Focus the input after clearing
+		inputRef.current?.focus();
 	}, [handleSearch]);
 
 	// Only trigger search when debouncedQuery changes
@@ -69,6 +72,7 @@ export function SearchBar({
 		<div className={`relative ${className}`}>
 			<SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
+				ref={inputRef}
 				type="text"
 				placeholder={placeholder}
 				className="pl-10 pr-10"

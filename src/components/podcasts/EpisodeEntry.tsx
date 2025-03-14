@@ -20,7 +20,7 @@ export default function EpisodeEntry({ episode }: EpisodeEntryProps) {
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
 
 	return (
-		<Card className="hover:bg-muted/50 dark:hover:bg-slate-800/50 transition-colors my-4 border dark:border-slate-800">
+		<Card className="hover:bg-muted/50 dark:hover:bg-slate-800/50 transition-colors my-4">
 			<CardContent className="p-6">
 				<div className="grid grid-cols-[auto_1fr] lg:grid-cols-[180px_1fr] gap-4 lg:gap-6">
 					<div className="row-span-1 lg:row-span-3">

@@ -241,42 +241,46 @@ export const getPodcastAndLastEpisodes = unstable_cache(
 );
 
 // Get all podcasts and last episodes
-export const getAllPodcastAndLastEpisodes = async () => {
-	const lastEpisodeSubquery = db
-		.select({
-			podcastId: episodes.podcastId,
-			maxPubDate: sql`max(${episodes.pubDate})`.as("maxPubDate"),
-		})
-		.from(episodes)
-		.groupBy(episodes.podcastId)
-		.as("lastEpisode");
+export const getAllPodcastAndLastEpisodes = unstable_cache(
+	async () => {
+		const lastEpisodeSubquery = db
+			.select({
+				podcastId: episodes.podcastId,
+				maxPubDate: sql`max(${episodes.pubDate})`.as("maxPubDate"),
+			})
+			.from(episodes)
+			.groupBy(episodes.podcastId)
+			.as("lastEpisode");
 
-	return db
-		.select({
-			title: podcasts.title,
-			podcastId: podcasts.id,
-			image: podcasts.image,
-			episodeTitle: episodes.title,
-			episodeId: episodes.id,
-			episodePubDate: episodes.pubDate,
-			episodeSlug: episodes.episodeSlug,
-			podcastSlug: podcasts.podcastSlug,
-			itunesImage: podcasts.itunesImage,
-		})
-		.from(podcasts)
-		.leftJoin(
-			lastEpisodeSubquery,
-			eq(podcasts.id, lastEpisodeSubquery.podcastId),
-		)
-		.leftJoin(
-			episodes,
-			and(
-				eq(podcasts.id, episodes.podcastId),
-				eq(episodes.pubDate, lastEpisodeSubquery.maxPubDate),
-			),
-		)
-		.orderBy(desc(lastEpisodeSubquery.maxPubDate));
-};
+		return db
+			.select({
+				title: podcasts.title,
+				podcastId: podcasts.id,
+				image: podcasts.image,
+				episodeTitle: episodes.title,
+				episodeId: episodes.id,
+				episodePubDate: episodes.pubDate,
+				episodeSlug: episodes.episodeSlug,
+				podcastSlug: podcasts.podcastSlug,
+				itunesImage: podcasts.itunesImage,
+			})
+			.from(podcasts)
+			.leftJoin(
+				lastEpisodeSubquery,
+				eq(podcasts.id, lastEpisodeSubquery.podcastId),
+			)
+			.leftJoin(
+				episodes,
+				and(
+					eq(podcasts.id, episodes.podcastId),
+					eq(episodes.pubDate, lastEpisodeSubquery.maxPubDate),
+				),
+			)
+			.orderBy(desc(lastEpisodeSubquery.maxPubDate));
+	},
+	["all-podcasts-with-last-episodes"],
+	{ tags: ["podcasts", "episodes"], revalidate: 3600 }, // 1 hour in seconds
+);
 
 // Get episode titles
 export const getEpisodeTitles = unstable_cache(
@@ -407,4 +411,38 @@ export const getFeaturedPodcasts = unstable_cache(
 	},
 	["featured-podcasts"],
 	{ tags: ["podcasts"], revalidate: 3600 },
+);
+
+// Get podcast tags
+export const getPodcastTags = unstable_cache(
+	async (limit = 10) => {
+		const result = await db.execute(
+			sql`
+				WITH tag_extraction AS (
+					SELECT 
+						unnest(string_to_array(replace(replace(p.title, ',', ' '), '-', ' '), ' ')) as tag_word
+					FROM 
+						podcasts p
+					WHERE 
+						p.language LIKE 'en%'
+				)
+				SELECT 
+					tag_word as tag,
+					count(*) as count
+				FROM 
+					tag_extraction
+				WHERE 
+					length(tag_word) > 3
+				GROUP BY 
+					tag_word
+				ORDER BY 
+					count DESC
+				LIMIT ${limit}
+			`,
+		);
+
+		return result as unknown as Array<{ tag: string; count: number }>;
+	},
+	["podcast-tags"],
+	{ tags: ["podcasts"], revalidate: 3600 }, // 1 hour in seconds
 );

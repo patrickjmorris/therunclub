@@ -5,8 +5,8 @@
 			"schedule": "15 12 * * *"
 		},
 		{
-			"path": "/api/content?type=videos",
-			"schedule": "15 12 * * *"
+			"path": "/api/websub/manage?operation=update-expiring",
+			"schedule": "0 */12 * * *"
 		}
 	]
 }

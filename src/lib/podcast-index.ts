@@ -100,6 +100,7 @@ export function createPodcastIndexClient(config: PodcastIndexConfig) {
 	async function getPodcastByFeedUrl(
 		feedUrl: string,
 	): Promise<PodcastHealthCheck | null> {
+		console.log(`[DEBUG] Checking podcast health for feed URL: ${feedUrl}`);
 		const headers = generateHeaders();
 		const response = await fetch(
 			`${baseUrl}/podcasts/byfeedurl?url=${encodeURIComponent(feedUrl)}`,
@@ -107,14 +108,34 @@ export function createPodcastIndexClient(config: PodcastIndexConfig) {
 		);
 
 		if (!response.ok) {
-			console.error(`Failed to check podcast health for ${feedUrl}`);
+			console.error(
+				`[ERROR] Failed to check podcast health for ${feedUrl}. Status: ${response.status}, StatusText: ${response.statusText}`,
+			);
+			try {
+				const errorBody = await response.text();
+				console.error(`[ERROR] Response body: ${errorBody}`);
+			} catch (e) {
+				console.error(`[ERROR] Could not read response body: ${e}`);
+			}
 			return null;
 		}
 
 		const data = (await response.json()) as PodcastByFeedResponse;
+		console.log(`[DEBUG] Podcast Index API response for ${feedUrl}:`, data);
+
+		if (!data.feed) {
+			console.error(`[ERROR] No feed data returned for ${feedUrl}`);
+			return null;
+		}
+
 		const feed = data.feed;
 
 		if (feed.parseErrors === 0 && feed.dead === 0 && feed.episodeCount > 2) {
+			console.log(`[DEBUG] Podcast ${feedUrl} passed health check:`, {
+				episodeCount: feed.episodeCount,
+				isDead: feed.dead,
+				hasParseErrors: feed.parseErrors,
+			});
 			return {
 				episodeCount: feed.episodeCount,
 				isDead: feed.dead,
@@ -122,7 +143,7 @@ export function createPodcastIndexClient(config: PodcastIndexConfig) {
 			};
 		}
 
-		console.log(`Podcast ${feedUrl} failed quality checks:`, {
+		console.log(`[WARNING] Podcast ${feedUrl} failed quality checks:`, {
 			parseErrors: feed.parseErrors,
 			dead: feed.dead,
 			episodeCount: feed.episodeCount,

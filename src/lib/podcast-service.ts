@@ -102,9 +102,26 @@ async function processPodcast(
 		// Quick RSS feed check first
 		let data: CustomFeed;
 		try {
+			console.log(
+				`[DEBUG] Attempting to parse RSS feed for ${podcast.title} (${podcast.feedUrl})`,
+			);
 			data = await customParser.parseURL(podcast.feedUrl);
+			console.log(`[DEBUG] Successfully parsed RSS feed for ${podcast.title}`);
 		} catch (error) {
-			console.error(`Failed to parse RSS feed for ${podcast.title}:`, error);
+			console.error(
+				`[ERROR] Failed to parse RSS feed for ${podcast.title} (${podcast.feedUrl}):`,
+				error,
+			);
+			// Even if we can't parse the feed, we should keep the podcast in the database
+			// Just update the lastBuildDate to avoid constant retries
+			await db
+				.update(podcasts)
+				.set({
+					updatedAt: new Date(),
+					hasParseErrors: 1,
+				})
+				.where(eq(podcasts.id, podcast.id));
+
 			return {
 				success: false,
 				podcastId: podcast.id,
@@ -114,6 +131,9 @@ async function processPodcast(
 
 		// Parse and validate lastBuildDate
 		const lastBuildDate = parseDate(data.lastBuildDate);
+		console.log(
+			`[DEBUG] Parsed lastBuildDate: ${lastBuildDate}, current lastBuildDate: ${podcast.lastBuildDate}`,
+		);
 
 		// Check if feed has been updated since last check
 		if (
@@ -122,7 +142,7 @@ async function processPodcast(
 			lastBuildDate <= podcast.lastBuildDate
 		) {
 			console.log(
-				`Skipping ${podcast.title} - no new content since last update`,
+				`[INFO] Skipping ${podcast.title} - no new content since last update`,
 			);
 			return {
 				success: true,
@@ -143,33 +163,46 @@ async function processPodcast(
 
 		if (shouldCheckExternalAPIs) {
 			// Get health check from Podcast Index
-			healthCheck = await podcastIndex.getPodcastByFeedUrl(podcast.feedUrl);
-			console.log("Health check result:", {
-				isDead: healthCheck?.isDead,
-				episodeCount: healthCheck?.episodeCount,
-				hasParseErrors: healthCheck?.hasParseErrors,
-			});
-
-			if (!healthCheck) {
+			try {
 				console.log(
-					`Podcast ${podcast.title} failed health check, skipping update`,
+					`[DEBUG] Checking health for ${podcast.title} via Podcast Index`,
 				);
-				return {
-					success: false,
-					podcastId: podcast.id,
-					error: "Failed health check",
-				};
+				healthCheck = await podcastIndex.getPodcastByFeedUrl(podcast.feedUrl);
+				console.log("[DEBUG] Health check result:", {
+					isDead: healthCheck?.isDead,
+					episodeCount: healthCheck?.episodeCount,
+					hasParseErrors: healthCheck?.hasParseErrors,
+				});
+			} catch (error) {
+				console.error(
+					`[ERROR] Error checking podcast health for ${podcast.title}:`,
+					error,
+				);
+				// Continue with the update even if health check fails
 			}
 
 			// Get iTunes data
-			itunesData = await getITunesPodcastByID(podcast.iTunesId ?? "");
-			console.log("iTunes data status:", {
-				found: !!itunesData,
-				iTunesId: podcast.iTunesId,
-			});
+			try {
+				console.log(
+					`[DEBUG] Fetching iTunes data for ${podcast.title} (iTunesId: ${podcast.iTunesId})`,
+				);
+				itunesData = await getITunesPodcastByID(podcast.iTunesId ?? "");
+				console.log("[DEBUG] iTunes data status:", {
+					found: !!itunesData,
+					iTunesId: podcast.iTunesId,
+				});
+			} catch (error) {
+				console.error(
+					`[ERROR] Error fetching iTunes data for ${podcast.title}:`,
+					error,
+				);
+				// Continue with the update even if iTunes data fetch fails
+			}
 		}
 
 		// Update podcast metadata with what we have
+		// IMPORTANT: Always keep existing data if new data is not available
+		console.log(`[DEBUG] Updating podcast metadata for ${podcast.title}`);
 		const [updatedPodcast] = await db
 			.insert(podcasts)
 			.values({
@@ -202,6 +235,7 @@ async function processPodcast(
 				),
 				itunesSummary: decode(data.itunes?.summary || podcast.itunesSummary),
 				itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
+				// Only update these fields if we have new data, otherwise keep existing values
 				episodeCount: healthCheck?.episodeCount || podcast.episodeCount,
 				isDead: healthCheck?.isDead || podcast.isDead,
 				hasParseErrors: healthCheck?.hasParseErrors || podcast.hasParseErrors,
@@ -234,6 +268,9 @@ async function processPodcast(
 
 		// Process episodes if podcast was updated successfully
 		if (updatedPodcast) {
+			console.log(
+				`[DEBUG] Successfully updated podcast metadata for ${podcast.title}`,
+			);
 			// Get the latest episode date from the database
 			const [latestEpisode] = await db
 				.select({ pubDate: episodes.pubDate })
@@ -271,7 +308,9 @@ async function processPodcast(
 				}));
 
 			if (episodeValues.length > 0) {
-				console.log(`Attempting to upsert ${episodeValues.length} episodes`);
+				console.log(
+					`[DEBUG] Attempting to upsert ${episodeValues.length} episodes for ${podcast.title}`,
+				);
 
 				// Remove duplicates by keeping only the first occurrence
 				const uniqueEpisodes = episodeValues.filter(
@@ -282,9 +321,9 @@ async function processPodcast(
 
 				if (episodeValues.length !== uniqueEpisodes.length) {
 					console.log(
-						`Removed ${
+						`[DEBUG] Removed ${
 							episodeValues.length - uniqueEpisodes.length
-						} duplicate episodes`,
+						} duplicate episodes for ${podcast.title}`,
 					);
 					episodeValues = uniqueEpisodes;
 				}
@@ -306,8 +345,11 @@ async function processPodcast(
 								image: sql`EXCLUDED.image`,
 							},
 						});
+					console.log(
+						`[DEBUG] Successfully upserted ${episodeValues.length} episodes for ${podcast.title}`,
+					);
 				} catch (upsertError) {
-					console.error("Episode upsert error details:", {
+					console.error("[ERROR] Episode upsert error details:", {
 						podcastId: podcast.id,
 						podcastTitle: podcast.title,
 						episodeCount: episodeValues.length,
@@ -315,6 +357,8 @@ async function processPodcast(
 					});
 					throw upsertError;
 				}
+			} else {
+				console.log(`[DEBUG] No new episodes to upsert for ${podcast.title}`);
 			}
 
 			return {
@@ -325,6 +369,7 @@ async function processPodcast(
 			};
 		}
 
+		console.log(`[WARNING] No podcast update performed for ${podcast.title}`);
 		return {
 			success: true,
 			podcastId: podcast.id,
@@ -332,7 +377,7 @@ async function processPodcast(
 			skippedReason: "No podcast update needed",
 		};
 	} catch (error) {
-		console.error("Podcast processing error:", {
+		console.error("[ERROR] Podcast processing error:", {
 			podcastId: podcast.id,
 			title: podcast.title,
 			error: error instanceof Error ? error.message : error,
@@ -438,7 +483,7 @@ export async function updateAllPodcastColors() {
 }
 
 export async function addNewPodcast(feedUrl: string) {
-	console.log("Adding new podcast:", feedUrl);
+	console.log("[INFO] Adding new podcast:", feedUrl);
 
 	try {
 		// First check if podcast already exists
@@ -449,6 +494,17 @@ export async function addNewPodcast(feedUrl: string) {
 			.limit(1);
 
 		if (existingPodcast) {
+			console.log(`[INFO] Podcast with feed URL ${feedUrl} already exists`);
+
+			// Even if the podcast already exists, revalidate the caches
+			// to ensure it appears correctly in the UI
+			try {
+				const { revalidatePodcastsAndEpisodes } = await import("@/db/queries");
+				revalidatePodcastsAndEpisodes();
+			} catch (error) {
+				console.error("[ERROR] Failed to revalidate caches:", error);
+			}
+
 			return {
 				success: false,
 				error: "Podcast already exists",
@@ -457,20 +513,37 @@ export async function addNewPodcast(feedUrl: string) {
 		}
 
 		// Get health check first
-		const healthCheck = await podcastIndex.getPodcastByFeedUrl(feedUrl);
-		if (!healthCheck) {
-			return {
-				success: false,
-				error: "Failed health check - podcast may be dead or have parse errors",
-			};
+		let healthCheck = null;
+		try {
+			console.log(
+				`[DEBUG] Checking health for new podcast ${feedUrl} via Podcast Index`,
+			);
+			healthCheck = await podcastIndex.getPodcastByFeedUrl(feedUrl);
+			console.log("[DEBUG] Health check result:", {
+				isDead: healthCheck?.isDead,
+				episodeCount: healthCheck?.episodeCount,
+				hasParseErrors: healthCheck?.hasParseErrors,
+			});
+		} catch (error) {
+			console.error(
+				`[ERROR] Error checking podcast health for ${feedUrl}:`,
+				error,
+			);
+			// Continue with the addition even if health check fails
 		}
 
 		// Parse the RSS feed
 		let data: CustomFeed;
 		try {
+			console.log(
+				`[DEBUG] Attempting to parse RSS feed for new podcast ${feedUrl}`,
+			);
 			data = await parser.parseURL(feedUrl);
+			console.log(
+				`[DEBUG] Successfully parsed RSS feed for new podcast ${feedUrl}`,
+			);
 		} catch (error) {
-			console.error("Failed to parse RSS feed:", error);
+			console.error(`[ERROR] Failed to parse RSS feed for ${feedUrl}:`, error);
 			return {
 				success: false,
 				error: "Failed to parse RSS feed",
@@ -481,13 +554,29 @@ export async function addNewPodcast(feedUrl: string) {
 		let itunesData = null;
 		// Try to get iTunes ID from feed first
 		if (data.itunes?.id) {
-			itunesData = await getITunesPodcastByID(data.itunes.id);
+			try {
+				console.log(
+					`[DEBUG] Fetching iTunes data for new podcast ${feedUrl} (iTunesId: ${data.itunes.id})`,
+				);
+				itunesData = await getITunesPodcastByID(data.itunes.id);
+				console.log("[DEBUG] iTunes data status:", {
+					found: !!itunesData,
+					iTunesId: data.itunes.id,
+				});
+			} catch (error) {
+				console.error(
+					`[ERROR] Error fetching iTunes data for ${feedUrl}:`,
+					error,
+				);
+				// Continue with the addition even if iTunes data fetch fails
+			}
 		}
 
 		// If no iTunes data yet, try searching by title and author
 		if (!itunesData && data.title) {
 			try {
 				const searchQuery = `${data.title} ${data.itunes?.author || ""}`.trim();
+				console.log(`[DEBUG] Searching iTunes for "${searchQuery}"`);
 				const response = await fetch(
 					`https://itunes.apple.com/search?term=${encodeURIComponent(
 						searchQuery,
@@ -497,14 +586,26 @@ export async function addNewPodcast(feedUrl: string) {
 					const searchData = (await response.json()) as iTunesSearchResponse;
 					if (searchData.results.length > 0) {
 						itunesData = searchData.results[0];
+						console.log(
+							`[DEBUG] Found iTunes data via search for "${searchQuery}"`,
+						);
+					} else {
+						console.log(
+							`[DEBUG] No iTunes data found via search for "${searchQuery}"`,
+						);
 					}
+				} else {
+					console.error(
+						`[ERROR] iTunes search failed for "${searchQuery}": ${response.status} ${response.statusText}`,
+					);
 				}
 			} catch (error) {
-				console.error("iTunes search error:", error);
+				console.error(`[ERROR] iTunes search error for ${feedUrl}:`, error);
 			}
 		}
 
 		// Insert the new podcast
+		console.log(`[DEBUG] Inserting new podcast ${feedUrl} into database`);
 		const [insertedPodcast] = await db
 			.insert(podcasts)
 			.values({
@@ -525,19 +626,24 @@ export async function addNewPodcast(feedUrl: string) {
 				),
 				itunesSummary: decode(data.itunes?.summary || ""),
 				itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
-				episodeCount: healthCheck.episodeCount,
-				isDead: healthCheck.isDead,
-				hasParseErrors: healthCheck.hasParseErrors,
+				episodeCount: healthCheck?.episodeCount || 0,
+				isDead: healthCheck?.isDead || 0,
+				hasParseErrors: healthCheck?.hasParseErrors || 0,
 				iTunesId: itunesData?.collectionId?.toString() || "",
 			})
 			.returning();
 
 		if (!insertedPodcast) {
+			console.error(`[ERROR] Failed to insert new podcast ${feedUrl}`);
 			return {
 				success: false,
 				error: "Failed to insert podcast",
 			};
 		}
+
+		console.log(
+			`[DEBUG] Successfully inserted new podcast ${feedUrl} (${insertedPodcast.id})`,
+		);
 
 		// Process initial episodes
 		const episodeValues = (data.items ?? [])
@@ -558,7 +664,23 @@ export async function addNewPodcast(feedUrl: string) {
 			}));
 
 		if (episodeValues.length > 0) {
+			console.log(
+				`[DEBUG] Inserting ${episodeValues.length} episodes for new podcast ${feedUrl}`,
+			);
 			await db.insert(episodes).values(episodeValues as Episode[]);
+			console.log(
+				`[DEBUG] Successfully inserted ${episodeValues.length} episodes for new podcast ${feedUrl}`,
+			);
+		} else {
+			console.log(`[WARNING] No episodes found for new podcast ${feedUrl}`);
+		}
+
+		// Revalidate all podcast-related caches
+		try {
+			const { revalidatePodcastsAndEpisodes } = await import("@/db/queries");
+			revalidatePodcastsAndEpisodes();
+		} catch (error) {
+			console.error("[ERROR] Failed to revalidate caches:", error);
 		}
 
 		return {
@@ -567,7 +689,7 @@ export async function addNewPodcast(feedUrl: string) {
 			episodesAdded: episodeValues.length,
 		};
 	} catch (error) {
-		console.error("Error adding new podcast:", error);
+		console.error(`[ERROR] Error adding new podcast ${feedUrl}:`, error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Unknown error occurred",

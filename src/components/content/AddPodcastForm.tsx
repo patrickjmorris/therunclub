@@ -43,7 +43,18 @@ export default function AddPodcastForm() {
 
 	useEffect(() => {
 		if (state?.redirect) {
-			router.push(state.redirect);
+			// First refresh the router to ensure we have the latest data
+			router.refresh();
+
+			// Then redirect after a small delay to ensure cache is updated
+			const redirectUrl = state.redirect; // Store in a variable to ensure it doesn't change
+			const redirectTimer = setTimeout(() => {
+				if (redirectUrl) {
+					router.push(redirectUrl);
+				}
+			}, 1000); // 1 second delay
+
+			return () => clearTimeout(redirectTimer);
 		}
 	}, [state?.redirect, router]);
 

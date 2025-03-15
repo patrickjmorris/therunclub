@@ -1,12 +1,13 @@
 "use server";
 
 import { addNewPodcast } from "@/lib/podcast-service";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { type PodcastSearchResult } from "@/lib/podcast-index";
 import { addPodcastSchema } from "./validation";
 import type { AddPodcastState } from "./types";
 import { requireRole, AuthError } from "@/lib/auth-utils";
 import { updatePodcastColors } from "@/lib/update-podcast-colors";
+import { revalidatePodcastsAndEpisodes } from "@/db/queries";
 
 export const addPodcast = requireRole(["admin", "editor"])(
 	async (
@@ -51,7 +52,15 @@ export const addPodcast = requireRole(["admin", "editor"])(
 				};
 			}
 
-			revalidatePath("/podcasts");
+			// Revalidate all podcast-related caches
+			revalidatePodcastsAndEpisodes(); // This revalidates both "podcasts" and "episodes" tags
+			revalidateTag("podcast-by-slug"); // Specifically revalidate the podcast detail page cache
+			revalidateTag("podcast"); // Revalidate any other podcast-related caches
+			revalidateTag("all-podcasts-with-last-episodes"); // Revalidate the podcasts list cache
+			revalidatePath("/podcasts"); // Also revalidate the podcasts page path
+
+			// Add a small delay to ensure cache revalidation has time to propagate
+			await new Promise((resolve) => setTimeout(resolve, 500));
 
 			// Return success state before redirecting
 			const successState: AddPodcastState = {

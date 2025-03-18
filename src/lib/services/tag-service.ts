@@ -64,11 +64,11 @@ export async function getEpisodesByTag(tag: string, limit = 6) {
 			episodeSlug: episodes.episodeSlug,
 			pubDate: episodes.pubDate,
 			enclosureUrl: episodes.enclosureUrl,
-			image: episodes.image,
+			image: episodes.episodeImage,
 			// Join with podcasts to get podcast info
 			podcastTitle: podcasts.title,
 			podcastSlug: podcasts.podcastSlug,
-			podcastImage: podcasts.image,
+			podcastImage: podcasts.podcastImage,
 		})
 		.from(episodes)
 		.innerJoin(

@@ -317,6 +317,7 @@ export const getEpisode = unstable_cache(
 				duration: episodes.duration,
 				explicit: episodes.explicit,
 				image: episodes.episodeImage,
+				episodeImage: episodes.episodeImage,
 				episodeSlug: episodes.episodeSlug,
 				podcastSlug: podcasts.podcastSlug,
 				link: podcasts.link,

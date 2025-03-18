@@ -10,7 +10,7 @@ import { Headphones } from "lucide-react";
 interface PodcastWithLatestEpisode {
 	title: string;
 	podcastId: string;
-	image: string | null;
+	image?: string | null;
 	podcastImage: string | null;
 	episodeTitle: string | null;
 	episodeId: string | null;

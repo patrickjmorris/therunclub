@@ -11,7 +11,7 @@ export interface EpisodeWithPodcast {
 	duration: string | null;
 	explicit: "yes" | "no" | null;
 	image: string | null;
-	episodeImage: string | null;
+	episodeImage?: string | null;
 	episodeSlug: string | null;
 	podcastSlug: string | null;
 	link: string | null;

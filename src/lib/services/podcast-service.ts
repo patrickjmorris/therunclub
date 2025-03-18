@@ -256,7 +256,8 @@ export const getAllPodcastAndLastEpisodes = unstable_cache(
 			.select({
 				title: podcasts.title,
 				podcastId: podcasts.id,
-				image: podcasts.podcastImage,
+				podcastImage: podcasts.podcastImage,
+				episodeImage: episodes.episodeImage,
 				episodeTitle: episodes.title,
 				episodeId: episodes.id,
 				episodePubDate: episodes.pubDate,

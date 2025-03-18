@@ -15,6 +15,7 @@ interface CompactEpisodeCardProps {
 		podcastTitle?: string | null;
 		podcastSlug?: string | null;
 		podcastImage?: string | null;
+		episodeImage?: string | null;
 		itunesImage?: string | null;
 		enclosureUrl?: string | null;
 		pubDate?: Date | null;

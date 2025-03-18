@@ -25,7 +25,7 @@ export default function EpisodeEntry({ episode }: EpisodeEntryProps) {
 				<div className="grid grid-cols-[auto_1fr] lg:grid-cols-[180px_1fr] gap-4 lg:gap-6">
 					<div className="row-span-1 lg:row-span-3">
 						<Image
-							src={episode.image || episode.podcastImage || ""}
+							src={episode.episodeImage || episode.podcastImage || ""}
 							alt={episode.title}
 							width={180}
 							height={180}

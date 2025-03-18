@@ -37,6 +37,7 @@ export function CompactEpisodeCard({
 						<div className="relative aspect-square w-full overflow-hidden rounded-md mb-2">
 							<Image
 								alt={episode.podcastTitle ?? ""}
+								priority={true}
 								className="object-cover transition-transform hover:scale-105"
 								fill
 								src={episode.podcastImage || episode.itunesImage || ""}

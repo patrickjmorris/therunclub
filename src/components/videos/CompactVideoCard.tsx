@@ -28,6 +28,7 @@ export function CompactVideoCard({
 						<div className="relative aspect-video w-full overflow-hidden rounded-md mb-2">
 							<Image
 								alt={video.title}
+								priority={true}
 								className="object-cover transition-transform hover:scale-105"
 								fill
 								src={video.thumbnailUrl || "/images/placeholder.png"}

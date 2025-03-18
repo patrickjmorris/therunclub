@@ -110,6 +110,7 @@ export const podcasts = pgTable(
 		description: text("description"),
 		feedUrl: text("feed_url").notNull().unique(),
 		image: text("image"),
+		podcastImage: text("podcast_image"),
 		vibrantColor: text("vibrant_color"),
 		author: text("author"),
 		link: text("link"),
@@ -150,6 +151,7 @@ export const episodes = pgTable(
 		duration: text("duration").notNull(),
 		explicit: text("explicit", { enum: ["yes", "no"] }).default("no"),
 		image: text("image"),
+		episodeImage: text("episode_image"),
 		athleteMentionsProcessed: boolean("athlete_mentions_processed").default(
 			false,
 		),

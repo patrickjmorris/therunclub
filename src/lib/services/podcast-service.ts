@@ -75,12 +75,12 @@ export const getNewEpisodes = unstable_cache(
 			.select({
 				podcastId: podcasts.id,
 				podcastTitle: podcasts.title,
-				podcastImage: podcasts.image,
+				podcastImage: podcasts.podcastImage,
 				podcastSlug: podcasts.podcastSlug,
 				itunesImage: podcasts.itunesImage,
 				episodeId: episodes.id,
 				episodeTitle: episodes.title,
-				episodeImage: episodes.image,
+				episodeImage: episodes.episodeImage,
 				episodeDuration: episodes.duration,
 				episodeSlug: episodes.episodeSlug,
 				pubDate: episodes.pubDate,
@@ -104,10 +104,10 @@ export const getLastTenEpisodes = unstable_cache(
 				id: episodes.id,
 				title: episodes.title,
 				pubDate: episodes.pubDate,
-				image: episodes.image,
+				image: episodes.episodeImage,
 				podcastId: episodes.podcastId,
 				podcastTitle: podcasts.title,
-				podcastImage: podcasts.image,
+				podcastImage: podcasts.podcastImage,
 				duration: episodes.duration,
 				content: episodes.content,
 				episodeSlug: episodes.episodeSlug,
@@ -149,7 +149,7 @@ export const getLastEpisodesByPodcast = unstable_cache(
 			.select({
 				podcastTitle: podcasts.title,
 				podcastId: podcasts.id,
-				podcastImage: podcasts.image,
+				podcastImage: podcasts.podcastImage,
 				episodeTitle: episodes.title,
 				episodeId: episodes.id,
 				episodePubDate: episodes.pubDate,
@@ -189,7 +189,7 @@ export const getPodcastMetadata = unstable_cache(
 			.select({
 				title: podcasts.title,
 				description: podcasts.description,
-				image: podcasts.image,
+				image: podcasts.podcastImage,
 				author: podcasts.author,
 				itunesExplicit: podcasts.itunesExplicit,
 			})
@@ -221,7 +221,7 @@ export const getPodcastAndLastEpisodes = unstable_cache(
 			.select({
 				title: podcasts.title,
 				podcastId: podcasts.id,
-				image: podcasts.image,
+				image: podcasts.podcastImage,
 				episodeTitle: episodes.title,
 				episodeId: episodes.id,
 				episodePubDate: episodes.pubDate,
@@ -256,7 +256,7 @@ export const getAllPodcastAndLastEpisodes = unstable_cache(
 			.select({
 				title: podcasts.title,
 				podcastId: podcasts.id,
-				image: podcasts.image,
+				image: podcasts.podcastImage,
 				episodeTitle: episodes.title,
 				episodeId: episodes.id,
 				episodePubDate: episodes.pubDate,
@@ -312,11 +312,11 @@ export const getEpisode = unstable_cache(
 				podcastId: episodes.podcastId,
 				podcastTitle: podcasts.title,
 				podcastAuthor: podcasts.author,
-				podcastImage: podcasts.image,
+				podcastImage: podcasts.podcastImage,
 				enclosureUrl: episodes.enclosureUrl,
 				duration: episodes.duration,
 				explicit: episodes.explicit,
-				image: episodes.image,
+				image: episodes.episodeImage,
 				episodeSlug: episodes.episodeSlug,
 				podcastSlug: podcasts.podcastSlug,
 				link: podcasts.link,
@@ -344,7 +344,7 @@ export const getPodcastBySlug = unstable_cache(
 				id: podcasts.id,
 				title: podcasts.title,
 				description: podcasts.description,
-				image: podcasts.image,
+				image: podcasts.podcastImage,
 				author: podcasts.author,
 				itunesExplicit: podcasts.itunesExplicit,
 				podcastSlug: podcasts.podcastSlug,
@@ -370,10 +370,10 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 				id: episodes.id,
 				title: episodes.title,
 				pubDate: episodes.pubDate,
-				image: episodes.image,
+				image: episodes.episodeImage,
 				podcastId: episodes.podcastId,
 				podcastTitle: podcasts.title,
-				podcastImage: podcasts.image,
+				podcastImage: podcasts.podcastImage,
 				duration: episodes.duration,
 				content: episodes.content,
 				episodeSlug: episodes.episodeSlug,
@@ -400,12 +400,14 @@ export const getFeaturedPodcasts = unstable_cache(
 			.select({
 				id: podcasts.id,
 				title: podcasts.title,
-				image: podcasts.image,
+				image: podcasts.podcastImage,
 				podcastSlug: podcasts.podcastSlug,
 				vibrantColor: podcasts.vibrantColor,
 			})
 			.from(podcasts)
-			.where(and(isNotNull(podcasts.image), like(podcasts.language, "en%")))
+			.where(
+				and(isNotNull(podcasts.podcastImage), like(podcasts.language, "en%")),
+			)
 			.orderBy(desc(podcasts.episodeCount))
 			.limit(limit);
 	},

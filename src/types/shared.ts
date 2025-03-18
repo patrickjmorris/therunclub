@@ -25,6 +25,7 @@ export interface BasicEpisode {
 	podcastSlug: string;
 	podcastTitle: string;
 	podcastImage: string | null;
+	episodeImage: string | null;
 	duration: string;
 	content: string | null;
 	podcastId: string;

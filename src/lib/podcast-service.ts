@@ -9,6 +9,7 @@ import type { iTunesSearchResponse } from "@/lib/itunes-types";
 import { decode } from "html-entities";
 import { slugify } from "@/lib/utils";
 import { parseDate, safeDateParse } from "@/lib/date-utils";
+import { optimizeImage } from "@/lib/image-utils";
 
 const BATCH_SIZE = 5;
 
@@ -200,6 +201,27 @@ async function processPodcast(
 			}
 		}
 
+		// Get the podcast image URL
+		const podcastImageUrl =
+			data.image?.url ||
+			data.itunes?.image ||
+			itunesData?.artworkUrl600 ||
+			podcast.image;
+
+		// Optimize podcast image if we have one
+		let podcast_image = null;
+		if (podcastImageUrl) {
+			try {
+				podcast_image = await optimizeImage(podcastImageUrl, 1400, "podcasts");
+			} catch (error) {
+				console.error(
+					`Error optimizing podcast image for ${podcast.title}:`,
+					error,
+				);
+				podcast_image = null;
+			}
+		}
+
 		// Update podcast metadata with what we have
 		// IMPORTANT: Always keep existing data if new data is not available
 		console.log(`[DEBUG] Updating podcast metadata for ${podcast.title}`);
@@ -211,11 +233,8 @@ async function processPodcast(
 				feedUrl: podcast.feedUrl,
 				description:
 					data.description || itunesData?.description || podcast.description,
-				image:
-					data.image?.url ||
-					data.itunes?.image ||
-					itunesData?.artworkUrl600 ||
-					podcast.image,
+				image: podcastImageUrl,
+				podcastImage: podcast_image,
 				author: decode(
 					itunesData?.artistName || data.itunes?.author || podcast.author,
 				),
@@ -248,6 +267,7 @@ async function processPodcast(
 					title: sql`EXCLUDED.title`,
 					description: sql`EXCLUDED.description`,
 					image: sql`EXCLUDED.image`,
+					podcastImage: sql`EXCLUDED.podcast_image`,
 					author: sql`EXCLUDED.author`,
 					link: sql`EXCLUDED.link`,
 					language: sql`EXCLUDED.language`,
@@ -262,6 +282,7 @@ async function processPodcast(
 					isDead: sql`EXCLUDED.is_dead`,
 					hasParseErrors: sql`EXCLUDED.has_parse_errors`,
 					iTunesId: sql`EXCLUDED.itunes_id`,
+					updatedAt: sql`CURRENT_TIMESTAMP`,
 				},
 			})
 			.returning();
@@ -280,7 +301,7 @@ async function processPodcast(
 				.limit(1);
 
 			// Prepare episode values for bulk insert/update with decoded text
-			let episodeValues = (data.items ?? [])
+			const episodeValues = (data.items ?? [])
 				.filter((item): item is NonNullable<typeof item> => {
 					// Filter out episodes without enclosure URL
 					if (!item.enclosure?.url) return false;
@@ -294,44 +315,70 @@ async function processPodcast(
 
 					return true;
 				})
-				.map((item) => ({
-					podcastId: podcast.id,
-					title: decode(item.title || ""),
-					episodeSlug: slugify(decode(item.title || "")),
-					pubDate: item.pubDate ? parseDate(item.pubDate) : null,
-					content: item.content || null,
-					link: item.link || null,
-					enclosureUrl: item.enclosure?.url || "",
-					duration: item.itunes?.duration || "",
-					explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
-					image: item.itunes?.image || null,
-				}));
+				.map(async (item) => {
+					// Get the episode image URL
+					const episodeImageUrl = item.itunes?.image || null;
+
+					// Optimize episode image if we have one
+					let episode_image = null;
+					if (episodeImageUrl) {
+						try {
+							episode_image = await optimizeImage(
+								episodeImageUrl,
+								1400,
+								"episodes",
+							);
+						} catch (error) {
+							console.error(
+								`Error optimizing episode image for ${item.title}:`,
+								error,
+							);
+							episode_image = null;
+						}
+					}
+
+					return {
+						podcastId: podcast.id,
+						title: decode(item.title || ""),
+						episodeSlug: slugify(decode(item.title || "")),
+						pubDate: item.pubDate ? parseDate(item.pubDate) : null,
+						content: item.content || null,
+						link: item.link || null,
+						enclosureUrl: item.enclosure?.url || "",
+						duration: item.itunes?.duration || "",
+						explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
+						image: episodeImageUrl,
+						episodeImage: episode_image,
+					};
+				});
 
 			if (episodeValues.length > 0) {
 				console.log(
 					`[DEBUG] Attempting to upsert ${episodeValues.length} episodes for ${podcast.title}`,
 				);
 
+				// Wait for all episode values to be processed
+				const processedEpisodeValues = await Promise.all(episodeValues);
+
 				// Remove duplicates by keeping only the first occurrence
-				const uniqueEpisodes = episodeValues.filter(
+				const uniqueEpisodes = processedEpisodeValues.filter(
 					(episode, index, self) =>
 						index ===
 						self.findIndex((e) => e.enclosureUrl === episode.enclosureUrl),
 				);
 
-				if (episodeValues.length !== uniqueEpisodes.length) {
+				if (processedEpisodeValues.length !== uniqueEpisodes.length) {
 					console.log(
 						`[DEBUG] Removed ${
-							episodeValues.length - uniqueEpisodes.length
+							processedEpisodeValues.length - uniqueEpisodes.length
 						} duplicate episodes for ${podcast.title}`,
 					);
-					episodeValues = uniqueEpisodes;
 				}
 
 				try {
 					await db
 						.insert(episodes)
-						.values(episodeValues as Episode[])
+						.values(uniqueEpisodes as Episode[])
 						.onConflictDoUpdate({
 							target: [episodes.enclosureUrl],
 							set: {
@@ -343,16 +390,17 @@ async function processPodcast(
 								duration: sql`EXCLUDED.duration`,
 								explicit: sql`EXCLUDED.explicit`,
 								image: sql`EXCLUDED.image`,
+								episodeImage: sql`EXCLUDED.episode_image`,
 							},
 						});
 					console.log(
-						`[DEBUG] Successfully upserted ${episodeValues.length} episodes for ${podcast.title}`,
+						`[DEBUG] Successfully upserted ${uniqueEpisodes.length} episodes for ${podcast.title}`,
 					);
 				} catch (upsertError) {
 					console.error("[ERROR] Episode upsert error details:", {
 						podcastId: podcast.id,
 						podcastTitle: podcast.title,
-						episodeCount: episodeValues.length,
+						episodeCount: uniqueEpisodes.length,
 						error: upsertError,
 					});
 					throw upsertError;

@@ -11,6 +11,7 @@ interface PodcastWithLatestEpisode {
 	title: string;
 	podcastId: string;
 	image: string | null;
+	podcastImage: string | null;
 	episodeTitle: string | null;
 	episodeId: string | null;
 	episodePubDate: Date | null;
@@ -48,6 +49,7 @@ export function PodcastGrid({ podcasts, className }: PodcastGridProps) {
 									className="object-cover transition-transform hover:scale-105"
 									fill
 									src={
+										podcast.podcastImage ||
 										podcast.itunesImage ||
 										podcast.image ||
 										"/images/placeholder.png"

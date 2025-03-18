@@ -34,7 +34,7 @@ export default function DynamicHeader({
 									alt={title}
 									fill
 									className="object-cover"
-									priority
+									priority={true}
 								/>
 							</div>
 						</div>

@@ -93,8 +93,11 @@ const getPodcastWithEpisodes = unstable_cache(
 		}
 
 		// Extract vibrant color if not already present
-		if (podcast.image && !podcast.vibrantColor) {
-			const vibrantColor = await updatePodcastColors(podcast.id, podcast.image);
+		if (podcast.podcastImage && !podcast.vibrantColor) {
+			const vibrantColor = await updatePodcastColors(
+				podcast.id,
+				podcast.podcastImage,
+			);
 			if (vibrantColor) {
 				podcast.vibrantColor = vibrantColor;
 			}
@@ -129,7 +132,7 @@ export async function FeaturedPodcast({ podcastId }: FeaturedPodcastProps) {
 	const formattedItems = podcast.episodes.map((episode) => ({
 		id: episode.id,
 		title: episode.title,
-		thumbnailUrl: episode.image || podcast.image || "",
+		thumbnailUrl: episode.episodeImage || podcast.podcastImage || "",
 		publishedAt: episode.pubDate || new Date(),
 		type: "episode" as const,
 		podcastTitle: podcast.title,
@@ -140,7 +143,7 @@ export async function FeaturedPodcast({ podcastId }: FeaturedPodcastProps) {
 	return (
 		<FeaturedChannelClient
 			title={podcast.title}
-			thumbnailUrl={podcast.image || ""}
+			thumbnailUrl={podcast.podcastImage || ""}
 			vibrantColor={podcast.vibrantColor || undefined}
 			items={formattedItems}
 			type="podcast"

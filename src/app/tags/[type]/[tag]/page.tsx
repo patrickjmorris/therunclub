@@ -97,7 +97,8 @@ export default async function TagPage(props: TagPageProps) {
 										<Image
 											src={video.thumbnailUrl ?? ""}
 											alt={video.title}
-											fill
+											width={400}
+											height={225}
 											className="object-cover"
 										/>
 									</div>

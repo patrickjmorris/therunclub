@@ -100,7 +100,8 @@ export function FeaturedPodcastsRow({ podcasts }: FeaturedPodcastsRowProps) {
 											<Image
 												src={podcast.image || "/images/placeholder.png"}
 												alt={podcast.title}
-												fill
+												width={150}
+												height={150}
 												className="rounded-lg object-cover shadow-sm"
 											/>
 										</div>

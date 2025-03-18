@@ -90,7 +90,10 @@ export default async function VideosPage({ searchParams }: PageProps) {
 				<h2 className="text-2xl font-bold mb-6">Latest Videos</h2>
 
 				{/* The key prop on Suspense ensures it re-renders when query/tag changes */}
-				<Suspense key={`filter-${query}-${tag}`} fallback={null}>
+				<Suspense
+					key={`filter-${query}-${tag}`}
+					fallback={<LoadingGridSkeleton />}
+				>
 					<VideoFilter tags={topTags} />
 				</Suspense>
 

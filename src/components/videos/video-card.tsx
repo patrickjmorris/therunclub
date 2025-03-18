@@ -22,7 +22,8 @@ export function VideoCard({ video, onShare }: VideoCardProps) {
 						<Image
 							src={video.thumbnailUrl ?? ""}
 							alt={video.title}
-							fill
+							width={435}
+							height={245}
 							className="object-cover"
 							sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 						/>

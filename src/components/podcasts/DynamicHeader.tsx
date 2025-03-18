@@ -32,9 +32,10 @@ export default function DynamicHeader({
 								<Image
 									src={imageUrl}
 									alt={title}
-									fill
+									width={366}
+									height={366}
 									className="object-cover"
-									priority
+									priority={true}
 								/>
 							</div>
 						</div>

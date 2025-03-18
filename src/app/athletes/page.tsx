@@ -50,9 +50,9 @@ async function AthletesList({ athletes, hasMore, page }: AthletesListProps) {
 								<Image
 									src={athlete.imageUrl}
 									alt={athlete.name}
-									fill
+									width={64}
+									height={64}
 									className="object-cover rounded-full"
-									sizes="64px"
 								/>
 							</div>
 						)}

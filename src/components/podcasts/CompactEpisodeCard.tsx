@@ -15,6 +15,7 @@ interface CompactEpisodeCardProps {
 		podcastTitle?: string | null;
 		podcastSlug?: string | null;
 		podcastImage?: string | null;
+		episodeImage?: string | null;
 		itunesImage?: string | null;
 		enclosureUrl?: string | null;
 		pubDate?: Date | null;
@@ -37,8 +38,10 @@ export function CompactEpisodeCard({
 						<div className="relative aspect-square w-full overflow-hidden rounded-md mb-2">
 							<Image
 								alt={episode.podcastTitle ?? ""}
+								priority={true}
 								className="object-cover transition-transform hover:scale-105"
-								fill
+								width={180}
+								height={180}
 								src={episode.podcastImage || episode.itunesImage || ""}
 							/>
 						</div>

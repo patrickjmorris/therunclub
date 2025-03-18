@@ -99,8 +99,10 @@ export function FeaturedChannelsRow({ channels }: FeaturedChannelsRowProps) {
 											<Image
 												src={channel.thumbnailUrl || "/images/placeholder.png"}
 												alt={channel.title}
-												fill
+												width={150}
+												height={150}
 												className="rounded-lg object-cover shadow-sm"
+												priority
 											/>
 										</div>
 										<div className="w-full">

@@ -35,8 +35,8 @@ export function LinkPreview({ url, className, ogData }: LinkPreviewProps) {
 						src={ogData.image}
 						alt={ogData.title}
 						className="object-cover"
-						fill
-						sizes="96px"
+						width={96}
+						height={96}
 					/>
 				) : (
 					<div className="flex h-full w-full items-center justify-center bg-neutral-100 dark:bg-neutral-800">

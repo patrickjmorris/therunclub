@@ -136,9 +136,8 @@ export function ProfileSection({
 						<Image
 							src={imageUrl}
 							alt={name}
-							fill
-							className="object-cover"
-							sizes="(min-width: 1024px) 12rem, 12rem"
+							width={192}
+							height={192}
 							priority
 						/>
 					</div>

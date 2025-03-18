@@ -111,7 +111,7 @@ export function AudioPlayer() {
 			album: player.episode.podcastTitle,
 			artwork: [
 				{
-					src: player.episode.image || player.episode.podcastImage || "",
+					src: player.episode.episodeImage || player.episode.podcastImage || "",
 					sizes: "512x512",
 					type: "image/jpeg",
 				},
@@ -197,7 +197,11 @@ export function AudioPlayer() {
 									{player.episode.image && (
 										/* eslint-disable-next-line @next/next/no-img-element */
 										<img
-											src={player.episode.image}
+											src={
+												player.episode.episodeImage ||
+												player.episode.podcastImage ||
+												""
+											}
 											alt={player.episode.title}
 											className="h-full w-full rounded-lg object-cover"
 										/>

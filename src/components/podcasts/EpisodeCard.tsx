@@ -13,6 +13,7 @@ interface EpisodeCardProps {
 		podcastId?: string | null;
 		podcastTitle?: string | null;
 		podcastSlug?: string | null;
+		episodeImage?: string | null;
 		podcastImage?: string | null;
 		itunesImage?: string | null;
 		enclosureUrl?: string | null;
@@ -35,6 +36,7 @@ export function EpisodeCard({ episode, className = "" }: EpisodeCardProps) {
 		duration: null,
 		explicit: null,
 		image: episode.itunesImage ?? null,
+		episodeImage: episode.episodeImage ?? null,
 		episodeSlug: episode.episodeSlug ?? null,
 		podcastSlug: episode.podcastSlug ?? null,
 		link: null,
@@ -54,7 +56,7 @@ export function EpisodeCard({ episode, className = "" }: EpisodeCardProps) {
 							alt={episode.podcastTitle ?? ""}
 							className="object-cover transition-transform group-hover:scale-105"
 							height={400}
-							src={episode.podcastImage || episode.itunesImage || ""}
+							src={episode.episodeImage || episode.itunesImage || ""}
 							width={400}
 						/>
 					</div>

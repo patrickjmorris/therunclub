@@ -2,32 +2,9 @@
 
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	MoreHorizontal,
-	Bell,
-	Share2,
-	ThumbsUp,
-	Play,
-	Pause,
-	Volume2,
-	VolumeX,
-} from "lucide-react";
+import { ThumbsUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface Video {
 	id: string;
@@ -51,9 +28,7 @@ interface FeaturedChannelProps {
 
 export function FeaturedChannel({
 	title,
-	description,
 	thumbnailUrl,
-	customUrl,
 	subscriberCount,
 	country,
 	videos,
@@ -68,6 +43,7 @@ export function FeaturedChannel({
 					fill
 					className="object-cover"
 					priority
+					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
 					<div className="absolute top-4 left-4 flex items-center gap-3">
@@ -101,7 +77,8 @@ export function FeaturedChannel({
 								<Image
 									src={video.thumbnailUrl}
 									alt={video.title}
-									fill
+									width={320}
+									height={200}
 									className="object-cover transition-transform duration-300"
 								/>
 								{video.duration && (

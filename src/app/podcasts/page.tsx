@@ -5,7 +5,6 @@ import { FormattedDate } from "@/components/FormattedDate";
 import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
-import { searchEpisodesWithPodcasts } from "@/db/queries";
 import {
 	getFeaturedPodcasts,
 	getNewEpisodes,
@@ -17,10 +16,7 @@ import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";
 import { PodcastFilter } from "@/components/podcasts/podcast-filter";
 import AddContentWrapper from "@/components/content/AddContentWrapper";
-import { ListenNowButton } from "@/components/ListenNowButton";
-import { EpisodeCard } from "@/components/podcasts/EpisodeCard";
 import { CompactEpisodeCard } from "@/components/podcasts/CompactEpisodeCard";
-import { cn } from "@/lib/utils";
 import { FeaturedPodcastsRow } from "@/components/podcasts/FeaturedPodcastsRow";
 import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
 import { PodcastGrid } from "@/components/podcasts/PodcastGrid";
@@ -115,6 +111,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 									podcastTitle: podcast.podcastTitle,
 									podcastSlug: podcast.podcastSlug,
 									podcastImage: podcast.podcastImage,
+									episodeImage: podcast.episodeImage,
 									itunesImage: podcast.itunesImage,
 									enclosureUrl: podcast.enclosureUrl,
 									pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,

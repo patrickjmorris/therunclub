@@ -141,7 +141,7 @@ export const globalSearch = unstable_cache(
 					id: podcasts.id,
 					title: podcasts.title,
 					description: sql<string>`substring(${podcasts.description}, 1, 150)`, // Simplified and reduced length
-					thumbnailUrl: podcasts.image,
+					thumbnailUrl: podcasts.podcastImage,
 					publishedAt: podcasts.lastBuildDate,
 					podcastSlug: podcasts.podcastSlug,
 					priority: sql<number>`2`, // High priority
@@ -221,7 +221,7 @@ export const globalSearch = unstable_cache(
 					id: episodes.id,
 					title: episodes.title,
 					description: sql<string>`substring(${episodes.content}, 1, 150)`, // Simplified and reduced length
-					thumbnailUrl: sql<string>`coalesce(${episodes.image}, ${podcasts.image})`,
+					thumbnailUrl: sql<string>`coalesce(${episodes.episodeImage}, ${podcasts.podcastImage})`,
 					publishedAt: episodes.pubDate,
 					episodeSlug: episodes.episodeSlug,
 					podcastId: episodes.podcastId,

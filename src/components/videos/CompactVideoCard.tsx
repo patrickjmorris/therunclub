@@ -30,7 +30,8 @@ export function CompactVideoCard({
 								alt={video.title}
 								priority={true}
 								className="object-cover transition-transform hover:scale-105"
-								fill
+								width={220}
+								height={124}
 								src={video.thumbnailUrl || "/images/placeholder.png"}
 							/>
 							<div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">

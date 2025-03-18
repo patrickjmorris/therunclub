@@ -56,7 +56,7 @@ export function EpisodeCard({ episode, className = "" }: EpisodeCardProps) {
 							alt={episode.podcastTitle ?? ""}
 							className="object-cover transition-transform group-hover:scale-105"
 							height={400}
-							src={episode.podcastImage || episode.itunesImage || ""}
+							src={episode.episodeImage || episode.itunesImage || ""}
 							width={400}
 						/>
 					</div>

@@ -51,7 +51,8 @@ export function MoreContent({ title, items }: MoreContentProps) {
 												<Image
 													src={item.thumbnailUrl ?? ""}
 													alt={item.title}
-													fill
+													width={365}
+													height={205}
 													className="object-cover"
 												/>
 											</div>

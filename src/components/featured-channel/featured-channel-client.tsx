@@ -79,6 +79,32 @@ export function FeaturedChannelClient({
 	return (
 		<Card className="overflow-hidden">
 			{/* Hero Section */}
+			{/* <Link
+				href={
+					type === "channel" ? `videos/channels/${slug}` : `/podcasts/${slug}`
+				}
+			>
+				<div
+					className="relative h-[200px] w-full"
+					style={{
+						background: `linear-gradient(to bottom, ${vibrantColor}60, ${vibrantColor}95)`,
+					}}
+				>
+					<Image
+						src={thumbnailUrl}
+						alt={title}
+						width={800}
+						height={800}
+						className="object-cover mix-blend-overlay"
+						priority
+					/>
+					<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
+						<div className="absolute bottom-4 left-4">
+							<h1 className="text-white text-2xl font-bold">{title}</h1>
+						</div>
+					</div>
+				</div>
+			</Link> */}
 			<Link
 				href={
 					type === "channel" ? `videos/channels/${slug}` : `/podcasts/${slug}`
@@ -94,8 +120,9 @@ export function FeaturedChannelClient({
 						src={thumbnailUrl}
 						alt={title}
 						fill
-						className="object-cover mix-blend-overlay"
+						className="object-cover mix-blend-overlay w-full h-full"
 						priority
+						sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					/>
 					<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
 						<div className="absolute bottom-4 left-4">
@@ -164,7 +191,8 @@ export function FeaturedChannelClient({
 									<Image
 										src={item.thumbnailUrl}
 										alt={item.title}
-										fill
+										width={320}
+										height={200}
 										className={cn(
 											"object-cover transition-transform duration-300",
 											hoveredItemId === item.id && "scale-105",

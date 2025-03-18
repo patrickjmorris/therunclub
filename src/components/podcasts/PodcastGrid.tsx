@@ -47,7 +47,8 @@ export function PodcastGrid({ podcasts, className }: PodcastGridProps) {
 								<Image
 									alt={podcast.title}
 									className="object-cover transition-transform hover:scale-105"
-									fill
+									width={235}
+									height={235}
 									src={
 										podcast.podcastImage ||
 										podcast.itunesImage ||

@@ -40,7 +40,8 @@ export function CompactEpisodeCard({
 								alt={episode.podcastTitle ?? ""}
 								priority={true}
 								className="object-cover transition-transform hover:scale-105"
-								fill
+								width={180}
+								height={180}
 								src={episode.podcastImage || episode.itunesImage || ""}
 							/>
 						</div>

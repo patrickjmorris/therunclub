@@ -37,6 +37,7 @@ export function LinkPreview({ url, className, ogData }: LinkPreviewProps) {
 						className="object-cover"
 						width={96}
 						height={96}
+						unoptimized
 					/>
 				) : (
 					<div className="flex h-full w-full items-center justify-center bg-neutral-100 dark:bg-neutral-800">

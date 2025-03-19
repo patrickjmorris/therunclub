@@ -1,13 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { Play, ChevronLeft, ChevronRight } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { useRef, useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 interface ContentItem {
 	id: string;
@@ -25,8 +21,8 @@ interface FeaturedContentProps {
 	thumbnailUrl: string;
 	vibrantColor?: string;
 	items: ContentItem[];
-	type: "channel" | "podcast";
-	slug?: string;
+	type: "video" | "podcast";
+	slug: string;
 }
 
 export function FeaturedChannelClient({
@@ -38,76 +34,12 @@ export function FeaturedChannelClient({
 	slug,
 }: FeaturedContentProps) {
 	const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
-	const [showLeftArrow, setShowLeftArrow] = useState(false);
-	const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		const container = scrollContainerRef.current;
-		if (!container) return;
-
-		const handleScroll = () => {
-			setShowLeftArrow(container.scrollLeft > 0);
-		};
-
-		container.addEventListener("scroll", handleScroll);
-		return () => container.removeEventListener("scroll", handleScroll);
-	}, []);
-
-	const scroll = (direction: "left" | "right") => {
-		if (!scrollContainerRef.current) return;
-		const container = scrollContainerRef.current;
-		const scrollAmount = container.clientWidth / 2;
-		const newScrollPosition =
-			direction === "left"
-				? container.scrollLeft - scrollAmount
-				: container.scrollLeft + scrollAmount;
-
-		container.scrollTo({
-			left: newScrollPosition,
-			behavior: "smooth",
-		});
-	};
-
-	const arrowButtonClasses =
-		"absolute top-1/2 -translate-y-1/2 h-24 w-12 z-10 hidden md:flex items-center justify-center bg-background/80 transition-opacity";
-
-	const getItemUrl = (item: ContentItem) => {
-		if (item.type === "video") return `/videos/${item.id}`;
-		return `/podcasts/${item.podcastSlug}/${item.episodeSlug}`;
-	};
 
 	return (
 		<Card className="overflow-hidden">
-			{/* Hero Section */}
-			{/* <Link
-				href={
-					type === "channel" ? `videos/channels/${slug}` : `/podcasts/${slug}`
-				}
-			>
-				<div
-					className="relative h-[200px] w-full"
-					style={{
-						background: `linear-gradient(to bottom, ${vibrantColor}60, ${vibrantColor}95)`,
-					}}
-				>
-					<Image
-						src={thumbnailUrl}
-						alt={title}
-						width={800}
-						height={800}
-						className="object-cover mix-blend-overlay"
-						priority
-					/>
-					<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
-						<div className="absolute bottom-4 left-4">
-							<h1 className="text-white text-2xl font-bold">{title}</h1>
-						</div>
-					</div>
-				</div>
-			</Link> */}
 			<Link
 				href={
-					type === "channel" ? `videos/channels/${slug}` : `/podcasts/${slug}`
+					type === "video" ? `videos/channels/${slug}` : `/podcasts/${slug}`
 				}
 			>
 				<div
@@ -116,13 +48,14 @@ export function FeaturedChannelClient({
 						background: `linear-gradient(to bottom, ${vibrantColor}60, ${vibrantColor}95)`,
 					}}
 				>
-					<Image
+					<ImageWithFallback
 						src={thumbnailUrl}
 						alt={title}
 						fill
-						className="object-cover mix-blend-overlay w-full h-full"
+						type={type}
 						priority
 						sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+						className="object-cover mix-blend-overlay w-full h-full"
 					/>
 					<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
 						<div className="absolute bottom-4 left-4">
@@ -131,97 +64,83 @@ export function FeaturedChannelClient({
 					</div>
 				</div>
 			</Link>
-
 			{/* Content Row */}
-			<div className="relative group">
-				<div
-					className="absolute inset-0"
-					style={{
-						background: `linear-gradient(to bottom, ${vibrantColor}30, transparent)`,
-					}}
-				/>
-
-				{/* Scrollable Container */}
-				<div className="relative p-4">
-					{/* Navigation Buttons (desktop only) */}
-					{showLeftArrow && (
-						<Button
-							variant="ghost"
-							size="icon"
-							className={cn(
-								arrowButtonClasses,
-								"-left-3 opacity-0 group-hover:opacity-100",
-							)}
-							onClick={(e) => {
-								e.preventDefault();
-								scroll("left");
-							}}
+			<div className="p-4">
+				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+					{items.map((item) => (
+						<Link
+							key={item.id}
+							href={
+								type === "video"
+									? `/videos/${item.id}`
+									: `/podcasts/${slug}/episodes/${item.id}`
+							}
+							className="group"
+							onMouseEnter={() => setHoveredItemId(item.id)}
+							onMouseLeave={() => setHoveredItemId(null)}
 						>
-							<ChevronLeft className="h-8 w-8" />
-						</Button>
-					)}
-					<Button
-						variant="ghost"
-						size="icon"
-						className={cn(
-							arrowButtonClasses,
-							"-right-3 opacity-0 group-hover:opacity-100",
-						)}
-						onClick={(e) => {
-							e.preventDefault();
-							scroll("right");
-						}}
-					>
-						<ChevronRight className="h-8 w-8" />
-					</Button>
-
-					<div
-						ref={scrollContainerRef}
-						className="flex overflow-x-auto space-x-4 pb-4 snap-x snap-mandatory scrollbar-hide"
-					>
-						{items.map((item) => (
-							<Link
-								key={item.id}
-								href={getItemUrl(item)}
-								className="group/item flex-none w-[240px] md:w-[320px] snap-start"
-								onMouseEnter={() => setHoveredItemId(item.id)}
-								onMouseLeave={() => setHoveredItemId(null)}
-							>
-								<div className="aspect-video relative rounded-md overflow-hidden">
-									<Image
-										src={item.thumbnailUrl}
-										alt={item.title}
-										width={320}
-										height={200}
-										className={cn(
-											"object-cover transition-transform duration-300",
-											hoveredItemId === item.id && "scale-105",
-										)}
-									/>
-									{hoveredItemId === item.id && (
-										<div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-											<Play className="h-12 w-12 text-white" />
-										</div>
+							<div className="relative aspect-video rounded-lg overflow-hidden">
+								<ImageWithFallback
+									src={item.thumbnailUrl || "/images/placeholder.png"}
+									alt={item.title}
+									width={300}
+									height={169}
+									type={type}
+									className="transition-transform duration-300 group-hover:scale-105"
+								/>
+								<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+									{type === "video" ? (
+										<svg
+											className="w-12 h-12 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											aria-label="Play video"
+											role="img"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+											/>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
+										</svg>
+									) : (
+										<svg
+											className="w-12 h-12 text-white"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											aria-label="Listen to podcast"
+											role="img"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M3 18v-6a9 9 0 0118 0v6"
+											/>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M21 19a2 2 0 01-2 2H5a2 2 0 01-2-2v-3a2 2 0 012-2h14a2 2 0 012 2v3zM3 18h18"
+											/>
+										</svg>
 									)}
 								</div>
-								<div className="mt-2">
-									{item.type === "episode" && item.podcastTitle && (
-										<p className="text-sm text-muted-foreground mb-1">
-											{item.podcastTitle}
-										</p>
-									)}
-									<h3 className="text-sm font-medium line-clamp-2">
-										{item.title}
-									</h3>
-									<p className="text-sm text-muted-foreground">
-										{formatDistanceToNow(item.publishedAt, {
-											addSuffix: true,
-										})}
-									</p>
-								</div>
-							</Link>
-						))}
-					</div>
+							</div>
+							<h3 className="mt-2 text-sm font-medium line-clamp-2">
+								{item.title}
+							</h3>
+						</Link>
+					))}
 				</div>
 			</div>
 		</Card>

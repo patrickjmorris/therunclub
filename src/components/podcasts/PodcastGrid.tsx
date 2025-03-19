@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Headphones } from "lucide-react";
@@ -44,11 +44,12 @@ export function PodcastGrid({ podcasts, className }: PodcastGridProps) {
 					>
 						<CardContent className="p-3 flex flex-col h-full">
 							<div className="relative aspect-square w-full overflow-hidden rounded-md mb-2">
-								<Image
+								<ImageWithFallback
 									alt={podcast.title}
-									className="object-cover transition-transform hover:scale-105"
+									className="transition-transform hover:scale-105"
 									width={235}
 									height={235}
+									type="podcast"
 									src={
 										podcast.podcastImage ||
 										podcast.itunesImage ||

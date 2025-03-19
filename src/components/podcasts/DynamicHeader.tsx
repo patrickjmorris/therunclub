@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 interface DynamicHeaderProps {
 	imageUrl: string;
@@ -29,13 +29,14 @@ export default function DynamicHeader({
 					<div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
 						<div>
 							<div className="aspect-square relative rounded-lg overflow-hidden shadow-xl">
-								<Image
+								<ImageWithFallback
 									src={imageUrl}
 									alt={title}
 									width={366}
 									height={366}
-									className="object-cover"
+									type="podcast"
 									priority={true}
+									className="object-cover"
 								/>
 							</div>
 						</div>

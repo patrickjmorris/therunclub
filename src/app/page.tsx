@@ -1,9 +1,6 @@
-import Image from "next/image";
-import { formatDistanceToNow } from "date-fns";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Headphones, Clock, ArrowRight, Tag } from "lucide-react";
+import { ArrowRight, Tag } from "lucide-react";
 import Link from "next/link";
 import { GlobalSearch } from "@/components/search/global-search";
 import {
@@ -21,8 +18,6 @@ import {
 	getNewEpisodes,
 } from "@/lib/services/podcast-service";
 import { getPopularRunClubs } from "@/lib/services/club-service";
-import { ListenNowButton } from "@/components/ListenNowButton";
-import { EpisodeCard } from "@/components/podcasts/EpisodeCard";
 import { CompactEpisodeCard } from "@/components/podcasts/CompactEpisodeCard";
 import { CompactVideoCard } from "@/components/videos/CompactVideoCard";
 import { HorizontalScroll } from "@/components/ui/horizontal-scroll";

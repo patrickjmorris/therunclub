@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 interface FeaturedChannel {
 	id: string;
@@ -57,30 +57,33 @@ export function FeaturedChannelsRow({ channels }: FeaturedChannelsRowProps) {
 	};
 
 	return (
-		<div className="relative group">
-			{/* Navigation Buttons */}
-			{showLeftArrow && (
-				<Button
-					variant="ghost"
-					size="icon"
-					className="absolute -left-4 top-1/2 -translate-y-1/2 h-20 w-10 z-10 hidden md:flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
-					onClick={() => scroll("left")}
-				>
-					<ChevronLeft className="h-8 w-8" />
-				</Button>
-			)}
-			{showRightArrow && (
-				<Button
-					variant="ghost"
-					size="icon"
-					className="absolute -right-4 top-1/2 -translate-y-1/2 h-20 w-10 z-10 hidden md:flex items-center justify-center bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
-					onClick={() => scroll("right")}
-				>
-					<ChevronRight className="h-8 w-8" />
-				</Button>
-			)}
+		<div className="space-y-4">
+			<div className="flex justify-between items-center">
+				<h2 className="text-2xl font-bold">Featured Channels</h2>
+				<div className="flex gap-2">
+					{showLeftArrow && (
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={() => scroll("left")}
+							className="rounded-full"
+						>
+							<ChevronLeft className="h-4 w-4" />
+						</Button>
+					)}
+					{showRightArrow && (
+						<Button
+							variant="outline"
+							size="icon"
+							onClick={() => scroll("right")}
+							className="rounded-full"
+						>
+							<ChevronRight className="h-4 w-4" />
+						</Button>
+					)}
+				</div>
+			</div>
 
-			{/* Scrollable Container */}
 			<div
 				ref={scrollContainerRef}
 				className="overflow-x-auto scrollbar-hide -mx-4 md:mx-0 px-4 md:px-0"
@@ -88,7 +91,7 @@ export function FeaturedChannelsRow({ channels }: FeaturedChannelsRowProps) {
 				<div className="grid md:grid-flow-col grid-rows-[repeat(2,_minmax(0,_1fr))] md:grid-rows-1 auto-cols-[160px] md:auto-cols-[150px] grid-cols-5 md:grid-cols-none gap-3 pb-4 min-w-[800px] md:min-w-0">
 					{channels.map((channel) => (
 						<Link
-							key={channel.id}
+							key={`featured-${channel.id}`}
 							href={`/videos/channels/${channel.id}`}
 							className="transition-opacity hover:opacity-80"
 						>
@@ -96,13 +99,13 @@ export function FeaturedChannelsRow({ channels }: FeaturedChannelsRowProps) {
 								<CardContent className="p-2">
 									<div className="flex flex-col items-start gap-2">
 										<div className="relative aspect-square w-full">
-											<Image
+											<ImageWithFallback
 												src={channel.thumbnailUrl || "/images/placeholder.png"}
 												alt={channel.title}
 												width={150}
 												height={150}
-												className="rounded-lg object-cover shadow-sm"
-												priority
+												type="video"
+												className="rounded-lg shadow-sm"
 											/>
 										</div>
 										<div className="w-full">

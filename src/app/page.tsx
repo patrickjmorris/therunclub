@@ -92,11 +92,11 @@ const getTaggedContent = cache(
 );
 
 // Preload functions for eager data fetching
-export const preloadHomeData = () => {
+const preloadHomeData = () => {
 	void getHomeData();
 };
 
-export const preloadTaggedContent = () => {
+const preloadTaggedContent = () => {
 	void getTaggedContent();
 };
 

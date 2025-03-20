@@ -31,30 +31,140 @@ import {
 	getVideosByTag,
 	getEpisodesByTag,
 } from "@/lib/services/tag-service";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
+import {
+	LoadingCardSkeleton,
+	LoadingGridSkeleton,
+} from "@/components/videos/loading-ui";
+import { PodcastGridSkeleton } from "@/components/podcasts/PodcastGridSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export const revalidate = 3600;
+// Route segment config
+export const dynamic = "force-dynamic";
+export const revalidate = 1800; // 30 minutes
+
+// Add dynamic metadata
+export const metadata = {
+	title: "The Run Club - Running Podcasts, Videos & More",
+	description:
+		"Discover the best running podcasts, videos, and content from top athletes and coaches.",
+};
+
+// Cache the data fetching functions with React cache for deduplication
+const getHomeData = cache(
+	unstable_cache(
+		async () => {
+			const [podcasts, videos, runClubs, featuredPodcasts, featuredChannels] =
+				await Promise.all([
+					getNewEpisodes(16),
+					getHomeLatestVideos(16),
+					getPopularRunClubs(),
+					getFeaturedPodcasts(3),
+					getFeaturedChannels(),
+				]);
+
+			return { podcasts, videos, runClubs, featuredPodcasts, featuredChannels };
+		},
+		["home-data"],
+		{ tags: ["home"], revalidate: 1800 },
+	),
+);
+
+const getTaggedContent = cache(
+	unstable_cache(
+		async () => {
+			const [topVideoTag] = await getTopTags("video", 14, 1);
+			const [topEpisodeTag] = await getTopTags("episode", 14, 1);
+
+			const taggedVideos = topVideoTag
+				? await getVideosByTag(topVideoTag.tag, 16)
+				: [];
+			const taggedEpisodes = topEpisodeTag
+				? await getEpisodesByTag(topEpisodeTag.tag, 16)
+				: [];
+
+			return { topVideoTag, topEpisodeTag, taggedVideos, taggedEpisodes };
+		},
+		["tagged-content"],
+		{ tags: ["home"], revalidate: 1800 },
+	),
+);
+
+// Preload functions for eager data fetching
+const preloadHomeData = () => {
+	void getHomeData();
+};
+
+const preloadTaggedContent = () => {
+	void getTaggedContent();
+};
+
+// Loading components for each section
+function VideosSectionSkeleton() {
+	return (
+		<section className="w-full py-12 md:py-24">
+			<div className="container px-4 md:px-6">
+				<div className="flex items-center justify-between mb-8">
+					<Skeleton className="h-8 w-48" />
+					<Skeleton className="h-10 w-32" />
+				</div>
+				<HorizontalScroll>
+					{Array.from({ length: 6 }).map((_, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: Loading skeleton
+						<LoadingCardSkeleton key={i} />
+					))}
+				</HorizontalScroll>
+			</div>
+		</section>
+	);
+}
+
+function PodcastsSectionSkeleton() {
+	return (
+		<section className="w-full py-12 md:py-24 bg-slate-50/50 dark:bg-slate-800/10">
+			<div className="container px-4 md:px-6">
+				<div className="flex items-center justify-between mb-8">
+					<Skeleton className="h-8 w-48" />
+					<Skeleton className="h-10 w-32" />
+				</div>
+				<PodcastGridSkeleton count={6} />
+			</div>
+		</section>
+	);
+}
+
+function TaggedContentSkeleton() {
+	return (
+		<>
+			<section className="w-full py-12 md:py-24 bg-slate-50 dark:bg-slate-800/20">
+				<div className="container px-4 md:px-6">
+					<div className="flex items-center justify-between mb-8">
+						<div className="flex items-center">
+							<Tag className="mr-3 h-8 w-8" />
+							<Skeleton className="h-8 w-48" />
+						</div>
+						<Skeleton className="h-10 w-24" />
+					</div>
+					<HorizontalScroll>
+						{Array.from({ length: 6 }).map((_, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: Loading skeleton
+							<LoadingCardSkeleton key={i} />
+						))}
+					</HorizontalScroll>
+				</div>
+			</section>
+		</>
+	);
+}
 
 export default async function HomePage() {
-	const [podcasts, videos, runClubs, featuredPodcasts, featuredChannels] =
-		await Promise.all([
-			getNewEpisodes(16),
-			getHomeLatestVideos(16),
-			getPopularRunClubs(),
-			getFeaturedPodcasts(3),
-			getFeaturedChannels(),
-		]);
+	// Eagerly initiate data fetching
+	preloadHomeData();
+	preloadTaggedContent();
 
-	// Get top tags and content for those tags
-	const [topVideoTag] = await getTopTags("video", 14, 1);
-	const [topEpisodeTag] = await getTopTags("episode", 14, 1);
-
-	// Get content for top tags if they exist
-	const taggedVideos = topVideoTag
-		? await getVideosByTag(topVideoTag.tag, 16)
-		: [];
-	const taggedEpisodes = topEpisodeTag
-		? await getEpisodesByTag(topEpisodeTag.tag, 16)
-		: [];
+	// Fetch featured data
+	const { featuredChannels, featuredPodcasts } = await getHomeData();
 
 	return (
 		<div className="flex flex-col min-h-screen">
@@ -69,153 +179,19 @@ export default async function HomePage() {
 			</section>
 
 			{/* Videos Section */}
-			<section className="w-full py-12 md:py-24">
-				<div className="container px-4 md:px-6">
-					<div className="flex items-center justify-between mb-8">
-						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-							Latest Videos
-						</h2>
-						<Button variant="ghost" asChild>
-							<Link href={"/videos"} className="group">
-								View All Videos
-								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-							</Link>
-						</Button>
-					</div>
-					<HorizontalScroll>
-						{videos.map((video) => (
-							<CompactVideoCard
-								key={video.id}
-								video={{
-									id: video.id,
-									title: video.title,
-									thumbnailUrl: video.thumbnailUrl,
-									publishedAt: video.publishedAt,
-									channelTitle: video.channelTitle,
-								}}
-							/>
-						))}
-					</HorizontalScroll>
-				</div>
-			</section>
+			<Suspense fallback={<VideosSectionSkeleton />}>
+				<VideoSection />
+			</Suspense>
 
-			{/* Podcasts Row */}
-			<section className="w-full py-12 md:py-24 bg-slate-50/50 dark:bg-slate-800/10">
-				<div className="container px-4 md:px-6">
-					<div className="flex items-center justify-between mb-8">
-						<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-							Latest Episodes
-						</h2>
-						<Button variant="ghost" asChild>
-							<Link href={"/podcasts"} className="group">
-								View All Episodes
-								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-							</Link>
-						</Button>
-					</div>
+			{/* Podcasts Section */}
+			<Suspense fallback={<PodcastsSectionSkeleton />}>
+				<PodcastSection />
+			</Suspense>
 
-					<HorizontalScroll>
-						{podcasts.map((podcast) => (
-							<CompactEpisodeCard
-								key={podcast.episodeId}
-								episode={{
-									episodeId: podcast.episodeId,
-									episodeTitle: podcast.episodeTitle,
-									episodeSlug: podcast.episodeSlug,
-									podcastId: podcast.podcastId,
-									podcastTitle: podcast.podcastTitle,
-									podcastSlug: podcast.podcastSlug,
-									podcastImage: podcast.podcastImage,
-									itunesImage: podcast.episodeImage,
-									enclosureUrl: podcast.enclosureUrl,
-									pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,
-								}}
-							/>
-						))}
-					</HorizontalScroll>
-				</div>
-			</section>
-
-			{/* Top Tagged Videos Section */}
-			{topVideoTag && taggedVideos.length > 0 && (
-				<section className="w-full py-12 md:py-24 bg-slate-50 dark:bg-slate-800/20">
-					<div className="container px-4 md:px-6">
-						<div className="flex items-center justify-between mb-8">
-							<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl flex items-center">
-								<Tag className="mr-3 h-8 w-8" />
-								<span>Top Videos: {topVideoTag.tag}</span>
-							</h2>
-							<Button variant="ghost" asChild>
-								<Link
-									href={`/tags/video/${encodeURIComponent(topVideoTag.tag)}`}
-									className="group"
-								>
-									View All
-									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-								</Link>
-							</Button>
-						</div>
-						<HorizontalScroll>
-							{taggedVideos.map((video) => (
-								<CompactVideoCard
-									key={video.id}
-									video={{
-										id: video.id,
-										title: video.title,
-										thumbnailUrl: video.thumbnailUrl,
-										publishedAt: video.publishedAt,
-										channelTitle: video.channelTitle,
-									}}
-								/>
-							))}
-						</HorizontalScroll>
-					</div>
-				</section>
-			)}
-
-			{/* Top Tagged Episodes Section */}
-			{topEpisodeTag && taggedEpisodes.length > 0 && (
-				<section className="w-full py-12 md:py-24 bg-white dark:bg-background">
-					<div className="container px-4 md:px-6">
-						<div className="flex items-center justify-between mb-8">
-							<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl flex items-center">
-								<Tag className="mr-3 h-8 w-8" />
-								<span>Top Episodes: {topEpisodeTag.tag}</span>
-							</h2>
-							<Button variant="ghost" asChild>
-								<Link
-									href={`/tags/episode/${encodeURIComponent(
-										topEpisodeTag.tag,
-									)}`}
-									className="group"
-								>
-									View All
-									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-								</Link>
-							</Button>
-						</div>
-						<HorizontalScroll>
-							{taggedEpisodes.map((episode) => (
-								<CompactEpisodeCard
-									key={episode.id}
-									episode={{
-										episodeId: episode.id,
-										episodeTitle: episode.title,
-										episodeSlug: episode.episodeSlug,
-										podcastId: episode.podcastId,
-										podcastTitle: episode.podcastTitle,
-										podcastSlug: episode.podcastSlug,
-										podcastImage: episode.podcastImage,
-										itunesImage: episode.image,
-										enclosureUrl: episode.enclosureUrl,
-										pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
-									}}
-								/>
-							))}
-						</HorizontalScroll>
-					</div>
-				</section>
-			)}
+			{/* Tagged Content Sections */}
+			<Suspense fallback={<TaggedContentSkeleton />}>
+				<TaggedContentSection />
+			</Suspense>
 
 			{/* Featured Channels Section */}
 			<section className="w-full py-12 md:py-24 bg-white dark:bg-background">
@@ -283,5 +259,169 @@ export default async function HomePage() {
 				</div>
 			</section>
 		</div>
+	);
+}
+
+// Separate components for streaming
+async function VideoSection() {
+	const { videos } = await getHomeData();
+	return (
+		<section className="w-full py-12 md:py-24">
+			<div className="container px-4 md:px-6">
+				<div className="flex items-center justify-between mb-8">
+					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+						Latest Videos
+					</h2>
+					<Button variant="ghost" asChild>
+						<Link href={"/videos"} className="group">
+							View All Videos
+							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+						</Link>
+					</Button>
+				</div>
+				<HorizontalScroll>
+					{videos.map((video) => (
+						<CompactVideoCard
+							key={video.id}
+							video={{
+								id: video.id,
+								title: video.title,
+								thumbnailUrl: video.thumbnailUrl,
+								publishedAt: video.publishedAt,
+								channelTitle: video.channelTitle,
+							}}
+						/>
+					))}
+				</HorizontalScroll>
+			</div>
+		</section>
+	);
+}
+
+async function PodcastSection() {
+	const { podcasts } = await getHomeData();
+	return (
+		<section className="w-full py-12 md:py-24 bg-slate-50/50 dark:bg-slate-800/10">
+			<div className="container px-4 md:px-6">
+				<div className="flex items-center justify-between mb-8">
+					<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+						Latest Episodes
+					</h2>
+					<Button variant="ghost" asChild>
+						<Link href={"/podcasts"} className="group">
+							View All Episodes
+							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+						</Link>
+					</Button>
+				</div>
+				<HorizontalScroll>
+					{podcasts.map((podcast) => (
+						<CompactEpisodeCard
+							key={podcast.episodeId}
+							episode={{
+								episodeId: podcast.episodeId,
+								episodeTitle: podcast.episodeTitle,
+								episodeSlug: podcast.episodeSlug,
+								podcastId: podcast.podcastId,
+								podcastTitle: podcast.podcastTitle,
+								podcastSlug: podcast.podcastSlug,
+								podcastImage: podcast.podcastImage,
+								itunesImage: podcast.episodeImage,
+								enclosureUrl: podcast.enclosureUrl,
+								pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,
+							}}
+						/>
+					))}
+				</HorizontalScroll>
+			</div>
+		</section>
+	);
+}
+
+async function TaggedContentSection() {
+	const { topVideoTag, topEpisodeTag, taggedVideos, taggedEpisodes } =
+		await getTaggedContent();
+
+	return (
+		<>
+			{topVideoTag && taggedVideos.length > 0 && (
+				<section className="w-full py-12 md:py-24 bg-slate-50 dark:bg-slate-800/20">
+					<div className="container px-4 md:px-6">
+						<div className="flex items-center justify-between mb-8">
+							<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl flex items-center">
+								<Tag className="mr-3 h-8 w-8" />
+								<span>Top Videos: {topVideoTag.tag}</span>
+							</h2>
+							<Button variant="ghost" asChild>
+								<Link
+									href={`/tags/video/${encodeURIComponent(topVideoTag.tag)}`}
+									className="group"
+								>
+									View All
+									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+								</Link>
+							</Button>
+						</div>
+						<HorizontalScroll>
+							{taggedVideos.map((video) => (
+								<CompactVideoCard
+									key={video.id}
+									video={{
+										id: video.id,
+										title: video.title,
+										thumbnailUrl: video.thumbnailUrl,
+										publishedAt: video.publishedAt,
+										channelTitle: video.channelTitle,
+									}}
+								/>
+							))}
+						</HorizontalScroll>
+					</div>
+				</section>
+			)}
+
+			{topEpisodeTag && taggedEpisodes.length > 0 && (
+				<section className="w-full py-12 md:py-24 bg-white dark:bg-background">
+					<div className="container px-4 md:px-6">
+						<div className="flex items-center justify-between mb-8">
+							<h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl flex items-center">
+								<Tag className="mr-3 h-8 w-8" />
+								<span>Top Episodes: {topEpisodeTag.tag}</span>
+							</h2>
+							<Button variant="ghost" asChild>
+								<Link
+									href={`/tags/episode/${encodeURIComponent(
+										topEpisodeTag.tag,
+									)}`}
+									className="group"
+								>
+									View All
+									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+								</Link>
+							</Button>
+						</div>
+						<HorizontalScroll>
+							{taggedEpisodes.map((episode) => (
+								<CompactEpisodeCard
+									key={episode.id}
+									episode={{
+										episodeId: episode.id,
+										episodeTitle: episode.title,
+										episodeSlug: episode.episodeSlug,
+										podcastId: episode.podcastId,
+										podcastTitle: episode.podcastTitle,
+										podcastSlug: episode.podcastSlug,
+										podcastImage: episode.podcastImage,
+										itunesImage: episode.image,
+										enclosureUrl: episode.enclosureUrl,
+										pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
+									}}
+								/>
+							))}
+						</HorizontalScroll>
+					</div>
+				</section>
+			)}
+		</>
 	);
 }

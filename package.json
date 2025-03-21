@@ -32,7 +32,9 @@
 		"backfill:tags:prod": "NODE_ENV=production bun run scripts/backfill-tags.ts",
 		"deploy:tagging-function": "./scripts/deploy-tagging-function.sh",
 		"apply:tagging-triggers": "./scripts/apply-tagging-triggers.sh",
-		"athlete-detection": "concurrently \"bun run worker\" \"bun run queue\""
+		"athlete-detection": "concurrently \"bun run worker\" \"bun run queue\"",
+		"db:migrate:athletes": "bun run scripts/migrate-athletes.ts",
+		"db:rollback:athletes": "bun run scripts/rollback-athletes.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {

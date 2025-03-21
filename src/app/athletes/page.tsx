@@ -103,7 +103,7 @@ async function getAthletes(page = 1) {
 			fromDate: fiveYearsAgo,
 			limit: ATHLETES_PER_PAGE,
 			offset,
-			goldMedalistIds,
+			goldMedalistIds: goldMedalistIds.filter(Boolean) as string[],
 		}),
 		getAthleteCount(),
 	]);

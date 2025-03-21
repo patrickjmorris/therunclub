@@ -372,6 +372,7 @@ export async function getEpisodeAthleteReferences(
 			athlete: {
 				columns: {
 					id: true,
+					worldAthleticsId: true,
 					name: true,
 					imageUrl: true,
 					slug: true,
@@ -417,13 +418,13 @@ export async function getAllAthletes() {
 export async function getOlympicGoldMedalists() {
 	return await db
 		.select({
-			id: athletes.id,
+			id: athletes.worldAthleticsId,
 		})
 		.from(athletes)
 		.innerJoin(
 			athleteHonors,
 			and(
-				eq(athletes.id, athleteHonors.athleteId),
+				eq(athletes.worldAthleticsId, athleteHonors.athleteId),
 				ilike(athleteHonors.categoryName, "%olympic%"),
 				sql`${athleteHonors.categoryName} NOT ILIKE '%youth%'`,
 				eq(athleteHonors.place, "1."),
@@ -460,10 +461,13 @@ export async function getAllAthletesWithDisciplines({
 			`,
 		})
 		.from(athletes)
-		.leftJoin(athleteResults, eq(athletes.id, athleteResults.athleteId))
+		.leftJoin(
+			athleteResults,
+			eq(athletes.worldAthleticsId, athleteResults.athleteId),
+		)
 		.groupBy(athletes.id)
 		.orderBy(
-			sql`CASE WHEN ${athletes.id} IN (${sql.raw(
+			sql`CASE WHEN ${athletes.worldAthleticsId} IN (${sql.raw(
 				quotedIds,
 			)}) THEN 0 ELSE 1 END`,
 			desc(athletes.name),
@@ -490,7 +494,7 @@ export async function searchAthletes(query: string, limit = 10) {
 	return db
 		.select({
 			athlete: {
-				id: athletes.id,
+				id: athletes.worldAthleticsId,
 				name: athletes.name,
 				imageUrl: athletes.imageUrl,
 				slug: athletes.slug,

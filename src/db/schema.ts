@@ -312,23 +312,44 @@ export type UserRole = typeof userRoles.$inferSelect;
 export type NewUserRole = typeof userRoles.$inferInsert;
 export type UserRoleType = "admin" | "editor" | "user";
 
+export const athleteCategories = pgTable("athlete_categories", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	name: text("name").notNull().unique(),
+	description: text("description"),
+	createdAt: timestamp("created_at").defaultNow(),
+	updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Add types for athlete categories
+export type AthleteCategory = typeof athleteCategories.$inferSelect;
+export type NewAthleteCategory = typeof athleteCategories.$inferInsert;
+
+// Add Zod schemas for athlete categories
+export const insertAthleteCategorySchema =
+	createInsertSchema(athleteCategories);
+export const selectAthleteCategorySchema =
+	createSelectSchema(athleteCategories);
+
 export const athletes = pgTable("athletes", {
-	id: text("id").primaryKey(),
+	id: uuid("id").primaryKey().defaultRandom(),
+	worldAthleticsId: text("world_athletics_id").unique(),
+	categoryId: uuid("category_id").references(() => athleteCategories.id),
 	name: text("name").notNull(),
 	slug: text("slug").notNull().unique(),
 	countryCode: text("country_code"),
 	countryName: text("country_name"),
 	dateOfBirth: date("date_of_birth"),
 	bio: text("bio"),
-	imageUrl: text("image_url"),
 	socialMedia: jsonb("social_media").$type<{
 		twitter?: string;
 		instagram?: string;
 		facebook?: string;
 		website?: string;
+		strava?: string;
 	}>(),
+	imageUrl: text("image_url"),
 	verified: boolean("verified").default(false),
-	updatedAt: timestamp("updated_at").defaultNow(),
+	updatedAt: timestamp("updated_at"),
 	createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -336,7 +357,7 @@ export const athleteHonors = pgTable("athlete_honors", {
 	id: text("id").primaryKey(),
 	athleteId: text("athlete_id")
 		.notNull()
-		.references(() => athletes.id),
+		.references(() => athletes.worldAthleticsId),
 	categoryName: text("category_name").notNull(),
 	competition: text("competition").notNull(),
 	discipline: text("discipline").notNull(),
@@ -347,7 +368,9 @@ export const athleteHonors = pgTable("athlete_honors", {
 
 export const athleteResults = pgTable("athlete_results", {
 	id: text("id").primaryKey(),
-	athleteId: text("athlete_id").references(() => athletes.id),
+	athleteId: text("athlete_id")
+		.notNull()
+		.references(() => athletes.worldAthleticsId),
 	competitionName: text("competition_name"),
 	date: date("date").notNull(),
 	discipline: text("discipline").notNull(),
@@ -356,32 +379,9 @@ export const athleteResults = pgTable("athlete_results", {
 	wind: text("wind"),
 });
 
-// Update relations
-export const athleteRelations = relations(athletes, ({ many }) => ({
-	results: many(athleteResults),
-	honors: many(athleteHonors),
-	sponsors: many(athleteSponsors),
-	gear: many(athleteGear),
-	events: many(athleteEvents),
-}));
-
-export const athleteResultsRelations = relations(athleteResults, ({ one }) => ({
-	athlete: one(athletes, {
-		fields: [athleteResults.athleteId],
-		references: [athletes.id],
-	}),
-}));
-
-export const athleteHonorsRelations = relations(athleteHonors, ({ one }) => ({
-	athlete: one(athletes, {
-		fields: [athleteHonors.athleteId],
-		references: [athletes.id],
-	}),
-}));
-
 export const athleteSponsors = pgTable("athlete_sponsors", {
 	id: uuid("id").defaultRandom().primaryKey(),
-	athleteId: text("athlete_id")
+	athleteId: uuid("athlete_id")
 		.notNull()
 		.references(() => athletes.id),
 	name: text("name").notNull(),
@@ -396,7 +396,7 @@ export const athleteSponsors = pgTable("athlete_sponsors", {
 
 export const athleteGear = pgTable("athlete_gear", {
 	id: uuid("id").defaultRandom().primaryKey(),
-	athleteId: text("athlete_id")
+	athleteId: uuid("athlete_id")
 		.notNull()
 		.references(() => athletes.id),
 	name: text("name").notNull(),
@@ -423,7 +423,7 @@ export const athleteGear = pgTable("athlete_gear", {
 
 export const athleteEvents = pgTable("athlete_events", {
 	id: uuid("id").primaryKey().defaultRandom(),
-	athleteId: text("athlete_id")
+	athleteId: uuid("athlete_id")
 		.notNull()
 		.references(() => athletes.id, { onDelete: "cascade" }),
 	name: text("name").notNull(),
@@ -443,6 +443,68 @@ export const athleteEvents = pgTable("athlete_events", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const athleteMentions = pgTable(
+	"athlete_mentions",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		athleteId: text("athlete_id")
+			.notNull()
+			.references(() => athletes.worldAthleticsId, { onDelete: "cascade" }),
+		episodeId: uuid("episode_id")
+			.notNull()
+			.references(() => episodes.id, { onDelete: "cascade" }),
+		source: text("source", { enum: ["title", "description"] }).notNull(),
+		confidence: numeric("confidence").notNull(),
+		context: text("context").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+	},
+	(table) => ({
+		athleteEpisodeIdx: index("idx_athlete_mentions_athlete_episode").on(
+			table.athleteId,
+			table.episodeId,
+			table.confidence,
+		),
+		episodeAthleteIdx: index("idx_athlete_mentions_episode_athlete").on(
+			table.episodeId,
+			table.athleteId,
+			table.confidence,
+		),
+		uniqueMentionIdx: uniqueIndex("athlete_mentions_unique_idx").on(
+			table.athleteId,
+			table.episodeId,
+			table.source,
+		),
+	}),
+);
+
+// Update relations to use id instead of uuid
+export const athleteRelations = relations(athletes, ({ one, many }) => ({
+	category: one(athleteCategories, {
+		fields: [athletes.categoryId],
+		references: [athleteCategories.id],
+	}),
+	results: many(athleteResults),
+	honors: many(athleteHonors),
+	sponsors: many(athleteSponsors),
+	gear: many(athleteGear),
+	events: many(athleteEvents),
+	mentions: many(athleteMentions),
+}));
+
+export const athleteResultsRelations = relations(athleteResults, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteResults.athleteId],
+		references: [athletes.worldAthleticsId],
+	}),
+}));
+
+export const athleteHonorsRelations = relations(athleteHonors, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteHonors.athleteId],
+		references: [athletes.worldAthleticsId],
+	}),
+}));
 
 export const athleteSponsorsRelations = relations(
 	athleteSponsors,
@@ -468,49 +530,12 @@ export const athleteEventsRelations = relations(athleteEvents, ({ one }) => ({
 	}),
 }));
 
-export const athleteMentions = pgTable(
-	"athlete_mentions",
-	{
-		id: uuid("id").primaryKey().defaultRandom(),
-		athleteId: text("athlete_id")
-			.notNull()
-			.references(() => athletes.id, { onDelete: "cascade" }),
-		episodeId: uuid("episode_id")
-			.notNull()
-			.references(() => episodes.id, { onDelete: "cascade" }),
-		source: text("source", { enum: ["title", "description"] }).notNull(),
-		confidence: numeric("confidence").notNull(),
-		context: text("context").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-	},
-	(table) => ({
-		// Compound indexes for efficient querying
-		athleteEpisodeIdx: index("idx_athlete_mentions_athlete_episode").on(
-			table.athleteId,
-			table.episodeId,
-			table.confidence,
-		),
-		episodeAthleteIdx: index("idx_athlete_mentions_episode_athlete").on(
-			table.episodeId,
-			table.athleteId,
-			table.confidence,
-		),
-		// Unique constraint to prevent duplicate mentions
-		uniqueMentionIdx: uniqueIndex("athlete_mentions_unique_idx").on(
-			table.athleteId,
-			table.episodeId,
-			table.source,
-		),
-	}),
-);
-
-// Add relations for athlete mentions
 export const athleteMentionsRelations = relations(
 	athleteMentions,
 	({ one }) => ({
 		athlete: one(athletes, {
 			fields: [athleteMentions.athleteId],
-			references: [athletes.id],
+			references: [athletes.worldAthleticsId],
 		}),
 		episode: one(episodes, {
 			fields: [athleteMentions.episodeId],

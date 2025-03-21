@@ -1,7 +1,6 @@
 import { db } from "../src/db/client";
 import { athletes, athleteResults, athleteHonors } from "@/db/schema";
 import { getAthleteById, gqlClient } from "@/lib/world-athletics";
-import { countryCodeMap } from "@/lib/utils/country-codes";
 import { like, or, sql, and, eq, isNotNull } from "drizzle-orm";
 import { openai } from "../src/lib/openai";
 import fs from "fs";
@@ -16,43 +15,6 @@ interface AthleteInfo {
 		facebook?: string;
 		website?: string;
 	};
-}
-
-interface CompetitorBasicData {
-	birthDate: string;
-	countryCode: string;
-	countryFullName: string;
-	familyName: string;
-	givenName: string;
-}
-
-interface PersonalBest {
-	date: string;
-	discipline: string;
-	eventName: string;
-	records: string[];
-	mark: string;
-	venue: string;
-}
-
-interface Honor {
-	categoryName: string;
-	results: Array<{
-		competition: string;
-		mark: string;
-		place: string;
-		discipline: string;
-	}>;
-}
-
-interface Athlete {
-	id: string;
-	name: string;
-	countryCode?: string;
-	countryName?: string;
-	dateOfBirth?: string;
-	personalBests?: PersonalBest[];
-	honours?: Honor[];
 }
 
 interface AthleteSearchResponse {
@@ -90,18 +52,6 @@ interface AthleteData {
 	}>;
 }
 
-interface CompetitorResponse {
-	getSingleCompetitor: {
-		_id: string;
-		basicData: CompetitorBasicData;
-		personalBests: {
-			results: PersonalBest[];
-			withRecords: boolean;
-		};
-		honours: Honor[];
-	} | null;
-}
-
 interface AthleteSearchChild {
 	athleteId: number;
 }
@@ -117,6 +67,70 @@ interface LeadingAthletesEvent {
 		};
 	}>;
 }
+
+// Define major athletics countries
+const majorCountries = [
+	"USA",
+	"KEN",
+	"ETH",
+	"JAM",
+	"GBR",
+	"FRA",
+	"GER",
+	"ITA",
+	"ESP",
+	"POL",
+	"CHN",
+	"JPN",
+	"AUS",
+	"CAN",
+	"BRA",
+	"RSA",
+	"NGR",
+	"MAR",
+	"UGA",
+	"TAN",
+	"SWE",
+	"NOR",
+	"FIN",
+	"NED",
+	"BEL",
+	"POR",
+	"ROU",
+	"HUN",
+	"CZE",
+	"SVK",
+	"UKR",
+	"RUS",
+	"BLR",
+	"KAZ",
+	"UZB",
+	"TUR",
+	"GRE",
+	"CUB",
+	"BAH",
+	"TTO",
+	"DOM",
+	"COL",
+	"VEN",
+	"ECU",
+	"PER",
+	"CHI",
+	"ARG",
+	"NZL",
+	"QAT",
+	"BHR",
+	"KSA",
+	"IRL",
+	"DEN",
+	"SUI",
+	"AUT",
+	"CRO",
+	"SRB",
+	"BUL",
+	"ISR",
+	"CYP",
+];
 
 function parseBirthDate(dateStr: string | undefined | null): string | null {
 	if (!dateStr) return null;
@@ -183,9 +197,8 @@ async function getAthleteIdsByCountry(countryCode: string): Promise<string[]> {
 		// Flatten the nested structure and convert numbers to strings
 		return response.getLeadingAthletes.eventResults
 			.flatMap((event: LeadingAthletesEvent) => event.results)
-			.map((result: { competitor: { id: number } }) =>
-				result.competitor.id.toString(),
-			);
+			.filter((result) => result.competitor?.id != null)
+			.map((result) => result.competitor.id.toString());
 	} catch (error) {
 		console.error(`Error fetching athletes for country ${countryCode}:`, error);
 		return [];
@@ -197,11 +210,21 @@ async function importAthleteData(limit?: number) {
 	const athleteIds = await getAthleteIds();
 	console.log(`Found ${athleteIds.length} athletes from representative search`);
 
-	// Get athletes from each country
+	// Get athletes from major countries
 	const countryAthleteIds = new Set<string>();
-	for (const [code3] of Object.entries(countryCodeMap)) {
-		console.log(`Fetching athletes from country: ${code3}`);
+	const totalCountries = majorCountries.length;
+	let processedCountries = 0;
+
+	console.log(
+		`\nFetching athletes from ${totalCountries} major athletics countries...`,
+	);
+	for (const code3 of majorCountries) {
+		processedCountries++;
+		console.log(
+			`\n[${processedCountries}/${totalCountries}] Fetching athletes from: ${code3}`,
+		);
 		const ids = await getAthleteIdsByCountry(code3);
+		console.log(`Found ${ids.length} athletes from ${code3}`);
 		for (const id of ids) {
 			countryAthleteIds.add(id);
 		}
@@ -228,7 +251,7 @@ async function importAthleteData(limit?: number) {
 	);
 
 	for (const id of athletesToProcess) {
-		console.log(`Importing athlete ${id}...`);
+		console.log(`\nImporting athlete ${id}...`);
 		const athleteData = await getAthleteById(id);
 
 		// Add delay to avoid rate limiting
@@ -239,78 +262,92 @@ async function importAthleteData(limit?: number) {
 			continue;
 		}
 
+		console.log(`Successfully fetched data for ${athleteData.name}`);
+
 		// Create unique slug by combining name and ID
 		const nameSlug = slugify(athleteData.name);
 		const uniqueSlug = `${nameSlug}-${athleteData.id}`;
 
-		// Insert or update athlete
-		await db
-			.insert(athletes)
-			.values({
-				id: athleteData.id,
-				name: athleteData.name,
-				slug: uniqueSlug,
-				countryCode: athleteData.countryCode ?? null,
-				countryName: athleteData.countryName ?? null,
-				dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
-				verified: false,
-			})
-			.onConflictDoUpdate({
-				target: athletes.id,
-				set: {
+		try {
+			// Insert or update athlete
+			await db
+				.insert(athletes)
+				.values({
+					worldAthleticsId: athleteData.id,
 					name: athleteData.name,
 					slug: uniqueSlug,
 					countryCode: athleteData.countryCode ?? null,
 					countryName: athleteData.countryName ?? null,
 					dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
-					updatedAt: sql`CURRENT_TIMESTAMP`,
-				},
-			});
+					verified: false,
+				})
+				.onConflictDoUpdate({
+					target: athletes.worldAthleticsId,
+					set: {
+						name: athleteData.name,
+						slug: uniqueSlug,
+						countryCode: athleteData.countryCode ?? null,
+						countryName: athleteData.countryName ?? null,
+						dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
+						updatedAt: sql`CURRENT_TIMESTAMP`,
+					},
+				});
 
-		// Insert personal bests as results
-		if (athleteData.personalBests) {
-			for (const result of athleteData.personalBests) {
-				const resultId = `${athleteData.id}-${result.discipline}-${result.date}`;
+			console.log(`Updated athlete record for ${athleteData.name}`);
 
-				await db
-					.insert(athleteResults)
-					.values({
-						id: resultId,
-						athleteId: athleteData.id,
-						competitionName: result.eventName,
-						date: result.date,
-						discipline: result.discipline,
-						performance: result.mark,
-						place: null,
-						wind: null,
-					})
-					.onConflictDoNothing();
-			}
-		}
-
-		// Insert honors
-		if (athleteData.honours) {
-			for (const honor of athleteData.honours) {
-				for (const result of honor.results) {
-					const honorId = `${athleteData.id}-${honor.categoryName}-${result.competition}-${result.discipline}`;
+			// Insert personal bests as results
+			if (athleteData.personalBests && athleteData.id) {
+				console.log(
+					`Processing ${athleteData.personalBests.length} personal bests`,
+				);
+				for (const result of athleteData.personalBests) {
+					const resultId = `${athleteData.id}-${result.discipline}-${result.date}`;
 
 					await db
-						.insert(athleteHonors)
+						.insert(athleteResults)
 						.values({
-							id: honorId,
+							id: resultId,
 							athleteId: athleteData.id,
-							categoryName: honor.categoryName,
-							competition: result.competition,
+							competitionName: result.eventName,
+							date: result.date,
 							discipline: result.discipline,
-							mark: result.mark,
-							place: result.place,
+							performance: result.mark,
+							place: null,
+							wind: null,
 						})
 						.onConflictDoNothing();
 				}
+				console.log(`Updated personal bests for ${athleteData.name}`);
 			}
-		}
 
-		console.log(`Successfully imported athlete ${athleteData.name}`);
+			// Insert honors
+			if (athleteData.honours) {
+				console.log(`Processing ${athleteData.honours.length} honors`);
+				for (const honor of athleteData.honours) {
+					for (const result of honor.results) {
+						const honorId = `${athleteData.id}-${honor.categoryName}-${result.competition}-${result.discipline}`;
+
+						await db
+							.insert(athleteHonors)
+							.values({
+								id: honorId,
+								athleteId: athleteData.id,
+								categoryName: honor.categoryName,
+								competition: result.competition,
+								discipline: result.discipline,
+								mark: result.mark,
+								place: result.place,
+							})
+							.onConflictDoNothing();
+					}
+				}
+				console.log(`Updated honors for ${athleteData.name}`);
+			}
+
+			console.log(`✅ Successfully imported athlete ${athleteData.name}`);
+		} catch (error) {
+			console.error(`❌ Error importing athlete ${athleteData.name}:`, error);
+		}
 	}
 }
 

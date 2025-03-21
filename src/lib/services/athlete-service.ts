@@ -141,7 +141,7 @@ async function getAthleteFromWorldAthletics(
 // Get athlete from database by ID
 export async function getAthleteById(athleteId: string) {
 	return await db.query.athletes.findFirst({
-		where: eq(athletes.id, athleteId),
+		where: eq(athletes.worldAthleticsId, athleteId),
 	});
 }
 
@@ -530,9 +530,18 @@ export async function searchAthletes(query: string, limit = 10) {
 			)`,
 		})
 		.from(athletes)
-		.leftJoin(athleteMentions, eq(athletes.id, athleteMentions.athleteId))
-		.leftJoin(athleteResults, eq(athletes.id, athleteResults.athleteId))
-		.leftJoin(athleteHonors, eq(athletes.id, athleteHonors.athleteId))
+		.leftJoin(
+			athleteMentions,
+			eq(athletes.worldAthleticsId, athleteMentions.athleteId),
+		)
+		.leftJoin(
+			athleteResults,
+			eq(athletes.worldAthleticsId, athleteResults.athleteId),
+		)
+		.leftJoin(
+			athleteHonors,
+			eq(athletes.worldAthleticsId, athleteHonors.athleteId),
+		)
 		.where(
 			sql`to_tsvector('english', 
 				${athletes.name} || ' ' || 
@@ -725,15 +734,16 @@ export async function importAthleteData(limit?: number) {
 							});
 
 						// Insert personal bests
-						if (athleteData.personalBests) {
+						if (athleteData.personalBests && athleteData.id) {
+							const worldAthleticsId = athleteData.id;
 							await Promise.all(
 								athleteData.personalBests.map(async (result) => {
-									const resultId = `${athleteData.id}-${result.discipline}-${result.date}`;
+									const resultId = `${worldAthleticsId}-${result.discipline}-${result.date}`;
 									return db
 										.insert(athleteResults)
 										.values({
 											id: resultId,
-											athleteId: athleteData.id,
+											athleteId: worldAthleticsId,
 											competitionName: result.eventName,
 											date: result.date,
 											discipline: result.discipline,
@@ -873,7 +883,7 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	// Cache athletes in memory for faster lookups
 	const allAthletes = await db
 		.select({
-			id: athletes.id,
+			id: athletes.worldAthleticsId,
 			name: athletes.name,
 		})
 		.from(athletes);
@@ -896,7 +906,7 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 				const context = text.slice(start, end).toString();
 
 				detectedAthletes.push({
-					athleteId: id,
+					athleteId: id ?? "",
 					confidence: 1.0,
 					context,
 				});
@@ -962,11 +972,12 @@ export async function updateExistingAthletes(limit?: number) {
 		// Get existing athletes ordered by last update
 		const athletesToUpdate = await db
 			.select({
-				id: athletes.id,
+				worldAthleticsId: athletes.worldAthleticsId,
 				name: athletes.name,
 				updatedAt: athletes.updatedAt,
 			})
 			.from(athletes)
+			.where(isNotNull(athletes.worldAthleticsId))
 			.orderBy(athletes.updatedAt)
 			.limit(limit || 50);
 
@@ -987,11 +998,21 @@ export async function updateExistingAthletes(limit?: number) {
 			// Process batch concurrently
 			const batchResults = await Promise.allSettled(
 				batch.map(async (athlete) => {
+					if (!athlete.worldAthleticsId) {
+						console.log(
+							`[Athlete Update] Skipping athlete ${athlete.name} - no World Athletics ID`,
+						);
+						results.skipped++;
+						return;
+					}
+
 					try {
 						console.log(
-							`[Athlete Update] Processing ${athlete.name} (${athlete.id})`,
+							`[Athlete Update] Processing ${athlete.name} (${athlete.worldAthleticsId})`,
 						);
-						const athleteData = await getAthleteFromWorldAthletics(athlete.id);
+						const athleteData = await getAthleteFromWorldAthletics(
+							athlete.worldAthleticsId,
+						);
 
 						if (!athleteData) {
 							console.log(`[Athlete Update] No data found for ${athlete.name}`);
@@ -1009,18 +1030,18 @@ export async function updateExistingAthletes(limit?: number) {
 								dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
 								updatedAt: sql`CURRENT_TIMESTAMP`,
 							})
-							.where(eq(athletes.id, athlete.id));
+							.where(eq(athletes.worldAthleticsId, athlete.worldAthleticsId));
 
 						// Update personal bests
-						if (athleteData.personalBests) {
+						if (athleteData.personalBests && athlete.worldAthleticsId) {
 							await Promise.all(
 								athleteData.personalBests.map(async (result) => {
-									const resultId = `${athlete.id}-${result.discipline}-${result.date}`;
+									const resultId = `${athlete.worldAthleticsId}-${result.discipline}-${result.date}`;
 									return db
 										.insert(athleteResults)
 										.values({
 											id: resultId,
-											athleteId: athlete.id,
+											athleteId: athlete.worldAthleticsId ?? "",
 											competitionName: result.eventName,
 											date: result.date,
 											discipline: result.discipline,
@@ -1038,12 +1059,12 @@ export async function updateExistingAthletes(limit?: number) {
 							await Promise.all(
 								athleteData.honours.flatMap((honor) =>
 									honor.results.map(async (result) => {
-										const honorId = `${athlete.id}-${honor.categoryName}-${result.competition}-${result.discipline}`;
+										const honorId = `${athlete.worldAthleticsId}-${honor.categoryName}-${result.competition}-${result.discipline}`;
 										return db
 											.insert(athleteHonors)
 											.values({
 												id: honorId,
-												athleteId: athlete.id,
+												athleteId: athlete.worldAthleticsId ?? "",
 												categoryName: honor.categoryName,
 												competition: result.competition,
 												discipline: result.discipline,

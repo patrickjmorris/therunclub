@@ -210,35 +210,11 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 				)}
 			</div>
 
-			{/* Personal bests section */}
-			{Object.keys(personalBests).length > 0 && (
-				<div className="space-y-4">
-					<h2 className="text-2xl font-semibold dark:text-gray-100">
-						Personal Bests
-					</h2>
-					<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-						<div className="space-y-2">
-							{Object.entries(personalBests).map(([discipline, mark]) => (
-								<div
-									key={discipline}
-									className="flex justify-between items-center"
-								>
-									<div className="font-medium dark:text-gray-200">
-										{discipline}
-									</div>
-									<div className="text-gray-600 dark:text-gray-300">{mark}</div>
-								</div>
-							))}
-						</div>
-					</div>
-				</div>
-			)}
-
-			{/* Recent Results section */}
+			{/* Personal Bests section */}
 			{sortedResults.length > 0 && (
 				<div className="space-y-4">
 					<h2 className="text-2xl font-semibold dark:text-gray-100">
-						Recent Results
+						Personal Bests
 					</h2>
 					<div className="space-y-2">
 						{recentResults.map((result) => (

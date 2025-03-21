@@ -31,6 +31,7 @@ function getMedalColor(place: string | null) {
 
 export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 	const [showAllHonors, setShowAllHonors] = useState(false);
+	const [showAllResults, setShowAllResults] = useState(false);
 	// console.log("Athlete honors:", athlete.honors);
 	// Count Olympic medals
 	const olympicMedals = athlete.honors.filter(
@@ -113,6 +114,24 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 		});
 
 	const displayedHonors = showAllHonors ? majorHonors : majorHonors.slice(0, 5);
+
+	// Sort results by date and get the 5 most recent
+	const sortedResults = [...athlete.results]
+		.sort((a, b) => {
+			if (!a.date || !b.date) return 0;
+			return new Date(b.date).getTime() - new Date(a.date).getTime();
+		})
+		.filter((result) => {
+			const isRelay = result.discipline?.toLowerCase().includes("relay");
+			const isShortTrack = result.discipline
+				?.toLowerCase()
+				.includes("short track");
+			return !isRelay && !isShortTrack;
+		});
+
+	const recentResults = showAllResults
+		? sortedResults
+		: sortedResults.slice(0, 5);
 
 	return (
 		<div className="space-y-8">
@@ -211,6 +230,61 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 								</div>
 							))}
 						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Recent Results section */}
+			{sortedResults.length > 0 && (
+				<div className="space-y-4">
+					<h2 className="text-2xl font-semibold dark:text-gray-100">
+						Recent Results
+					</h2>
+					<div className="space-y-2">
+						{recentResults.map((result) => (
+							<div
+								key={result.id}
+								className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
+							>
+								<div className="flex justify-between items-start">
+									<div className="space-y-1">
+										<p className="font-medium dark:text-gray-200">
+											{result.discipline}
+										</p>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											{result.competitionName}
+										</p>
+									</div>
+									<div className="text-right">
+										<p className="font-medium dark:text-gray-200">
+											{result.performance}
+										</p>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											{new Date(result.date).toLocaleDateString()}
+										</p>
+									</div>
+								</div>
+								{result.place && (
+									<p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+										Place: {result.place}
+									</p>
+								)}
+								{result.wind && (
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Wind: {result.wind}
+									</p>
+								)}
+							</div>
+						))}
+						{sortedResults.length > 5 && (
+							<button
+								type="button"
+								onClick={() => setShowAllResults(!showAllResults)}
+								className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+							>
+								{showAllResults ? "Show Less" : "Show More"}
+							</button>
+						)}
 					</div>
 				</div>
 			)}

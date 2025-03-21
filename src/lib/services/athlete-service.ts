@@ -6,6 +6,7 @@ import {
 	athletes,
 	episodes,
 	podcasts,
+	athleteCategories,
 } from "@/db/schema";
 import {
 	desc,
@@ -16,6 +17,9 @@ import {
 	like,
 	isNotNull,
 	ilike,
+	gte,
+	or,
+	notInArray,
 } from "drizzle-orm";
 import { gqlClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
@@ -387,12 +391,20 @@ export async function getEpisodeAthleteReferences(
 export async function getAthleteBySlug(slug: string) {
 	return await db.query.athletes.findFirst({
 		where: eq(athletes.slug, slug),
+		columns: {
+			id: true,
+			worldAthleticsId: true,
+			name: true,
+			slug: true,
+			imageUrl: true,
+			bio: true,
+			countryName: true,
+			countryCode: true,
+		},
 	});
 }
 
 export async function getAthleteData(slug: string) {
-	// console.log("Attempting to fetch athlete with slug:", slug);
-
 	const athlete = await db.query.athletes.findFirst({
 		where: eq(athletes.slug, slug),
 		with: {
@@ -446,41 +458,47 @@ export async function getAllAthletesWithDisciplines({
 	offset,
 	goldMedalistIds,
 }: GetAthletesQueryParams) {
-	const quotedIds = goldMedalistIds.map((id) => `'${id}'`).join(",");
-
-	return db
+	const query = db
 		.select({
 			athlete: athletes,
-			disciplines: sql<string[]>`
-			  array_agg(DISTINCT ${athleteResults.discipline})
-			  FILTER (
-				WHERE ${athleteResults.discipline} NOT ILIKE '%short track%'
-				AND ${athleteResults.discipline} NOT ILIKE '%relay%'
-				AND ${athleteResults.date} >= ${fromDate}::date
-			  )
-			`,
+			disciplines: sql<
+				string[]
+			>`array_agg(DISTINCT ${athleteResults.discipline})`,
 		})
 		.from(athletes)
 		.leftJoin(
 			athleteResults,
-			eq(athletes.worldAthleticsId, athleteResults.athleteId),
+			and(
+				eq(athletes.worldAthleticsId, athleteResults.athleteId),
+				gte(athleteResults.date, fromDate),
+			),
+		)
+		.where(
+			or(
+				and(
+					isNotNull(athletes.worldAthleticsId),
+					inArray(athletes.worldAthleticsId, goldMedalistIds),
+				),
+				and(
+					isNotNull(athletes.worldAthleticsId),
+					notInArray(athletes.worldAthleticsId, goldMedalistIds),
+				),
+			),
 		)
 		.groupBy(athletes.id)
-		.orderBy(
-			sql`CASE WHEN ${athletes.worldAthleticsId} IN (${sql.raw(
-				quotedIds,
-			)}) THEN 0 ELSE 1 END`,
-			desc(athletes.name),
-		)
+		.orderBy(desc(athletes.name))
 		.limit(limit)
 		.offset(offset);
+
+	return await query;
 }
 
 export async function getAthleteCount() {
-	const [{ count }] = await db
+	const result = await db
 		.select({ count: sql<number>`count(*)` })
-		.from(athletes);
-	return count;
+		.from(athletes)
+		.where(isNotNull(athletes.worldAthleticsId));
+	return result[0].count;
 }
 
 // Search athletes with improved scoring
@@ -1067,4 +1085,21 @@ export async function updateExistingAthletes(limit?: number) {
 
 	console.log("[Athlete Update] Update complete:", results);
 	return results;
+}
+
+export async function getAllCategories() {
+	try {
+		const result = await db
+			.select({
+				id: athleteCategories.id,
+				name: athleteCategories.name,
+				description: athleteCategories.description,
+			})
+			.from(athleteCategories)
+			.orderBy(athleteCategories.name);
+		return result;
+	} catch (error) {
+		console.error("Error fetching categories:", error);
+		throw new Error("Failed to fetch categories");
+	}
 }

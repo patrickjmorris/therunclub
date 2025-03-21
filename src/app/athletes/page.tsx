@@ -7,12 +7,17 @@ import {
 	getAllAthletesWithDisciplines,
 	getAthleteCount,
 	getOlympicGoldMedalists,
+	getAllCategories,
 } from "@/lib/services/athlete-service";
+import { canManageContent } from "@/lib/auth-utils";
+import { CreateAthleteModal } from "./components/create-athlete-modal";
+
 const ATHLETES_PER_PAGE = 24;
 
 interface AthletesListProps {
 	athletes: {
 		id: string;
+		worldAthleticsId: string | null;
 		name: string;
 		slug: string;
 		countryName: string | null;
@@ -111,13 +116,16 @@ async function getAthletes(page = 1) {
 	return {
 		athletes: allAthletes.map(({ athlete, disciplines }) => ({
 			id: athlete.id,
+			worldAthleticsId: athlete.worldAthleticsId,
 			name: athlete.name,
 			slug: athlete.slug,
 			countryName: athlete.countryName,
 			countryCode: athlete.countryCode,
 			imageUrl: athlete.imageUrl,
 			disciplines: disciplines?.filter(Boolean) || [],
-			isOlympicGoldMedalist: goldMedalistIds.includes(athlete.id),
+			isOlympicGoldMedalist: goldMedalistIds.includes(
+				athlete.worldAthleticsId || "",
+			),
 		})),
 		hasMore: offset + ATHLETES_PER_PAGE < count,
 		page,
@@ -131,13 +139,25 @@ export default async function AthletesPage({
 }) {
 	const { page: pageParam } = await searchParams;
 	const page = pageParam ? parseInt(pageParam) : 1;
-	const { athletes: athletesList, hasMore } = await getAthletes(page);
+	const [athletes, categories, canEdit] = await Promise.all([
+		getAthletes(page),
+		getAllCategories(),
+		canManageContent(),
+	]);
 
 	return (
-		<div className="container mx-auto py-8 px-4">
-			<h1 className="text-3xl font-bold mb-8">Athletes</h1>
+		<div className="container mx-auto py-8">
+			<div className="flex justify-between items-center mb-8">
+				<h1 className="text-3xl font-bold">Athletes</h1>
+				<CreateAthleteModal categories={categories} canEdit={canEdit} />
+			</div>
+
 			<Suspense fallback={<div>Loading athletes...</div>}>
-				<AthletesList athletes={athletesList} hasMore={hasMore} page={page} />
+				<AthletesList
+					athletes={athletes.athletes}
+					hasMore={athletes.hasMore}
+					page={page}
+				/>
 			</Suspense>
 		</div>
 	);

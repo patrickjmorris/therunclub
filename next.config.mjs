@@ -39,6 +39,12 @@ const nextConfig = {
 				port: "",
 				pathname: "**",
 			},
+			{
+				protocol: "https",
+				hostname: "static.libsyn.com",
+				port: "",
+				pathname: "**",
+			},
 		],
 	},
 	experimental: {

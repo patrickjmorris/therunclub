@@ -21,7 +21,6 @@ export const revalidate = 86400; // Revalidate every day
 async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 	try {
 		const mentions = await getAthleteRecentMentions(athleteId);
-
 		return <AthleteMentions mentions={mentions} />;
 	} catch (error) {
 		console.error("Error loading athlete mentions:", error);
@@ -36,7 +35,6 @@ async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 
 export async function generateStaticParams() {
 	const allAthletes = await getAllAthletes();
-
 	return allAthletes.map((athlete) => ({
 		slug: athlete.slug,
 	}));
@@ -187,12 +185,15 @@ export default async function AthletePage(props: {
 										isAdmin={isAdmin}
 									/>
 								</div>
+
 								{/* Recent Mentions Section */}
 								<div className="mt-8">
 									<Suspense
 										fallback={<MentionLoading title="Recent Mentions" />}
 									>
-										<AthleteMentionsSection athleteId={athlete.id} />
+										<AthleteMentionsSection
+											athleteId={athlete.worldAthleticsId || ""}
+										/>
 									</Suspense>
 								</div>
 							</div>

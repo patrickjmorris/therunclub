@@ -6,6 +6,7 @@ import {
 	athletes,
 	episodes,
 	podcasts,
+	athleteCategories,
 } from "@/db/schema";
 import {
 	desc,
@@ -16,6 +17,9 @@ import {
 	like,
 	isNotNull,
 	ilike,
+	gte,
+	or,
+	notInArray,
 } from "drizzle-orm";
 import { gqlClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
@@ -137,7 +141,7 @@ async function getAthleteFromWorldAthletics(
 // Get athlete from database by ID
 export async function getAthleteById(athleteId: string) {
 	return await db.query.athletes.findFirst({
-		where: eq(athletes.id, athleteId),
+		where: eq(athletes.worldAthleticsId, athleteId),
 	});
 }
 
@@ -387,12 +391,20 @@ export async function getEpisodeAthleteReferences(
 export async function getAthleteBySlug(slug: string) {
 	return await db.query.athletes.findFirst({
 		where: eq(athletes.slug, slug),
+		columns: {
+			id: true,
+			worldAthleticsId: true,
+			name: true,
+			slug: true,
+			imageUrl: true,
+			bio: true,
+			countryName: true,
+			countryCode: true,
+		},
 	});
 }
 
 export async function getAthleteData(slug: string) {
-	// console.log("Attempting to fetch athlete with slug:", slug);
-
 	const athlete = await db.query.athletes.findFirst({
 		where: eq(athletes.slug, slug),
 		with: {
@@ -446,41 +458,47 @@ export async function getAllAthletesWithDisciplines({
 	offset,
 	goldMedalistIds,
 }: GetAthletesQueryParams) {
-	const quotedIds = goldMedalistIds.map((id) => `'${id}'`).join(",");
-
-	return db
+	const query = db
 		.select({
 			athlete: athletes,
-			disciplines: sql<string[]>`
-			  array_agg(DISTINCT ${athleteResults.discipline})
-			  FILTER (
-				WHERE ${athleteResults.discipline} NOT ILIKE '%short track%'
-				AND ${athleteResults.discipline} NOT ILIKE '%relay%'
-				AND ${athleteResults.date} >= ${fromDate}::date
-			  )
-			`,
+			disciplines: sql<
+				string[]
+			>`array_agg(DISTINCT ${athleteResults.discipline})`,
 		})
 		.from(athletes)
 		.leftJoin(
 			athleteResults,
-			eq(athletes.worldAthleticsId, athleteResults.athleteId),
+			and(
+				eq(athletes.worldAthleticsId, athleteResults.athleteId),
+				gte(athleteResults.date, fromDate),
+			),
+		)
+		.where(
+			or(
+				and(
+					isNotNull(athletes.worldAthleticsId),
+					inArray(athletes.worldAthleticsId, goldMedalistIds),
+				),
+				and(
+					isNotNull(athletes.worldAthleticsId),
+					notInArray(athletes.worldAthleticsId, goldMedalistIds),
+				),
+			),
 		)
 		.groupBy(athletes.id)
-		.orderBy(
-			sql`CASE WHEN ${athletes.worldAthleticsId} IN (${sql.raw(
-				quotedIds,
-			)}) THEN 0 ELSE 1 END`,
-			desc(athletes.name),
-		)
+		.orderBy(desc(athletes.name))
 		.limit(limit)
 		.offset(offset);
+
+	return await query;
 }
 
 export async function getAthleteCount() {
-	const [{ count }] = await db
+	const result = await db
 		.select({ count: sql<number>`count(*)` })
-		.from(athletes);
-	return count;
+		.from(athletes)
+		.where(isNotNull(athletes.worldAthleticsId));
+	return result[0].count;
 }
 
 // Search athletes with improved scoring
@@ -512,9 +530,18 @@ export async function searchAthletes(query: string, limit = 10) {
 			)`,
 		})
 		.from(athletes)
-		.leftJoin(athleteMentions, eq(athletes.id, athleteMentions.athleteId))
-		.leftJoin(athleteResults, eq(athletes.id, athleteResults.athleteId))
-		.leftJoin(athleteHonors, eq(athletes.id, athleteHonors.athleteId))
+		.leftJoin(
+			athleteMentions,
+			eq(athletes.worldAthleticsId, athleteMentions.athleteId),
+		)
+		.leftJoin(
+			athleteResults,
+			eq(athletes.worldAthleticsId, athleteResults.athleteId),
+		)
+		.leftJoin(
+			athleteHonors,
+			eq(athletes.worldAthleticsId, athleteHonors.athleteId),
+		)
 		.where(
 			sql`to_tsvector('english', 
 				${athletes.name} || ' ' || 
@@ -707,15 +734,16 @@ export async function importAthleteData(limit?: number) {
 							});
 
 						// Insert personal bests
-						if (athleteData.personalBests) {
+						if (athleteData.personalBests && athleteData.id) {
+							const worldAthleticsId = athleteData.id;
 							await Promise.all(
 								athleteData.personalBests.map(async (result) => {
-									const resultId = `${athleteData.id}-${result.discipline}-${result.date}`;
+									const resultId = `${worldAthleticsId}-${result.discipline}-${result.date}`;
 									return db
 										.insert(athleteResults)
 										.values({
 											id: resultId,
-											athleteId: athleteData.id,
+											athleteId: worldAthleticsId,
 											competitionName: result.eventName,
 											date: result.date,
 											discipline: result.discipline,
@@ -855,7 +883,7 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	// Cache athletes in memory for faster lookups
 	const allAthletes = await db
 		.select({
-			id: athletes.id,
+			id: athletes.worldAthleticsId,
 			name: athletes.name,
 		})
 		.from(athletes);
@@ -878,7 +906,7 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 				const context = text.slice(start, end).toString();
 
 				detectedAthletes.push({
-					athleteId: id,
+					athleteId: id ?? "",
 					confidence: 1.0,
 					context,
 				});
@@ -944,11 +972,12 @@ export async function updateExistingAthletes(limit?: number) {
 		// Get existing athletes ordered by last update
 		const athletesToUpdate = await db
 			.select({
-				id: athletes.id,
+				worldAthleticsId: athletes.worldAthleticsId,
 				name: athletes.name,
 				updatedAt: athletes.updatedAt,
 			})
 			.from(athletes)
+			.where(isNotNull(athletes.worldAthleticsId))
 			.orderBy(athletes.updatedAt)
 			.limit(limit || 50);
 
@@ -969,11 +998,21 @@ export async function updateExistingAthletes(limit?: number) {
 			// Process batch concurrently
 			const batchResults = await Promise.allSettled(
 				batch.map(async (athlete) => {
+					if (!athlete.worldAthleticsId) {
+						console.log(
+							`[Athlete Update] Skipping athlete ${athlete.name} - no World Athletics ID`,
+						);
+						results.skipped++;
+						return;
+					}
+
 					try {
 						console.log(
-							`[Athlete Update] Processing ${athlete.name} (${athlete.id})`,
+							`[Athlete Update] Processing ${athlete.name} (${athlete.worldAthleticsId})`,
 						);
-						const athleteData = await getAthleteFromWorldAthletics(athlete.id);
+						const athleteData = await getAthleteFromWorldAthletics(
+							athlete.worldAthleticsId,
+						);
 
 						if (!athleteData) {
 							console.log(`[Athlete Update] No data found for ${athlete.name}`);
@@ -991,18 +1030,18 @@ export async function updateExistingAthletes(limit?: number) {
 								dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
 								updatedAt: sql`CURRENT_TIMESTAMP`,
 							})
-							.where(eq(athletes.id, athlete.id));
+							.where(eq(athletes.worldAthleticsId, athlete.worldAthleticsId));
 
 						// Update personal bests
-						if (athleteData.personalBests) {
+						if (athleteData.personalBests && athlete.worldAthleticsId) {
 							await Promise.all(
 								athleteData.personalBests.map(async (result) => {
-									const resultId = `${athlete.id}-${result.discipline}-${result.date}`;
+									const resultId = `${athlete.worldAthleticsId}-${result.discipline}-${result.date}`;
 									return db
 										.insert(athleteResults)
 										.values({
 											id: resultId,
-											athleteId: athlete.id,
+											athleteId: athlete.worldAthleticsId ?? "",
 											competitionName: result.eventName,
 											date: result.date,
 											discipline: result.discipline,
@@ -1020,12 +1059,12 @@ export async function updateExistingAthletes(limit?: number) {
 							await Promise.all(
 								athleteData.honours.flatMap((honor) =>
 									honor.results.map(async (result) => {
-										const honorId = `${athlete.id}-${honor.categoryName}-${result.competition}-${result.discipline}`;
+										const honorId = `${athlete.worldAthleticsId}-${honor.categoryName}-${result.competition}-${result.discipline}`;
 										return db
 											.insert(athleteHonors)
 											.values({
 												id: honorId,
-												athleteId: athlete.id,
+												athleteId: athlete.worldAthleticsId ?? "",
 												categoryName: honor.categoryName,
 												competition: result.competition,
 												discipline: result.discipline,
@@ -1067,4 +1106,21 @@ export async function updateExistingAthletes(limit?: number) {
 
 	console.log("[Athlete Update] Update complete:", results);
 	return results;
+}
+
+export async function getAllCategories() {
+	try {
+		const result = await db
+			.select({
+				id: athleteCategories.id,
+				name: athleteCategories.name,
+				description: athleteCategories.description,
+			})
+			.from(athleteCategories)
+			.orderBy(athleteCategories.name);
+		return result;
+	} catch (error) {
+		console.error("Error fetching categories:", error);
+		throw new Error("Failed to fetch categories");
+	}
 }

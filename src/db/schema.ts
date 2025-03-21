@@ -379,6 +379,25 @@ export const athleteResults = pgTable("athlete_results", {
 	wind: text("wind"),
 });
 
+export const worldRecords = pgTable("world_records", {
+	id: text("id").primaryKey(),
+	discipline: text("discipline").notNull(),
+	gender: text("gender", { enum: ["M", "F"] }).notNull(),
+	performance: text("performance").notNull(),
+	date: date("date").notNull(),
+	competitorId: text("competitor_id"),
+	competitorName: text("competitor_name"),
+	teamMembers:
+		jsonb("team_members").$type<
+			Array<{
+				id: string;
+				name: string;
+			}>
+		>(),
+	mixed: boolean("mixed").default(false),
+	lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+});
+
 export const athleteSponsors = pgTable("athlete_sponsors", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	athleteId: uuid("athlete_id")
@@ -611,3 +630,11 @@ export const contentTagsRelations = relations(contentTags, ({ one }) => ({
 // Add to types
 export type ContentTag = typeof contentTags.$inferSelect;
 export type NewContentTag = typeof contentTags.$inferInsert;
+
+// Add relations for world records
+export const worldRecordsRelations = relations(worldRecords, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [worldRecords.competitorId],
+		references: [athletes.worldAthleticsId],
+	}),
+}));

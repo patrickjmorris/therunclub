@@ -205,40 +205,51 @@ async function getAthleteIdsByCountry(countryCode: string): Promise<string[]> {
 	}
 }
 
-async function importAthleteData(limit?: number) {
-	// Get athletes from the first method
-	const athleteIds = await getAthleteIds();
-	console.log(`Found ${athleteIds.length} athletes from representative search`);
+async function importAthleteData(limit?: number, country?: string) {
+	let allAthleteIds: string[] = [];
 
-	// Get athletes from major countries
-	const countryAthleteIds = new Set<string>();
-	const totalCountries = majorCountries.length;
-	let processedCountries = 0;
-
-	console.log(
-		`\nFetching athletes from ${totalCountries} major athletics countries...`,
-	);
-	for (const code3 of majorCountries) {
-		processedCountries++;
+	if (country) {
+		// If country is specified, only fetch athletes from that country
+		console.log(`\nFetching athletes from country: ${country}`);
+		allAthleteIds = await getAthleteIdsByCountry(country);
+		console.log(`Found ${allAthleteIds.length} athletes from ${country}`);
+	} else {
+		// Get athletes from the first method
+		const athleteIds = await getAthleteIds();
 		console.log(
-			`\n[${processedCountries}/${totalCountries}] Fetching athletes from: ${code3}`,
+			`Found ${athleteIds.length} athletes from representative search`,
 		);
-		const ids = await getAthleteIdsByCountry(code3);
-		console.log(`Found ${ids.length} athletes from ${code3}`);
-		for (const id of ids) {
-			countryAthleteIds.add(id);
+
+		// Get athletes from major countries
+		const countryAthleteIds = new Set<string>();
+		const totalCountries = majorCountries.length;
+		let processedCountries = 0;
+
+		console.log(
+			`\nFetching athletes from ${totalCountries} major athletics countries...`,
+		);
+		for (const code3 of majorCountries) {
+			processedCountries++;
+			console.log(
+				`\n[${processedCountries}/${totalCountries}] Fetching athletes from: ${code3}`,
+			);
+			const ids = await getAthleteIdsByCountry(code3);
+			console.log(`Found ${ids.length} athletes from ${code3}`);
+			for (const id of ids) {
+				countryAthleteIds.add(id);
+			}
+
+			// Add delay between country requests
+			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
+		console.log(
+			`Found ${countryAthleteIds.size} additional athletes from countries`,
+		);
 
-		// Add delay between country requests
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		// Combine and deduplicate athlete IDs
+		allAthleteIds = [...new Set([...athleteIds, ...countryAthleteIds])];
+		console.log(`Total unique athletes to process: ${allAthleteIds.length}`);
 	}
-	console.log(
-		`Found ${countryAthleteIds.size} additional athletes from countries`,
-	);
-
-	// Combine and deduplicate athlete IDs
-	const allAthleteIds = [...new Set([...athleteIds, ...countryAthleteIds])];
-	console.log(`Total unique athletes to process: ${allAthleteIds.length}`);
 
 	// Apply limit if specified
 	const athletesToProcess = limit
@@ -678,11 +689,12 @@ async function generateAthleteBios(limit?: number) {
 
 // Choose which operation to run based on command line argument
 const operation = process.argv[2];
-const resultsFile = process.argv[3]; // Optional file path argument
-const limit = process.argv[4] ? parseInt(process.argv[4]) : undefined; // Optional limit argument
+const limit = process.argv[3] ? parseInt(process.argv[3]) : undefined; // Optional limit argument
+const country = process.argv[4]; // Optional country argument
+const resultsFile = process.argv[5]; // Optional file path argument
 
 if (operation === "import") {
-	importAthleteData(limit)
+	importAthleteData(limit, country)
 		.then(() => {
 			console.log("✅ Import completed successfully");
 			process.exit(0);
@@ -728,7 +740,7 @@ if (operation === "import") {
 		});
 } else {
 	console.log(
-		"Please specify an operation: 'import [limit]', 'generate-bios [limit]', 'test-bios', or 'process-results <file>'",
+		"Please specify an operation: 'import [limit] [country]', 'generate-bios [limit]', 'test-bios', or 'process-results <file>'",
 	);
 	process.exit(1);
 }

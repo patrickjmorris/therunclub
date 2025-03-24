@@ -1,13 +1,20 @@
-import Queue from "bull";
+import { Queue, Worker, Job } from "bullmq";
 import { db } from "@/db/client";
 import { episodes, athleteMentions, athletes } from "@/db/schema";
 import { createFuzzyMatcher } from "@/lib/fuzzy-matcher";
 import { eq } from "drizzle-orm";
+import { Redis } from "ioredis";
+import { processContentAthletes } from "../src/lib/services/athlete-service";
 
 interface DetectedAthlete {
 	athleteId: string;
 	confidence: number;
 	context: string;
+}
+
+interface AthleteDetectionJob {
+	contentId: string;
+	contentType: "podcast" | "video";
 }
 
 // Create a new queue instance with Redis configuration
@@ -18,21 +25,24 @@ console.log(
 	process.env.LOCAL_DB_URL?.split("@")[1] || "not set",
 );
 
-export const athleteDetectionQueue = new Queue("athlete-detection", REDIS_URL, {
-	defaultJobOptions: {
-		attempts: 3,
-		backoff: {
-			type: "exponential",
-			delay: 1000,
+export const athleteDetectionQueue = new Queue<AthleteDetectionJob>(
+	"athlete-detection",
+	{
+		connection: {
+			host: process.env.REDIS_HOST || "localhost",
+			port: parseInt(process.env.REDIS_PORT || "6379"),
 		},
-		removeOnComplete: true,
-		removeOnFail: false,
+		defaultJobOptions: {
+			attempts: 3,
+			backoff: {
+				type: "exponential",
+				delay: 1000,
+			},
+			removeOnComplete: true,
+			removeOnFail: false,
+		},
 	},
-	settings: {
-		stalledInterval: 30000, // Check for stalled jobs every 30 seconds
-		maxStalledCount: 1, // Only try to process a stalled job once
-	},
-});
+);
 
 async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	console.time("detectAthletes");
@@ -121,152 +131,65 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	return Array.from(uniqueAthletes.values());
 }
 
-// Configure the worker to process jobs with concurrency
-athleteDetectionQueue.process(1, async (job) => {
-	const { episodeId } = job.data;
-	console.log(`Starting to process episode: ${episodeId}`);
-	console.time(`processEpisode:${episodeId}`);
+// Create the worker
+const worker = new Worker<AthleteDetectionJob>(
+	"athlete-detection",
+	async (job: Job<AthleteDetectionJob>) => {
+		const { contentId, contentType } = job.data;
+		console.log(
+			`[Worker] Starting to process ${contentType} with ID: ${contentId}`,
+		);
 
-	try {
-		// Get episode data
-		console.log("Attempting to fetch episode from database...");
-		const episode = await db
-			.select({
-				id: episodes.id,
-				title: episodes.title,
-				content: episodes.content,
-			})
-			.from(episodes)
-			.where(eq(episodes.id, episodeId))
-			.limit(1)
-			.then((rows) => {
-				console.log(
-					"Database query result:",
-					rows[0] ? "Found episode" : "No episode found",
-				);
-				return rows[0];
-			});
-
-		if (!episode) {
-			console.error("Episode not found in database:", {
-				episodeId,
-				query: `SELECT id, title, content FROM episodes WHERE id = '${episodeId}' LIMIT 1`,
-			});
-			throw new Error(`Episode not found: ${episodeId}`);
+		try {
+			await processContentAthletes(contentId, contentType);
+			console.log(
+				`[Worker] Successfully processed ${contentType} with ID: ${contentId}`,
+			);
+		} catch (error) {
+			console.error(
+				`[Worker] Error processing ${contentType} with ID: ${contentId}:`,
+				error,
+			);
+			throw error;
 		}
+	},
+	{
+		connection: {
+			host: process.env.REDIS_HOST || "localhost",
+			port: parseInt(process.env.REDIS_PORT || "6379"),
+		},
+		concurrency: 5,
+		limiter: {
+			max: 50,
+			duration: 1000,
+		},
+	},
+);
 
-		console.log(`Processing episode: ${episode.title}`);
+// Handle worker events
+worker.on("completed", (job) => {
+	console.log(`[Worker] Job ${job.id} completed successfully`);
+});
 
-		// Process title
-		const titleAthletes = await detectAthletes(episode.title);
-		console.log(`Found ${titleAthletes.length} athletes in title`);
+worker.on("failed", (job, error) => {
+	console.error(`[Worker] Job ${job?.id} failed:`, error);
+});
 
-		for (const athlete of titleAthletes) {
-			try {
-				await db
-					.insert(athleteMentions)
-					.values({
-						athleteId: athlete.athleteId,
-						contentId: episode.id,
-						contentType: "podcast" as const,
-						source: "title" as const,
-						confidence: athlete.confidence.toString(),
-						context: athlete.context,
-					})
-					.onConflictDoUpdate({
-						target: [
-							athleteMentions.athleteId,
-							athleteMentions.contentId,
-							athleteMentions.contentType,
-							athleteMentions.source,
-						],
-						set: {
-							confidence: athlete.confidence.toString(),
-							context: athlete.context,
-						},
-					});
-			} catch (error) {
-				console.error("Error upserting title mention:", error);
-			}
-		}
-
-		// Process description/content if available
-		let contentAthletes: DetectedAthlete[] = [];
-		if (episode.content) {
-			contentAthletes = await detectAthletes(episode.content);
-			console.log(`Found ${contentAthletes.length} athletes in content`);
-
-			for (const athlete of contentAthletes) {
-				try {
-					await db
-						.insert(athleteMentions)
-						.values({
-							athleteId: athlete.athleteId,
-							contentId: episode.id,
-							contentType: "podcast" as const,
-							source: "description" as const,
-							confidence: athlete.confidence.toString(),
-							context: athlete.context,
-						})
-						.onConflictDoUpdate({
-							target: [
-								athleteMentions.athleteId,
-								athleteMentions.contentId,
-								athleteMentions.contentType,
-								athleteMentions.source,
-							],
-							set: {
-								confidence: athlete.confidence.toString(),
-								context: athlete.context,
-							},
-						});
-				} catch (error) {
-					console.error("Error upserting content mention:", error);
-				}
-			}
-		}
-
-		// Mark episode as processed
-		await db
-			.update(episodes)
-			.set({ athleteMentionsProcessed: true })
-			.where(eq(episodes.id, episodeId));
-
-		console.timeEnd(`processEpisode:${episodeId}`);
-		console.log(`Completed processing episode: ${episodeId}`);
-
-		return {
-			success: true,
-			titleMatches: titleAthletes.length,
-			contentMatches: contentAthletes.length,
-		};
-	} catch (error) {
-		console.error(`Error processing episode ${episodeId}:`, error);
-		throw error; // Re-throw to mark job as failed
+worker.on("error", (error) => {
+	// Ignore lock-related errors as they're handled by the job retry mechanism
+	if (!error.message?.includes("Missing lock")) {
+		console.error("[Worker] Worker error:", error);
 	}
 });
 
-// Add event handlers for monitoring
-athleteDetectionQueue.on("ready", () => {
-	console.log("Worker connected to Redis and ready to process jobs");
+worker.on("active", (job) => {
+	console.log(`[Worker] Job ${job.id} has started processing`);
 });
 
-athleteDetectionQueue.on("active", (job) => {
-	console.log(`Started processing episode: ${job.data.episodeId}`);
-});
-
-athleteDetectionQueue.on("completed", (job, result) => {
-	console.log(`✅ Processed episode ${job.data.episodeId}:`, result);
-});
-
-athleteDetectionQueue.on("failed", (job, error) => {
-	console.error(`❌ Failed to process episode ${job.data.episodeId}:`, error);
-});
-
-athleteDetectionQueue.on("error", (error) => {
-	console.error("Queue error:", error);
-});
-
-athleteDetectionQueue.on("stalled", (job) => {
-	console.warn(`Job ${job.id} has stalled`);
+// Graceful shutdown
+process.on("SIGTERM", async () => {
+	console.log("[Worker] Received SIGTERM signal, shutting down...");
+	await worker.close();
+	await athleteDetectionQueue.close();
+	process.exit(0);
 });

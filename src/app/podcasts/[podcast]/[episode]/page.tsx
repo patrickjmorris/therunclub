@@ -29,6 +29,13 @@ import {
 } from "@/components/LinkPreviewPreloader";
 import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
 import { MoreContent } from "@/components/content/more-content";
+import { getUserRole } from "@/lib/auth-utils";
+import { AthleteMentions } from "@/components/athlete-mentions";
+import {
+	getAthleteRecentMentions,
+	getAthleteData,
+	getAllAthletes,
+} from "@/lib/services/athlete-service";
 
 export const revalidate = 86400; // Revalidate every day
 
@@ -37,21 +44,6 @@ interface EpisodePageProps {
 		podcast: string;
 		episode: string;
 	}>;
-}
-
-async function AthleteReferencesSection({ episodeId }: { episodeId: string }) {
-	try {
-		const references = await getEpisodeAthleteReferences(episodeId);
-		return <AthleteReferences references={references} />;
-	} catch (error) {
-		console.error("Error loading athlete references:", error);
-		return (
-			<MentionError
-				title="Error Loading Athletes"
-				message="Unable to load athlete references for this episode."
-			/>
-		);
-	}
 }
 
 export async function generateStaticParams() {
@@ -279,7 +271,11 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 					<Separator />
 					<div className="mt-8">
 						<Suspense fallback={<MentionLoading title="Athletes Mentioned" />}>
-							<AthleteReferencesSection episodeId={episode.id} />
+							<AthleteReferences
+								contentId={episode.id}
+								contentType="podcast"
+								title="Athletes Mentioned"
+							/>
 						</Suspense>
 					</div>
 					{urls.length > 0 ? (

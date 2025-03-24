@@ -1,4 +1,4 @@
-import athleteDetectionQueue from "@/lib/queue/athlete-detection-queue";
+import { athleteDetectionQueue } from "./worker";
 
 async function startWorker() {
 	console.log("Starting athlete detection worker...");
@@ -6,7 +6,7 @@ async function startWorker() {
 	try {
 		// Wait for queue to be ready
 		await new Promise<void>((resolve) => {
-			athleteDetectionQueue.once("ready", () => {
+			athleteDetectionQueue.on("waiting", () => {
 				console.log("Queue is ready");
 				resolve();
 			});
@@ -56,7 +56,17 @@ async function startWorker() {
 					console.log(`Waiting for ${activeCount} active jobs to complete...`);
 					// Wait for active jobs to finish (max 30 seconds)
 					await Promise.race([
-						athleteDetectionQueue.whenCurrentJobsFinished(),
+						new Promise<void>((resolve) => {
+							const checkActive = async () => {
+								const count = await athleteDetectionQueue.getActiveCount();
+								if (count === 0) {
+									resolve();
+								} else {
+									setTimeout(checkActive, 1000);
+								}
+							};
+							checkActive();
+						}),
 						new Promise((resolve) => setTimeout(resolve, 30000)),
 					]);
 				}

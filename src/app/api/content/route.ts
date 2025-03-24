@@ -333,9 +333,28 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					10,
 				);
 
+				console.log("[Athlete Detection] Starting detection with params:", {
+					minHoursSinceUpdate,
+					batchSize,
+				});
+
+				// Get total count of unprocessed episodes
+				const [totalCount] = await db
+					.select({ count: sql<number>`count(*)` })
+					.from(episodes)
+					.where(
+						and(
+							sql`${episodes.updatedAt} >= NOW() - (${minHoursSinceUpdate} * INTERVAL '1 hour')`,
+							not(eq(episodes.athleteMentionsProcessed, true)),
+						),
+					);
+
 				// Query for recently updated episodes
 				const recentEpisodes = await db
-					.select({ id: episodes.id })
+					.select({
+						id: episodes.id,
+						title: episodes.title,
+					})
 					.from(episodes)
 					.where(
 						and(
@@ -346,29 +365,77 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					.orderBy(desc(episodes.updatedAt))
 					.limit(batchSize);
 
+				console.log("[Athlete Detection] Found episodes:", {
+					total: totalCount.count,
+					processing: recentEpisodes.length,
+				});
+
 				const results = {
 					processed: 0,
 					errors: 0,
 					totalEpisodes: recentEpisodes.length,
+					remainingEpisodes: totalCount.count - recentEpisodes.length,
+					errorDetails: [] as { id: string; error: string }[],
+					athleteMatches: {
+						total: 0,
+						title: 0,
+						content: 0,
+					},
 				};
 
 				// Process each episode
 				for (const episode of recentEpisodes) {
 					try {
-						await processEpisodeAthletes(episode.id);
+						console.log(
+							`[Athlete Detection] Processing episode: ${episode.title} (${episode.id})`,
+						);
+						const matches = await processEpisodeAthletes(episode.id);
+
 						results.processed++;
+						results.athleteMatches.title += matches.titleMatches;
+						results.athleteMatches.content += matches.contentMatches;
+						results.athleteMatches.total +=
+							matches.titleMatches + matches.contentMatches;
+
+						console.log("[Athlete Detection] Episode processed:", {
+							id: episode.id,
+							titleMatches: matches.titleMatches,
+							contentMatches: matches.contentMatches,
+						});
 					} catch (error) {
-						console.error(`Error processing episode ${episode.id}:`, error);
+						console.error(
+							`[Athlete Detection] Error processing episode ${episode.id}:`,
+							error,
+						);
 						results.errors++;
+						results.errorDetails.push({
+							id: episode.id,
+							error: error instanceof Error ? error.message : String(error),
+						});
 					}
 				}
 
+				// Calculate success rate
+				const successRate = results.processed
+					? ((results.processed - results.errors) / results.processed) * 100
+					: 0;
+
+				console.log("[Athlete Detection] Processing complete:", {
+					processed: results.processed,
+					errors: results.errors,
+					successRate: `${successRate.toFixed(1)}%`,
+					athleteMatches: results.athleteMatches,
+				});
+
 				return NextResponse.json({
 					message: "Athlete detection completed successfully",
-					results,
+					results: {
+						...results,
+						successRate: `${successRate.toFixed(1)}%`,
+					},
 				});
 			} catch (error) {
-				console.error("Error in athlete detection:", error);
+				console.error("[Athlete Detection] Error in batch processing:", error);
 				return NextResponse.json(
 					{
 						message: "Error in athlete detection",

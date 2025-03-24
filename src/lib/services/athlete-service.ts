@@ -262,7 +262,8 @@ function parseBirthDate(dateStr: string | undefined | null): string | null {
 export type AthleteMention = {
 	id: string;
 	athleteId: string;
-	episodeId: string;
+	contentId: string;
+	contentType: "podcast" | "video";
 	source: "title" | "description";
 	confidence: string;
 	context: string;

@@ -3,6 +3,13 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { pgTable, text, timestamp, uuid, numeric } from "drizzle-orm/pg-core";
 
 export async function up(db: PostgresJsDatabase) {
+	// First, drop any existing text search vectors or indexes
+	await db.execute(sql`
+		DROP INDEX IF EXISTS idx_athlete_mentions_athlete_episode;
+		DROP INDEX IF EXISTS idx_athlete_mentions_episode_athlete;
+		DROP INDEX IF EXISTS athlete_mentions_unique_idx;
+	`);
+
 	// 1. Create a temporary table with the new structure
 	await db.execute(sql`
     CREATE TABLE athlete_mentions_new (
@@ -15,10 +22,7 @@ export async function up(db: PostgresJsDatabase) {
       context TEXT NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT valid_content_reference CHECK (
-        (content_type = 'podcast' AND EXISTS (SELECT 1 FROM episodes WHERE id = content_id)) OR
-        (content_type = 'video' AND EXISTS (SELECT 1 FROM videos WHERE id = content_id))
-      )
+      FOREIGN KEY (content_id) REFERENCES episodes(id) ON DELETE CASCADE
     );
 
     -- Create indexes
@@ -49,7 +53,7 @@ export async function up(db: PostgresJsDatabase) {
     FROM athlete_mentions;
 
     -- Drop old table and rename new one
-    DROP TABLE athlete_mentions;
+    DROP TABLE athlete_mentions CASCADE;
     ALTER TABLE athlete_mentions_new RENAME TO athlete_mentions;
 
     -- Create updated_at trigger
@@ -69,6 +73,13 @@ export async function up(db: PostgresJsDatabase) {
 }
 
 export async function down(db: PostgresJsDatabase) {
+	// First, drop any existing text search vectors or indexes
+	await db.execute(sql`
+		DROP INDEX IF EXISTS idx_athlete_mentions_athlete_content;
+		DROP INDEX IF EXISTS idx_athlete_mentions_content_athlete;
+		DROP INDEX IF EXISTS athlete_mentions_unique_idx;
+	`);
+
 	// 1. Create a temporary table with the old structure
 	await db.execute(sql`
     CREATE TABLE athlete_mentions_old (
@@ -108,7 +119,7 @@ export async function down(db: PostgresJsDatabase) {
     WHERE content_type = 'podcast';
 
     -- Drop new table and rename old one
-    DROP TABLE athlete_mentions;
+    DROP TABLE athlete_mentions CASCADE;
     ALTER TABLE athlete_mentions_old RENAME TO athlete_mentions;
 
     -- Drop the trigger and function

@@ -326,7 +326,7 @@ async function PodcastSection() {
 								podcastTitle: podcast.podcastTitle,
 								podcastSlug: podcast.podcastSlug,
 								podcastImage: podcast.podcastImage,
-								itunesImage: podcast.episodeImage,
+								episodeImage: podcast.episodeImage,
 								enclosureUrl: podcast.enclosureUrl,
 								pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,
 							}}
@@ -412,7 +412,7 @@ async function TaggedContentSection() {
 										podcastTitle: episode.podcastTitle,
 										podcastSlug: episode.podcastSlug,
 										podcastImage: episode.podcastImage,
-										itunesImage: episode.image,
+										episodeImage: episode.image,
 										enclosureUrl: episode.enclosureUrl,
 										pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
 									}}

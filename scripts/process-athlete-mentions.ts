@@ -1,5 +1,5 @@
 import { db } from "@/db/client";
-import { episodes, athleteMentions } from "@/db/schema";
+import { episodes, athleteMentions, athletes } from "@/db/schema";
 import { createFuzzyMatcher } from "@/lib/fuzzy-matcher";
 import { eq, sql, desc, isNull } from "drizzle-orm";
 
@@ -13,16 +13,21 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	console.time("detectAthletes");
 
 	// Get all athletes
-	const allAthletes = await db.query.athletes.findMany({
-		columns: {
-			id: true,
-			name: true,
-		},
-	});
+	const allAthletes = await db
+		.select({
+			id: athletes.worldAthleticsId,
+			name: athletes.name,
+		})
+		.from(athletes);
 
 	const detectedAthletes: DetectedAthlete[] = [];
 	const athleteMap = new Map(
-		allAthletes.map((athlete) => [athlete.name.toLowerCase(), athlete.id]),
+		allAthletes
+			.filter(
+				(athlete): athlete is { id: string; name: string } =>
+					athlete.id !== null,
+			)
+			.map((athlete) => [athlete.name.toLowerCase(), athlete.id]),
 	);
 
 	// First try exact matches (faster)
@@ -116,15 +121,17 @@ async function processEpisode(episodeId: string) {
 				.insert(athleteMentions)
 				.values({
 					athleteId: athlete.athleteId,
-					episodeId: episode.id,
-					source: "title",
+					contentId: episode.id,
+					contentType: "podcast" as const,
+					source: "title" as const,
 					confidence: athlete.confidence.toString(),
 					context: athlete.context,
 				})
 				.onConflictDoUpdate({
 					target: [
 						athleteMentions.athleteId,
-						athleteMentions.episodeId,
+						athleteMentions.contentId,
+						athleteMentions.contentType,
 						athleteMentions.source,
 					],
 					set: {
@@ -147,15 +154,17 @@ async function processEpisode(episodeId: string) {
 					.insert(athleteMentions)
 					.values({
 						athleteId: athlete.athleteId,
-						episodeId: episode.id,
-						source: "description",
+						contentId: episode.id,
+						contentType: "podcast" as const,
+						source: "description" as const,
 						confidence: athlete.confidence.toString(),
 						context: athlete.context,
 					})
 					.onConflictDoUpdate({
 						target: [
 							athleteMentions.athleteId,
-							athleteMentions.episodeId,
+							athleteMentions.contentId,
+							athleteMentions.contentType,
 							athleteMentions.source,
 						],
 						set: {

@@ -20,6 +20,7 @@ import {
 	gte,
 	or,
 	notInArray,
+	isNull,
 } from "drizzle-orm";
 import { gqlClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
@@ -292,12 +293,12 @@ export type AthleteMention = {
 };
 
 export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
-	// Get the highest confidence mention IDs for each episode
+	// Get the highest confidence mention IDs for each content
 	const mentionIds = await db.execute<{ id: string }>(sql`
-		SELECT DISTINCT ON (episode_id) id
+		SELECT DISTINCT ON (content_id) id
 		FROM athlete_mentions
 		WHERE athlete_id = ${athleteId}
-		ORDER BY episode_id, confidence DESC
+		ORDER BY content_id, confidence DESC
 		LIMIT ${limit}
 	`);
 
@@ -307,7 +308,8 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 			// Top-level mention fields
 			id: athleteMentions.id,
 			athleteId: athleteMentions.athleteId,
-			episodeId: athleteMentions.episodeId,
+			contentId: athleteMentions.contentId,
+			contentType: athleteMentions.contentType,
 			source: athleteMentions.source,
 			confidence: athleteMentions.confidence,
 			context: athleteMentions.context,
@@ -339,7 +341,7 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 			},
 		})
 		.from(athleteMentions)
-		.innerJoin(episodes, eq(athleteMentions.episodeId, episodes.id))
+		.innerJoin(episodes, eq(athleteMentions.contentId, episodes.id))
 		.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
 		.where(
 			and(
@@ -347,6 +349,7 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 					athleteMentions.id,
 					mentionIds.map((m) => m.id),
 				),
+				eq(athleteMentions.contentType, "podcast"),
 				like(podcasts.language, "en%"),
 			),
 		)
@@ -361,7 +364,7 @@ export async function getEpisodeAthleteReferences(
 	const mentionIds = await db.execute<{ id: string }>(sql`
 		SELECT DISTINCT ON (athlete_id) id
 		FROM athlete_mentions
-		WHERE episode_id = ${episodeId}
+		WHERE content_id = ${episodeId} AND content_type = 'podcast'
 		ORDER BY athlete_id, confidence DESC
 		LIMIT ${limit}
 	`);
@@ -833,8 +836,9 @@ export async function processEpisodeAthletes(episodeId: string) {
 	for (const athlete of titleAthletes) {
 		await db.insert(athleteMentions).values({
 			athleteId: athlete.athleteId,
-			episodeId: episode.id,
-			source: "title",
+			contentId: episode.id,
+			contentType: "podcast" as const,
+			source: "title" as const,
 			confidence: athlete.confidence.toString(),
 			context: athlete.context,
 		});
@@ -847,8 +851,9 @@ export async function processEpisodeAthletes(episodeId: string) {
 		for (const athlete of contentAthletes) {
 			await db.insert(athleteMentions).values({
 				athleteId: athlete.athleteId,
-				episodeId: episode.id,
-				source: "description",
+				contentId: episode.id,
+				contentType: "podcast" as const,
+				source: "description" as const,
 				confidence: athlete.confidence.toString(),
 				context: athlete.context,
 			});
@@ -980,6 +985,159 @@ export async function updateExistingAthletes(limit?: number) {
 			.where(isNotNull(athletes.worldAthleticsId))
 			.orderBy(athletes.updatedAt)
 			.limit(limit || 50);
+
+		console.log(
+			`[Athlete Update] Found ${athletesToUpdate.length} athletes to update`,
+		);
+
+		// Process athletes in batches of 10
+		const BATCH_SIZE = 10;
+		for (let i = 0; i < athletesToUpdate.length; i += BATCH_SIZE) {
+			const batch = athletesToUpdate.slice(i, i + BATCH_SIZE);
+			console.log(
+				`[Athlete Update] Processing batch ${
+					Math.floor(i / BATCH_SIZE) + 1
+				}/${Math.ceil(athletesToUpdate.length / BATCH_SIZE)}`,
+			);
+
+			// Process batch concurrently
+			const batchResults = await Promise.allSettled(
+				batch.map(async (athlete) => {
+					if (!athlete.worldAthleticsId) {
+						console.log(
+							`[Athlete Update] Skipping athlete ${athlete.name} - no World Athletics ID`,
+						);
+						results.skipped++;
+						return;
+					}
+
+					try {
+						console.log(
+							`[Athlete Update] Processing ${athlete.name} (${athlete.worldAthleticsId})`,
+						);
+						const athleteData = await getAthleteFromWorldAthletics(
+							athlete.worldAthleticsId,
+						);
+
+						if (!athleteData) {
+							console.log(`[Athlete Update] No data found for ${athlete.name}`);
+							results.skipped++;
+							return;
+						}
+
+						// Update athlete basic info
+						await db
+							.update(athletes)
+							.set({
+								name: athleteData.name,
+								countryCode: athleteData.countryCode ?? null,
+								countryName: athleteData.countryName ?? null,
+								dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
+								updatedAt: sql`CURRENT_TIMESTAMP`,
+							})
+							.where(eq(athletes.worldAthleticsId, athlete.worldAthleticsId));
+
+						// Update personal bests
+						if (athleteData.personalBests && athlete.worldAthleticsId) {
+							await Promise.all(
+								athleteData.personalBests.map(async (result) => {
+									const resultId = `${athlete.worldAthleticsId}-${result.discipline}-${result.date}`;
+									return db
+										.insert(athleteResults)
+										.values({
+											id: resultId,
+											athleteId: athlete.worldAthleticsId ?? "",
+											competitionName: result.eventName,
+											date: result.date,
+											discipline: result.discipline,
+											performance: result.mark,
+											place: null,
+											wind: null,
+										})
+										.onConflictDoNothing();
+								}),
+							);
+						}
+
+						// Update honors
+						if (athleteData.honours) {
+							await Promise.all(
+								athleteData.honours.flatMap((honor) =>
+									honor.results.map(async (result) => {
+										const honorId = `${athlete.worldAthleticsId}-${honor.categoryName}-${result.competition}-${result.discipline}`;
+										return db
+											.insert(athleteHonors)
+											.values({
+												id: honorId,
+												athleteId: athlete.worldAthleticsId ?? "",
+												categoryName: honor.categoryName,
+												competition: result.competition,
+												discipline: result.discipline,
+												mark: result.mark,
+												place: result.place,
+											})
+											.onConflictDoNothing();
+									}),
+								),
+							);
+						}
+
+						results.updated++;
+						console.log(
+							`[Athlete Update] Successfully updated ${athlete.name}`,
+						);
+					} catch (error) {
+						console.error(
+							`[Athlete Update] Error updating ${athlete.name}:`,
+							error,
+						);
+						results.errors++;
+					}
+				}),
+			);
+
+			results.processed += batch.length;
+
+			// Add delay between batches
+			if (i + BATCH_SIZE < athletesToUpdate.length) {
+				console.log("[Athlete Update] Waiting between batches...");
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+			}
+		}
+	} catch (error) {
+		console.error("[Athlete Update] Fatal error during update:", error);
+		throw error;
+	}
+
+	console.log("[Athlete Update] Update complete:", results);
+	return results;
+}
+
+export async function updateAthleteData(
+	athleteId?: string,
+	forceUpdate = false,
+) {
+	const results = {
+		processed: 0,
+		updated: 0,
+		skipped: 0,
+		errors: 0,
+	};
+
+	try {
+		// Get athletes to update
+		const athletesToUpdate = await db.query.athletes.findMany({
+			where: athleteId
+				? eq(athletes.worldAthleticsId, athleteId)
+				: forceUpdate
+				  ? undefined
+				  : isNull(athletes.updatedAt),
+			columns: {
+				id: true,
+				worldAthleticsId: true,
+				name: true,
+			},
+		});
 
 		console.log(
 			`[Athlete Update] Found ${athletesToUpdate.length} athletes to update`,

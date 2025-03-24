@@ -10,7 +10,7 @@ interface DetectedAthlete {
 }
 
 interface AthleteRecord {
-	id: string;
+	id: string | null;
 	name: string;
 }
 
@@ -23,17 +23,19 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	// Cache athletes in memory for faster lookups
 	const allAthletes = await db
 		.select({
-			id: athletes.id,
+			id: athletes.worldAthleticsId,
 			name: athletes.name,
 		})
 		.from(athletes);
 
 	const detectedAthletes: DetectedAthlete[] = [];
 	const athleteMap = new Map(
-		allAthletes.map((athlete: AthleteRecord) => [
-			athlete.name.toLowerCase(),
-			athlete.id,
-		]),
+		allAthletes
+			.filter(
+				(athlete): athlete is { id: string; name: string } =>
+					athlete.id !== null,
+			)
+			.map((athlete) => [athlete.name.toLowerCase(), athlete.id]),
 	);
 
 	// First try exact matches (faster)
@@ -107,6 +109,7 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
  */
 export async function processEpisodeAthletes(episodeId: string) {
 	console.time(`processEpisode:${episodeId}`);
+	console.log("[Athlete Detection] Processing episode:", episodeId);
 
 	const episode = await db.query.episodes.findFirst({
 		where: eq(episodes.id, episodeId),
@@ -121,30 +124,74 @@ export async function processEpisodeAthletes(episodeId: string) {
 		throw new Error(`Episode not found: ${episodeId}`);
 	}
 
+	console.log("[Athlete Detection] Found episode:", {
+		id: episode.id,
+		titleLength: episode.title?.length || 0,
+		hasContent: !!episode.content,
+	});
+
 	// Process title
 	const titleAthletes = await detectAthletes(episode.title);
+	console.log("[Athlete Detection] Title matches:", titleAthletes.length);
+
 	for (const athlete of titleAthletes) {
-		await db.insert(athleteMentions).values({
-			athleteId: athlete.athleteId,
-			episodeId: episode.id,
-			source: "title",
-			confidence: athlete.confidence.toString(),
-			context: athlete.context,
-		});
+		try {
+			console.log("[Athlete Detection] Inserting title mention:", {
+				athleteId: athlete.athleteId,
+				contentId: episode.id,
+				contentType: "podcast",
+				source: "title",
+				confidence: athlete.confidence.toString(),
+				context: athlete.context,
+			});
+
+			await db.insert(athleteMentions).values({
+				athleteId: athlete.athleteId,
+				contentId: episode.id,
+				contentType: "podcast",
+				source: "title",
+				confidence: athlete.confidence.toString(),
+				context: athlete.context,
+			});
+		} catch (error) {
+			console.error(
+				"[Athlete Detection] Error inserting title mention:",
+				error,
+			);
+		}
 	}
 
 	// Process description/content if available
 	let contentAthletes: DetectedAthlete[] = [];
 	if (episode.content) {
 		contentAthletes = await detectAthletes(episode.content);
+		console.log("[Athlete Detection] Content matches:", contentAthletes.length);
+
 		for (const athlete of contentAthletes) {
-			await db.insert(athleteMentions).values({
-				athleteId: athlete.athleteId,
-				episodeId: episode.id,
-				source: "description",
-				confidence: athlete.confidence.toString(),
-				context: athlete.context,
-			});
+			try {
+				console.log("[Athlete Detection] Inserting content mention:", {
+					athleteId: athlete.athleteId,
+					contentId: episode.id,
+					contentType: "podcast",
+					source: "description",
+					confidence: athlete.confidence.toString(),
+					context: athlete.context,
+				});
+
+				await db.insert(athleteMentions).values({
+					athleteId: athlete.athleteId,
+					contentId: episode.id,
+					contentType: "podcast",
+					source: "description",
+					confidence: athlete.confidence.toString(),
+					context: athlete.context,
+				});
+			} catch (error) {
+				console.error(
+					"[Athlete Detection] Error inserting content mention:",
+					error,
+				);
+			}
 		}
 	}
 

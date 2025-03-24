@@ -93,7 +93,6 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 
 async function processEpisode(episodeId: string) {
 	console.log(`Processing athlete mentions for episode: ${episodeId}`);
-	console.time(`processEpisode:${episodeId}`);
 
 	try {
 		// Get episode data
@@ -111,6 +110,7 @@ async function processEpisode(episodeId: string) {
 		}
 
 		console.log(`Episode title: ${episode.title}`);
+		console.time("detectAthletes");
 
 		// Process title
 		const titleAthletes = await detectAthletes(episode.title);
@@ -120,15 +120,17 @@ async function processEpisode(episodeId: string) {
 					.insert(athleteMentions)
 					.values({
 						athleteId: athlete.athleteId,
-						episodeId: episode.id,
-						source: "title",
+						contentId: episode.id,
+						contentType: "podcast" as const,
+						source: "title" as const,
 						confidence: athlete.confidence.toString(),
 						context: athlete.context,
 					})
 					.onConflictDoUpdate({
 						target: [
 							athleteMentions.athleteId,
-							athleteMentions.episodeId,
+							athleteMentions.contentId,
+							athleteMentions.contentType,
 							athleteMentions.source,
 						],
 						set: {
@@ -151,15 +153,17 @@ async function processEpisode(episodeId: string) {
 						.insert(athleteMentions)
 						.values({
 							athleteId: athlete.athleteId,
-							episodeId: episode.id,
-							source: "description",
+							contentId: episode.id,
+							contentType: "podcast" as const,
+							source: "description" as const,
 							confidence: athlete.confidence.toString(),
 							context: athlete.context,
 						})
 						.onConflictDoUpdate({
 							target: [
 								athleteMentions.athleteId,
-								athleteMentions.episodeId,
+								athleteMentions.contentId,
+								athleteMentions.contentType,
 								athleteMentions.source,
 							],
 							set: {

@@ -1,6 +1,6 @@
 import Queue from "bull";
 import { db } from "@/db/client";
-import { episodes, athleteMentions } from "@/db/schema";
+import { episodes, athleteMentions, athletes } from "@/db/schema";
 import { createFuzzyMatcher } from "@/lib/fuzzy-matcher";
 import { eq } from "drizzle-orm";
 
@@ -13,8 +13,12 @@ interface DetectedAthlete {
 // Create a new queue instance with Redis configuration
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 console.log("Connecting to Redis at:", REDIS_URL);
+console.log(
+	"Database connection string:",
+	process.env.LOCAL_DB_URL?.split("@")[1] || "not set",
+);
 
-const athleteDetectionQueue = new Queue("athlete-detection", REDIS_URL, {
+export const athleteDetectionQueue = new Queue("athlete-detection", REDIS_URL, {
 	defaultJobOptions: {
 		attempts: 3,
 		backoff: {
@@ -34,16 +38,21 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	console.time("detectAthletes");
 
 	// Get all athletes
-	const allAthletes = await db.query.athletes.findMany({
-		columns: {
-			id: true,
-			name: true,
-		},
-	});
+	const allAthletes = await db
+		.select({
+			id: athletes.worldAthleticsId,
+			name: athletes.name,
+		})
+		.from(athletes);
 
 	const detectedAthletes: DetectedAthlete[] = [];
 	const athleteMap = new Map(
-		allAthletes.map((athlete) => [athlete.name.toLowerCase(), athlete.id]),
+		allAthletes
+			.filter(
+				(athlete): athlete is { id: string; name: string } =>
+					athlete.id !== null,
+			)
+			.map((athlete) => [athlete.name.toLowerCase(), athlete.id]),
 	);
 
 	// First try exact matches (faster)
@@ -120,16 +129,29 @@ athleteDetectionQueue.process(1, async (job) => {
 
 	try {
 		// Get episode data
-		const episode = await db.query.episodes.findFirst({
-			where: eq(episodes.id, episodeId),
-			columns: {
-				id: true,
-				title: true,
-				content: true,
-			},
-		});
+		console.log("Attempting to fetch episode from database...");
+		const episode = await db
+			.select({
+				id: episodes.id,
+				title: episodes.title,
+				content: episodes.content,
+			})
+			.from(episodes)
+			.where(eq(episodes.id, episodeId))
+			.limit(1)
+			.then((rows) => {
+				console.log(
+					"Database query result:",
+					rows[0] ? "Found episode" : "No episode found",
+				);
+				return rows[0];
+			});
 
 		if (!episode) {
+			console.error("Episode not found in database:", {
+				episodeId,
+				query: `SELECT id, title, content FROM episodes WHERE id = '${episodeId}' LIMIT 1`,
+			});
 			throw new Error(`Episode not found: ${episodeId}`);
 		}
 
@@ -145,15 +167,17 @@ athleteDetectionQueue.process(1, async (job) => {
 					.insert(athleteMentions)
 					.values({
 						athleteId: athlete.athleteId,
-						episodeId: episode.id,
-						source: "title",
+						contentId: episode.id,
+						contentType: "podcast" as const,
+						source: "title" as const,
 						confidence: athlete.confidence.toString(),
 						context: athlete.context,
 					})
 					.onConflictDoUpdate({
 						target: [
 							athleteMentions.athleteId,
-							athleteMentions.episodeId,
+							athleteMentions.contentId,
+							athleteMentions.contentType,
 							athleteMentions.source,
 						],
 						set: {
@@ -178,15 +202,17 @@ athleteDetectionQueue.process(1, async (job) => {
 						.insert(athleteMentions)
 						.values({
 							athleteId: athlete.athleteId,
-							episodeId: episode.id,
-							source: "description",
+							contentId: episode.id,
+							contentType: "podcast" as const,
+							source: "description" as const,
 							confidence: athlete.confidence.toString(),
 							context: athlete.context,
 						})
 						.onConflictDoUpdate({
 							target: [
 								athleteMentions.athleteId,
-								athleteMentions.episodeId,
+								athleteMentions.contentId,
+								athleteMentions.contentType,
 								athleteMentions.source,
 							],
 							set: {
@@ -244,6 +270,3 @@ athleteDetectionQueue.on("error", (error) => {
 athleteDetectionQueue.on("stalled", (job) => {
 	console.warn(`Job ${job.id} has stalled`);
 });
-
-// Export the queue for use in other files
-export default athleteDetectionQueue;

@@ -1,10 +1,25 @@
 import { db } from "@/db/client";
 import { episodes } from "@/db/schema";
 import { sql, desc } from "drizzle-orm";
-import athleteDetectionQueue from "./worker";
+import { athleteDetectionQueue } from "./worker";
 
 async function queueEpisodes() {
 	console.log("Starting to queue episodes for athlete detection...");
+
+	// Verify database connection
+	console.log("Verifying database connection...");
+	try {
+		const testQuery = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(episodes);
+		console.log(
+			"Database connection successful. Total episodes:",
+			testQuery[0].count,
+		);
+	} catch (error) {
+		console.error("Database connection failed:", error);
+		throw error;
+	}
 
 	// First check total episodes
 	const totalEpisodes = await db
@@ -38,10 +53,15 @@ async function queueEpisodes() {
 		.orderBy(desc(episodes.pubDate));
 
 	console.log(`\nFound ${unprocessedEpisodes.length} episodes to queue`);
+	console.log(
+		"First 5 episodes to be queued:",
+		unprocessedEpisodes.slice(0, 5),
+	);
 
 	// Add each episode to the queue
 	let queued = 0;
 	for (const episode of unprocessedEpisodes) {
+		console.log(`Queuing episode: ${episode.id} (${episode.title})`);
 		await athleteDetectionQueue.add(
 			{ episodeId: episode.id },
 			{

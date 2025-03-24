@@ -70,15 +70,15 @@ async function getAthletes() {
 	let lastId = "";
 
 	while (hasMore) {
-		const batch = await db.query.athletes.findMany({
-			columns: {
-				id: true,
-				name: true,
-			},
-			where: gt(athletes.id, lastId),
-			orderBy: athletes.id,
-			limit: BATCH_SIZE,
-		});
+		const batch = await db
+			.select({
+				id: athletes.worldAthleticsId,
+				name: athletes.name,
+			})
+			.from(athletes)
+			.where(gt(athletes.worldAthleticsId, lastId))
+			.orderBy(athletes.worldAthleticsId)
+			.limit(BATCH_SIZE);
 
 		if (!batch || batch.length === 0) {
 			hasMore = false;
@@ -86,19 +86,21 @@ async function getAthletes() {
 		}
 
 		for (const athlete of batch) {
-			const nameLower = athlete.name.toLowerCase();
-			// Pre-compile regex pattern for each athlete
-			athletesMap.set(nameLower, {
-				id: athlete.id,
-				name: athlete.name,
-				pattern: new RegExp(
-					`\\b${athlete.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-					"gi",
-				),
-			});
+			if (athlete.id) {
+				const nameLower = athlete.name.toLowerCase();
+				// Pre-compile regex pattern for each athlete
+				athletesMap.set(nameLower, {
+					id: athlete.id,
+					name: athlete.name,
+					pattern: new RegExp(
+						`\\b${athlete.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+						"gi",
+					),
+				});
+			}
 		}
 
-		lastId = batch[batch.length - 1].id;
+		lastId = batch[batch.length - 1].id || "";
 
 		if (batch.length < BATCH_SIZE) {
 			hasMore = false;
@@ -275,14 +277,16 @@ athleteDetectionQueue.process(async (job) => {
 		const mentions = [
 			...titleAthletes.map((athlete) => ({
 				athleteId: athlete.athleteId,
-				episodeId: episode.id,
+				contentId: episode.id,
+				contentType: "podcast" as const,
 				source: "title" as const,
 				confidence: athlete.confidence.toString(),
 				context: athlete.context,
 			})),
 			...contentAthletes.map((athlete) => ({
 				athleteId: athlete.athleteId,
-				episodeId: episode.id,
+				contentId: episode.id,
+				contentType: "podcast" as const,
 				source: "description" as const,
 				confidence: athlete.confidence.toString(),
 				context: athlete.context,
@@ -290,6 +294,10 @@ athleteDetectionQueue.process(async (job) => {
 		];
 
 		if (mentions.length > 0) {
+			console.log("[Athlete Detection] Batch inserting mentions:", {
+				count: mentions.length,
+				firstMention: mentions[0],
+			});
 			await db.insert(athleteMentions).values(mentions);
 		}
 

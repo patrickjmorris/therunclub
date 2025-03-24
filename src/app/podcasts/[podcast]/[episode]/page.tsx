@@ -353,7 +353,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 					items={filteredMoreEpisodes.map((e) => ({
 						id: e.id,
 						title: e.title,
-						thumbnailUrl: e.image ?? e.podcastImage ?? undefined,
+						thumbnailUrl: e.episodeImage ?? e.podcastImage ?? undefined,
 						publishedAt: e.pubDate ? new Date(e.pubDate) : undefined,
 						duration: e.duration ?? undefined,
 						type: "episode",

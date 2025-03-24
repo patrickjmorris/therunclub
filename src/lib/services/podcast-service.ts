@@ -372,7 +372,7 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 				id: episodes.id,
 				title: episodes.title,
 				pubDate: episodes.pubDate,
-				image: episodes.episodeImage,
+				episodeImage: episodes.episodeImage,
 				podcastId: episodes.podcastId,
 				podcastTitle: podcasts.title,
 				podcastImage: podcasts.podcastImage,

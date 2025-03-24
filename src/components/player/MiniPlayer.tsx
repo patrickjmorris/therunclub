@@ -2,6 +2,7 @@ import { type PlayerAPI } from "@/components/AudioProvider";
 import { PlayButton } from "@/components/player/PlayButton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface MiniPlayerProps {
 	player: PlayerAPI;
@@ -22,16 +23,13 @@ export function MiniPlayer({
 				<div className="flex items-center gap-4 bg-background/90 px-4 py-4 shadow shadow-border/80 ring-1 ring-border backdrop-blur-sm">
 					<div className="flex flex-1 items-center gap-4 min-w-0 overflow-hidden">
 						<div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-							{player.episode.image && (
-								/* eslint-disable-next-line @next/next/no-img-element */
-								<img
-									src={
-										player.episode.episodeImage ||
-										player.episode.podcastImage ||
-										""
-									}
+							{player.episode.episodeImage && (
+								<Image
+									src={player.episode.episodeImage}
 									alt={player.episode.title}
-									className="h-full w-full rounded-lg object-cover"
+									width={40}
+									height={40}
+									className="rounded-md"
 								/>
 							)}
 						</div>

@@ -14,9 +14,8 @@ interface CompactEpisodeCardProps {
 		podcastId?: string | null;
 		podcastTitle?: string | null;
 		podcastSlug?: string | null;
-		podcastImage?: string | null;
+		podcastImage: string | null;
 		episodeImage?: string | null;
-		itunesImage?: string | null;
 		enclosureUrl?: string | null;
 		pubDate?: Date | null;
 	};
@@ -42,7 +41,7 @@ export function CompactEpisodeCard({
 								className="object-cover transition-transform hover:scale-105"
 								width={180}
 								height={180}
-								src={episode.podcastImage || episode.itunesImage || ""}
+								src={episode.episodeImage || episode.podcastImage || ""}
 							/>
 						</div>
 						<div className="space-y-1 flex-1">

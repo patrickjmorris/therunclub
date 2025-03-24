@@ -1,90 +1,87 @@
+import { athleteDetectionQueue } from "./worker";
 import { db } from "@/db/client";
 import { episodes } from "@/db/schema";
-import { sql, desc } from "drizzle-orm";
-import athleteDetectionQueue from "./worker";
+import { eq } from "drizzle-orm";
+import { config } from "dotenv";
+
+// Load environment variables
+config({ path: ".env" });
+
+const isDevelopment = process.env.NODE_ENV !== "production";
 
 async function queueEpisodes() {
-	console.log("Starting to queue episodes for athlete detection...");
+	console.log(
+		"[Queue] Environment:",
+		isDevelopment ? "development" : "production",
+	);
+	console.log("[Queue] Starting to queue episodes for athlete detection...");
 
-	// First check total episodes
-	const totalEpisodes = await db
-		.select({ count: sql<number>`count(*)` })
-		.from(episodes);
+	try {
+		// Get all unprocessed episodes
+		const unprocessedEpisodes = await db
+			.select({
+				id: episodes.id,
+				title: episodes.title,
+			})
+			.from(episodes)
+			.where(eq(episodes.athleteMentionsProcessed, false));
 
-	console.log(`Total episodes in database: ${totalEpisodes[0].count}`);
-
-	// Check processed status
-	const processedStatus = await db
-		.select({
-			status: episodes.athleteMentionsProcessed,
-			count: sql<number>`count(*)`,
-		})
-		.from(episodes)
-		.groupBy(episodes.athleteMentionsProcessed);
-
-	console.log("\nCurrent processing status:");
-	for (const { status, count } of processedStatus) {
-		console.log(`- ${status === true ? "Processed" : "Unprocessed"}: ${count}`);
-	}
-
-	// Get all unprocessed episodes
-	const unprocessedEpisodes = await db
-		.select({
-			id: episodes.id,
-			title: episodes.title,
-		})
-		.from(episodes)
-		.where(sql`${episodes.athleteMentionsProcessed} IS NOT true`)
-		.orderBy(desc(episodes.pubDate));
-
-	console.log(`\nFound ${unprocessedEpisodes.length} episodes to queue`);
-
-	// Add each episode to the queue
-	let queued = 0;
-	for (const episode of unprocessedEpisodes) {
-		await athleteDetectionQueue.add(
-			{ episodeId: episode.id },
-			{
-				attempts: 3,
-				backoff: {
-					type: "exponential",
-					delay: 1000,
-				},
-				removeOnComplete: true,
-				removeOnFail: false,
-			},
+		console.log(
+			`[Queue] Found ${unprocessedEpisodes.length} unprocessed episodes`,
 		);
-		queued++;
-		if (queued % 100 === 0) {
-			console.log(`Queued ${queued} episodes...`);
+
+		// Queue each episode for processing
+		for (const episode of unprocessedEpisodes) {
+			try {
+				const job = await athleteDetectionQueue.add(
+					"process-episode",
+					{
+						contentId: episode.id,
+						contentType: "podcast" as const,
+					},
+					{
+						attempts: 3,
+						backoff: {
+							type: "exponential",
+							delay: 1000,
+						},
+						removeOnComplete: true,
+						removeOnFail: false,
+					},
+				);
+				console.log(
+					`[Queue] Queued episode: ${episode.title} (Job ID: ${job.id})`,
+				);
+			} catch (error) {
+				console.error(`[Queue] Error queuing episode ${episode.id}:`, error);
+			}
 		}
+
+		// Get queue status
+		const [waiting, active, completed, failed, delayed] = await Promise.all([
+			athleteDetectionQueue.getWaitingCount(),
+			athleteDetectionQueue.getActiveCount(),
+			athleteDetectionQueue.getCompletedCount(),
+			athleteDetectionQueue.getFailedCount(),
+			athleteDetectionQueue.getDelayedCount(),
+		]);
+
+		console.log("\n[Queue] Queue status after adding jobs:");
+		console.log(`- Waiting: ${waiting}`);
+		console.log(`- Active: ${active}`);
+		console.log(`- Completed: ${completed}`);
+		console.log(`- Failed: ${failed}`);
+		console.log(`- Delayed: ${delayed}`);
+
+		console.log("\n[Queue] Finished queuing episodes");
+	} catch (error) {
+		console.error("[Queue] Error in queueEpisodes:", error);
+		process.exit(1);
 	}
-
-	console.log("\nQueuing complete!");
-	console.log(`- Episodes queued: ${queued}`);
-
-	// Get queue status
-	const [waiting, active, completed, failed, delayed] = await Promise.all([
-		athleteDetectionQueue.getWaitingCount(),
-		athleteDetectionQueue.getActiveCount(),
-		athleteDetectionQueue.getCompletedCount(),
-		athleteDetectionQueue.getFailedCount(),
-		athleteDetectionQueue.getDelayedCount(),
-	]);
-
-	console.log("\nQueue status:");
-	console.log(`- Waiting: ${waiting}`);
-	console.log(`- Active: ${active}`);
-	console.log(`- Completed: ${completed}`);
-	console.log(`- Failed: ${failed}`);
-	console.log(`- Delayed: ${delayed}`);
-
-	// Close the queue
-	await athleteDetectionQueue.close();
 }
 
-// Run the queuing process
+// Run the script
 queueEpisodes().catch((error) => {
-	console.error("Error queuing episodes:", error);
+	console.error("[Queue] Script error:", error);
 	process.exit(1);
 });

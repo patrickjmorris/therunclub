@@ -1,7 +1,7 @@
-import athleteDetectionQueue from "@/lib/queue/athlete-detection-queue";
+import { athleteDetectionQueue } from "./worker";
 
 async function clearQueue() {
-	console.log("Clearing athlete detection queue...");
+	console.log("[Clear Queue] Starting to clear athlete detection queue...");
 
 	try {
 		// Get initial queue status
@@ -13,26 +13,16 @@ async function clearQueue() {
 			athleteDetectionQueue.getDelayedCount(),
 		]);
 
-		console.log("\nInitial queue status:");
+		console.log("\n[Clear Queue] Initial queue status:");
 		console.log(`- Waiting: ${waiting}`);
 		console.log(`- Active: ${active}`);
 		console.log(`- Completed: ${completed}`);
 		console.log(`- Failed: ${failed}`);
 		console.log(`- Delayed: ${delayed}`);
 
-		// Pause the queue to prevent new jobs from being processed
-		await athleteDetectionQueue.pause();
-		console.log("\nQueue paused");
-
-		// Clean all jobs from the queue
-		await athleteDetectionQueue.clean(0, "active");
-		await athleteDetectionQueue.clean(0, "wait");
-		await athleteDetectionQueue.clean(0, "delayed");
-		await athleteDetectionQueue.clean(0, "failed");
-		await athleteDetectionQueue.clean(0, "completed");
-
-		// Empty the queue
-		await athleteDetectionQueue.empty();
+		// Obliterate all jobs
+		await athleteDetectionQueue.obliterate();
+		console.log("\n[Clear Queue] Queue obliterated");
 
 		// Get final queue status
 		const [
@@ -49,26 +39,25 @@ async function clearQueue() {
 			athleteDetectionQueue.getDelayedCount(),
 		]);
 
-		console.log("\nFinal queue status:");
+		console.log("\n[Clear Queue] Final queue status:");
 		console.log(`- Waiting: ${finalWaiting}`);
 		console.log(`- Active: ${finalActive}`);
 		console.log(`- Completed: ${finalCompleted}`);
 		console.log(`- Failed: ${finalFailed}`);
 		console.log(`- Delayed: ${finalDelayed}`);
 
-		console.log("\nQueue cleared successfully");
+		console.log("\n[Clear Queue] Queue cleared successfully");
 
-		// Close the queue connection
+		// Close the queue
 		await athleteDetectionQueue.close();
-		process.exit(0);
 	} catch (error) {
-		console.error("Error clearing queue:", error);
+		console.error("[Clear Queue] Error clearing queue:", error);
 		process.exit(1);
 	}
 }
 
-// Run the clear queue function
+// Run the script
 clearQueue().catch((error) => {
-	console.error("Failed to clear queue:", error);
+	console.error("[Clear Queue] Script error:", error);
 	process.exit(1);
 });

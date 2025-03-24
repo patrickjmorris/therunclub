@@ -470,28 +470,29 @@ export const athleteMentions = pgTable(
 		athleteId: text("athlete_id")
 			.notNull()
 			.references(() => athletes.worldAthleticsId, { onDelete: "cascade" }),
-		episodeId: uuid("episode_id")
-			.notNull()
-			.references(() => episodes.id, { onDelete: "cascade" }),
+		contentId: uuid("content_id").notNull(),
+		contentType: text("content_type", { enum: ["podcast", "video"] }).notNull(),
 		source: text("source", { enum: ["title", "description"] }).notNull(),
 		confidence: numeric("confidence").notNull(),
 		context: text("context").notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 	},
 	(table) => ({
-		athleteEpisodeIdx: index("idx_athlete_mentions_athlete_episode").on(
+		athleteContentIdx: index("idx_athlete_mentions_athlete_content").on(
 			table.athleteId,
-			table.episodeId,
+			table.contentId,
 			table.confidence,
 		),
-		episodeAthleteIdx: index("idx_athlete_mentions_episode_athlete").on(
-			table.episodeId,
+		contentAthleteIdx: index("idx_athlete_mentions_content_athlete").on(
+			table.contentId,
 			table.athleteId,
 			table.confidence,
 		),
 		uniqueMentionIdx: uniqueIndex("athlete_mentions_unique_idx").on(
 			table.athleteId,
-			table.episodeId,
+			table.contentId,
+			table.contentType,
 			table.source,
 		),
 	}),
@@ -557,8 +558,14 @@ export const athleteMentionsRelations = relations(
 			references: [athletes.worldAthleticsId],
 		}),
 		episode: one(episodes, {
-			fields: [athleteMentions.episodeId],
+			fields: [athleteMentions.contentId],
 			references: [episodes.id],
+			relationName: "episodeMentions",
+		}),
+		video: one(videos, {
+			fields: [athleteMentions.contentId],
+			references: [videos.id],
+			relationName: "videoMentions",
 		}),
 	}),
 );

@@ -372,7 +372,7 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 				id: episodes.id,
 				title: episodes.title,
 				pubDate: episodes.pubDate,
-				image: episodes.episodeImage,
+				episodeImage: episodes.episodeImage,
 				podcastId: episodes.podcastId,
 				podcastTitle: podcasts.title,
 				podcastImage: podcasts.podcastImage,
@@ -383,6 +383,7 @@ export const getLastTenEpisodesByPodcastSlug = unstable_cache(
 				podcastAuthor: podcasts.author,
 				enclosureUrl: episodes.enclosureUrl,
 				explicit: episodes.explicit,
+				link: episodes.link,
 			})
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))

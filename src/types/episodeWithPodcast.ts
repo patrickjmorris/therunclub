@@ -10,7 +10,6 @@ export interface EpisodeWithPodcast {
 	enclosureUrl: string | null;
 	duration: string | null;
 	explicit: "yes" | "no" | null;
-	image: string | null;
 	episodeImage?: string | null;
 	episodeSlug: string | null;
 	podcastSlug: string | null;

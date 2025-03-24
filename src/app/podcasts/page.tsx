@@ -112,7 +112,6 @@ export default async function PodcastList({ searchParams }: PageProps) {
 									podcastSlug: podcast.podcastSlug,
 									podcastImage: podcast.podcastImage,
 									episodeImage: podcast.episodeImage,
-									itunesImage: podcast.itunesImage,
 									enclosureUrl: podcast.enclosureUrl,
 									pubDate: podcast.pubDate ? new Date(podcast.pubDate) : null,
 								}}

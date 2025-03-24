@@ -194,18 +194,19 @@ export function AudioPlayer() {
 						>
 							<div className="flex items-center gap-4">
 								<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-									{player.episode.image && (
-										/* eslint-disable-next-line @next/next/no-img-element */
-										<img
-											src={
-												player.episode.episodeImage ||
-												player.episode.podcastImage ||
-												""
-											}
-											alt={player.episode.title}
-											className="h-full w-full rounded-lg object-cover"
-										/>
-									)}
+									{player.episode.episodeImage ||
+										(player.episode.podcastImage && (
+											/* eslint-disable-next-line @next/next/no-img-element */
+											<img
+												src={
+													player.episode.episodeImage ||
+													player.episode.podcastImage ||
+													""
+												}
+												alt={player.episode.title}
+												className="h-full w-full rounded-lg object-cover"
+											/>
+										))}
 								</div>
 								<div
 									className="flex min-w-0 flex-col gap-0.5"

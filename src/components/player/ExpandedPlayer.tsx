@@ -78,17 +78,20 @@ export function ExpandedPlayer({
 					animation: isOpen ? "scaleUp 300ms ease forwards" : "none",
 				}}
 			>
-				{player.episode.image && (
-					/* eslint-disable-next-line @next/next/no-img-element */
-					<img
-						src={player.episode.image}
-						alt={player.episode.title}
-						className="h-full w-full rounded-lg object-cover"
-						style={{
-							animation: isOpen ? "fadeIn 300ms ease forwards" : "none",
-						}}
-					/>
-				)}
+				{player.episode.episodeImage ||
+					(player.episode.podcastImage && (
+						/* eslint-disable-next-line @next/next/no-img-element */
+						<img
+							src={
+								player.episode.episodeImage || player.episode.podcastImage || ""
+							}
+							alt={player.episode.title}
+							className="h-full w-full rounded-lg object-cover"
+							style={{
+								animation: isOpen ? "fadeIn 300ms ease forwards" : "none",
+							}}
+						/>
+					))}
 			</div>
 			<div className="space-y-1 text-center">
 				<h3 className="text-lg font-semibold text-foreground line-clamp-3">

@@ -18,6 +18,11 @@ interface EpisodeCardProps {
 		itunesImage?: string | null;
 		enclosureUrl?: string | null;
 		pubDate?: Date | null;
+		duration?: number | null;
+		content?: string | null;
+		podcastAuthor?: string | null;
+		explicit?: boolean | null;
+		link?: string | null;
 	};
 	className?: string;
 }
@@ -27,19 +32,18 @@ export function EpisodeCard({ episode, className = "" }: EpisodeCardProps) {
 		id: episode.episodeId,
 		title: episode.episodeTitle || episode.podcastTitle || "",
 		pubDate: episode.pubDate ?? null,
-		content: null,
+		episodeImage: episode.episodeImage ?? null,
 		podcastId: episode.podcastId ?? null,
 		podcastTitle: episode.podcastTitle || "",
-		podcastAuthor: null,
 		podcastImage: episode.podcastImage ?? null,
+		duration: episode.duration?.toString() ?? null,
+		content: episode.content ?? null,
+		podcastAuthor: episode.podcastAuthor ?? null,
+		explicit: episode.explicit ? "yes" : "no",
 		enclosureUrl: episode.enclosureUrl ?? null,
-		duration: null,
-		explicit: null,
-		image: episode.itunesImage ?? null,
-		episodeImage: episode.episodeImage ?? null,
 		episodeSlug: episode.episodeSlug ?? null,
 		podcastSlug: episode.podcastSlug ?? null,
-		link: null,
+		link: episode.link ?? null,
 	};
 
 	return (

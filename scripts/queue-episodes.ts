@@ -2,8 +2,18 @@ import { athleteDetectionQueue } from "./worker";
 import { db } from "@/db/client";
 import { episodes } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { config } from "dotenv";
+
+// Load environment variables
+config({ path: ".env" });
+
+const isDevelopment = process.env.NODE_ENV !== "production";
 
 async function queueEpisodes() {
+	console.log(
+		"[Queue] Environment:",
+		isDevelopment ? "development" : "production",
+	);
 	console.log("[Queue] Starting to queue episodes for athlete detection...");
 
 	try {

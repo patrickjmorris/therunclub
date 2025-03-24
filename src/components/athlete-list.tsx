@@ -8,16 +8,9 @@ import { useState } from "react";
 
 interface AthleteReference {
 	id: string;
-	context: string;
-	confidence: string;
-	source: "title" | "description";
-	athlete: {
-		id: string;
-		name: string;
-		imageUrl: string | null;
-		slug: string;
-		bio: string | null;
-	};
+	name: string;
+	imageUrl: string | null;
+	slug: string;
 }
 
 export function AthleteList({ mentions }: { mentions: AthleteReference[] }) {
@@ -34,27 +27,22 @@ export function AthleteList({ mentions }: { mentions: AthleteReference[] }) {
 							<div className="flex items-start gap-4">
 								<Avatar className="h-12 w-12">
 									<AvatarImage
-										src={mention.athlete.imageUrl ?? ""}
-										alt={mention.athlete.name}
+										src={mention.imageUrl ?? ""}
+										alt={mention.name}
 									/>
 									<AvatarFallback>
-										{mention.athlete.name.substring(0, 2)}
+										{mention.name.substring(0, 2)}
 									</AvatarFallback>
 								</Avatar>
 								<div className="flex-1 space-y-2">
 									<div className="flex items-start justify-between gap-2">
 										<div className="space-y-1">
 											<Link
-												href={`/athletes/${mention.athlete.slug}`}
+												href={`/athletes/${mention.slug}`}
 												className="text-lg font-medium hover:underline"
 											>
-												{mention.athlete.name}
+												{mention.name}
 											</Link>
-											{mention.athlete.bio && (
-												<p className="text-sm text-muted-foreground line-clamp-2">
-													{mention.athlete.bio}
-												</p>
-											)}
 										</div>
 									</div>
 								</div>

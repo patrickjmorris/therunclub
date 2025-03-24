@@ -21,7 +21,7 @@
 		"db:seed-clubs": "bun scripts/seed-clubs.ts",
 		"db:load-clubs": "bun scripts/load-clubs-csv.ts",
 		"db:load-clubs:prod": "NODE_ENV=production bun scripts/load-clubs-csv.ts",
-		"update-colors": "bunx tsx src/scripts/update-podcast-colors.ts",
+		"update-colors": "bunx tsx scripts/update-channel-colors.ts",
 		"worker:prod": "NODE_ENV=production bun run scripts/start-worker.ts",
 		"queue:prod": "NODE_ENV=production bun run scripts/queue-episodes.ts",
 		"worker": "NODE_ENV=development bun run scripts/start-worker.ts",

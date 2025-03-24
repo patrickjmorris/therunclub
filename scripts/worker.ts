@@ -5,6 +5,10 @@ import { createFuzzyMatcher } from "@/lib/fuzzy-matcher";
 import { eq } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { processContentAthletes } from "../src/lib/services/athlete-service";
+import { config } from "dotenv";
+
+// Load environment variables
+config({ path: ".env" });
 
 interface DetectedAthlete {
 	athleteId: string;
@@ -17,21 +21,33 @@ interface AthleteDetectionJob {
 	contentType: "podcast" | "video";
 }
 
-// Create a new queue instance with Redis configuration
+// Environment configuration
+const isDevelopment = process.env.NODE_ENV !== "production";
+// Always use local Redis for backfill jobs
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
-console.log("Connecting to Redis at:", REDIS_URL);
+
 console.log(
-	"Database connection string:",
-	process.env.LOCAL_DB_URL?.split("@")[1] || "not set",
+	"[Worker] Environment:",
+	isDevelopment ? "development" : "production",
 );
+console.log("[Worker] Using local Redis for backfill job");
+console.log(
+	"[Worker] Redis URL:",
+	REDIS_URL?.split("@")[1] || "localhost:6379",
+);
+
+// Parse Redis URL for host and port
+const redisUrl = new URL(REDIS_URL);
+const redisConfig = {
+	host: redisUrl.hostname || "localhost",
+	port: parseInt(redisUrl.port || "6379", 10),
+	// No need for TLS or auth for local Redis
+};
 
 export const athleteDetectionQueue = new Queue<AthleteDetectionJob>(
 	"athlete-detection",
 	{
-		connection: {
-			host: process.env.REDIS_HOST || "localhost",
-			port: parseInt(process.env.REDIS_PORT || "6379"),
-		},
+		connection: redisConfig,
 		defaultJobOptions: {
 			attempts: 3,
 			backoff: {
@@ -154,10 +170,7 @@ const worker = new Worker<AthleteDetectionJob>(
 		}
 	},
 	{
-		connection: {
-			host: process.env.REDIS_HOST || "localhost",
-			port: parseInt(process.env.REDIS_PORT || "6379"),
-		},
+		connection: redisConfig,
 		concurrency: 5,
 		limiter: {
 			max: 50,

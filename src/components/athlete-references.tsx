@@ -19,17 +19,10 @@ export async function AthleteReferences({
 	try {
 		const mentions = await db
 			.select({
-				id: athleteMentions.id,
-				context: athleteMentions.context,
-				confidence: athleteMentions.confidence,
-				source: athleteMentions.source,
-				athlete: {
-					id: athletes.id,
-					name: athletes.name,
-					imageUrl: athletes.imageUrl,
-					slug: athletes.slug,
-					bio: athletes.bio,
-				},
+				id: athletes.id,
+				name: athletes.name,
+				imageUrl: athletes.imageUrl,
+				slug: athletes.slug,
 			})
 			.from(athleteMentions)
 			.innerJoin(
@@ -41,6 +34,13 @@ export async function AthleteReferences({
 					eq(athleteMentions.contentId, contentId),
 					eq(athleteMentions.contentType, contentType),
 				),
+			)
+			.groupBy(
+				athletes.id,
+				athletes.name,
+				athletes.imageUrl,
+				athletes.slug,
+				athleteMentions.confidence,
 			)
 			.orderBy(desc(athleteMentions.confidence));
 

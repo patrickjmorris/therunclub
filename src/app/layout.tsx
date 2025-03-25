@@ -113,7 +113,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 							<main className="relative flex flex-1 min-h-screen flex-col bg-background">
 								<NuqsAdapter>{children}</NuqsAdapter>
 							</main>
-							<div className="fixed inset-x-0 bottom-0 z-10 lg:right-0 lg:left-auto lg:w-3/4">
+							<div className="fixed inset-x-0 bottom-0 z-50 lg:right-0 lg:left-auto lg:w-3/4">
 								<AudioPlayer />
 							</div>
 							<TailwindIndicator />

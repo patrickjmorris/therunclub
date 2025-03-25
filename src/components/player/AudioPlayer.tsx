@@ -84,7 +84,7 @@ export function AudioPlayer() {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: It's ok as it's a dependency of the player
 	useEffect(() => {
 		setCurrentTime(null);
-	}, [player.episode]);
+	}, [player.episode?.id]);
 
 	// Update currentTime when playback progresses
 	useEffect(() => {
@@ -98,9 +98,12 @@ export function AudioPlayer() {
 		if (player.episode) {
 			setIsVisible(true);
 		} else {
-			setIsVisible(false);
+			// Only hide if we're not currently playing
+			if (!player.playing) {
+				setIsVisible(false);
+			}
 		}
-	}, [player.episode]);
+	}, [player.episode, player.playing]);
 
 	// Handle media session
 	useEffect(() => {

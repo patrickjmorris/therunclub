@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
+import Image from "next/image";
 
 import { useAudioPlayer } from "@/components/AudioProvider";
 import { ForwardButton } from "@/components/player/ForwardButton";
@@ -194,19 +195,20 @@ export function AudioPlayer() {
 						>
 							<div className="flex items-center gap-4">
 								<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-									{player.episode.episodeImage ||
-										(player.episode.podcastImage && (
-											/* eslint-disable-next-line @next/next/no-img-element */
-											<img
-												src={
-													player.episode.episodeImage ||
-													player.episode.podcastImage ||
-													""
-												}
-												alt={player.episode.title}
-												className="h-full w-full rounded-lg object-cover"
-											/>
-										))}
+									{(player.episode.episodeImage ||
+										player.episode.podcastImage) && (
+										<Image
+											src={
+												player.episode.episodeImage ||
+												player.episode.podcastImage ||
+												""
+											}
+											alt={player.episode.title}
+											width={40}
+											height={40}
+											className="rounded-lg object-cover"
+										/>
+									)}
 								</div>
 								<div
 									className="flex min-w-0 flex-col gap-0.5"

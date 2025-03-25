@@ -52,21 +52,57 @@ This script:
 - Reports the number of matches found in title and content
 - Handles errors gracefully and provides detailed error messages
 
-Example output:
-```
-Processing athlete mentions for episode: abc123
-Episode title: Example Episode Title
-detectAthletes: 150ms
-  exactMatches: 50ms
-  fuzzyMatches: 100ms
-processEpisode:abc123: 200ms
+### Reprocess Episodes
 
-Processing complete!
-- Title matches: 2
-- Content matches: 5
+To reprocess episodes (useful when the detection algorithm has been updated):
+
+```bash
+# Reprocess all episodes
+bun run reprocess:mentions
+
+# Reprocess specific episodes
+bun run reprocess:mentions episodeId1 episodeId2 episodeId3
+
+# Reprocess all episodes from a specific podcast
+bun run reprocess:mentions --podcast=podcastId
+
+# Reprocess specific episodes from a specific podcast
+bun run reprocess:mentions --podcast=podcastId episodeId1 episodeId2 episodeId3
 ```
 
-### Output Example
+The reprocessing script:
+- Deletes existing mentions before reprocessing
+- Uses only exact matching (no fuzzy matching)
+- Processes episodes in batches of 100
+- Shows detailed progress and error reporting
+- Can filter by podcast ID
+- Maintains the same context extraction and deduplication logic
+
+### Clear Queue
+
+To clear the processing queue:
+
+```bash
+bun run clear:queue
+```
+
+### Sync Mentions
+
+To sync athlete mentions with the database:
+
+```bash
+bun run sync:mentions
+```
+
+### Check Supabase Configuration
+
+To verify Supabase configuration:
+
+```bash
+bun run check:supabase
+```
+
+## Output Examples
 
 When running the batch script, you'll see output like:
 
@@ -90,6 +126,21 @@ Remaining episodes to process: 400
 Run the script again to process the next batch.
 ```
 
+When reprocessing, you'll see output like:
+
+```
+Starting athlete mention reprocessing...
+Total episodes in database: 1000
+
+Processing batch of 100 episodes (1 to 100)
+Reprocessed episode abc123 (Episode Title): 2 title matches, 5 content matches
+...
+
+Reprocessing complete!
+- Total episodes processed: 1000
+- Total errors encountered: 0
+```
+
 ## Technical Details
 
 ### Matching Algorithm
@@ -98,7 +149,7 @@ Run the script again to process the next batch.
    - Uses word boundary regex (`\b`) to find exact name matches
    - Confidence score of 1.0 for exact matches
 
-2. **Fuzzy Matching**:
+2. **Fuzzy Matching** (only in initial processing):
    - Uses fuzzy string matching for near-matches
    - Minimum confidence threshold of 0.8
    - Processes text in 3-word sliding windows
@@ -115,6 +166,7 @@ Run the script again to process the next batch.
 - Check processing status through database queries
 - Run the script periodically to process new episodes
 - Use the single episode processor for debugging or reprocessing specific episodes
+- Use the reprocessing script when the detection algorithm is updated
 
 ## Performance Considerations
 

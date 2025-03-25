@@ -7,6 +7,7 @@ import { PlaybackRateButton } from "@/components/player/PlaybackRateButton";
 import { Slider } from "@/components/player/Slider";
 import { useState, useRef, type RefObject, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 interface ExpandedPlayerProps {
 	player: PlayerAPI;
@@ -53,6 +54,8 @@ export function ExpandedPlayer({
 
 	if (!player.episode) return null;
 
+	const imageUrl = player.episode.episodeImage || player.episode.podcastImage;
+
 	return (
 		// biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
 		<div
@@ -78,20 +81,17 @@ export function ExpandedPlayer({
 					animation: isOpen ? "scaleUp 300ms ease forwards" : "none",
 				}}
 			>
-				{player.episode.episodeImage ||
-					(player.episode.podcastImage && (
-						/* eslint-disable-next-line @next/next/no-img-element */
-						<img
-							src={
-								player.episode.episodeImage || player.episode.podcastImage || ""
-							}
-							alt={player.episode.title}
-							className="h-full w-full rounded-lg object-cover"
-							style={{
-								animation: isOpen ? "fadeIn 300ms ease forwards" : "none",
-							}}
-						/>
-					))}
+				{imageUrl && (
+					<Image
+						src={imageUrl}
+						alt={player.episode.title}
+						fill
+						className="rounded-lg object-cover"
+						style={{
+							animation: isOpen ? "fadeIn 300ms ease forwards" : "none",
+						}}
+					/>
+				)}
 			</div>
 			<div className="space-y-1 text-center">
 				<h3 className="text-lg font-semibold text-foreground line-clamp-3">

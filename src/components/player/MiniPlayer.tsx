@@ -17,19 +17,21 @@ export function MiniPlayer({
 }: MiniPlayerProps) {
 	if (!player.episode) return null;
 
+	const imageUrl = player.episode.episodeImage || player.episode.podcastImage;
+
 	return (
 		<div className="fixed inset-x-0 bottom-0 w-full">
 			<div className="mx-auto max-w-screen-2xl">
 				<div className="flex items-center gap-4 bg-background/90 px-4 py-4 shadow shadow-border/80 ring-1 ring-border backdrop-blur-sm">
 					<div className="flex flex-1 items-center gap-4 min-w-0 overflow-hidden">
 						<div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-							{player.episode.episodeImage && (
+							{imageUrl && (
 								<Image
-									src={player.episode.episodeImage}
+									src={imageUrl}
 									alt={player.episode.title}
 									width={40}
 									height={40}
-									className="rounded-md"
+									className="rounded-md object-cover"
 								/>
 							)}
 						</div>

@@ -48,6 +48,7 @@ interface CustomItem {
 	pubDate?: string;
 	content?: string;
 	link?: string;
+	guid?: string;
 	enclosure?: {
 		url?: string;
 	};
@@ -55,6 +56,8 @@ interface CustomItem {
 		duration?: string;
 		explicit?: string;
 		image?: string;
+		episode?: string;
+		season?: string;
 	};
 }
 
@@ -349,6 +352,8 @@ async function processPodcast(
 						explicit: item.itunes?.explicit === "yes" ? "yes" : "no",
 						image: episodeImageUrl,
 						episodeImage: episode_image,
+						guid: item.guid || null,
+						itunesEpisode: item.itunes?.episode || null,
 					};
 				});
 
@@ -360,17 +365,38 @@ async function processPodcast(
 				// Wait for all episode values to be processed
 				const processedEpisodeValues = await Promise.all(episodeValues);
 
-				// Remove duplicates by keeping only the first occurrence
-				const uniqueEpisodes = processedEpisodeValues.filter(
-					(episode, index, self) =>
-						index ===
-						self.findIndex((e) => e.enclosureUrl === episode.enclosureUrl),
-				);
+				// Remove duplicates by keeping only the first occurrence of each GUID or iTunes episode number
+				const uniqueEpisodes = processedEpisodeValues.reduce((acc, episode) => {
+					// If episode has a GUID, use that as the key
+					if (episode.guid) {
+						const key = episode.guid;
+						if (!acc.has(key)) {
+							acc.set(key, episode);
+						}
+					}
+					// If no GUID but has iTunes episode number, use podcast ID + episode number as key
+					else if (episode.itunesEpisode) {
+						const key = `${episode.podcastId}-${episode.itunesEpisode}`;
+						if (!acc.has(key)) {
+							acc.set(key, episode);
+						}
+					}
+					// If neither, use podcast ID + episode slug as key
+					else {
+						const key = `${episode.podcastId}-${episode.episodeSlug}`;
+						if (!acc.has(key)) {
+							acc.set(key, episode);
+						}
+					}
+					return acc;
+				}, new Map<string, (typeof processedEpisodeValues)[0]>());
 
-				if (processedEpisodeValues.length !== uniqueEpisodes.length) {
+				const deduplicatedEpisodes = Array.from(uniqueEpisodes.values());
+
+				if (processedEpisodeValues.length !== deduplicatedEpisodes.length) {
 					console.log(
 						`[DEBUG] Removed ${
-							processedEpisodeValues.length - uniqueEpisodes.length
+							processedEpisodeValues.length - deduplicatedEpisodes.length
 						} duplicate episodes for ${podcast.title}`,
 					);
 				}
@@ -378,29 +404,88 @@ async function processPodcast(
 				try {
 					await db
 						.insert(episodes)
-						.values(uniqueEpisodes as Episode[])
+						.values(deduplicatedEpisodes as Episode[])
 						.onConflictDoUpdate({
-							target: [episodes.enclosureUrl],
+							target: [episodes.guid],
+							where: sql`${episodes.guid} IS NOT NULL AND EXCLUDED.guid IS NOT NULL`,
 							set: {
 								title: sql`EXCLUDED.title`,
 								episodeSlug: sql`EXCLUDED.episode_slug`,
 								pubDate: sql`EXCLUDED.pub_date`,
 								content: sql`EXCLUDED.content`,
 								link: sql`EXCLUDED.link`,
+								enclosureUrl: sql`EXCLUDED.enclosure_url`,
 								duration: sql`EXCLUDED.duration`,
 								explicit: sql`EXCLUDED.explicit`,
 								image: sql`EXCLUDED.image`,
 								episodeImage: sql`EXCLUDED.episode_image`,
+								itunesEpisode: sql`EXCLUDED.itunes_episode`,
+								updatedAt: sql`CURRENT_TIMESTAMP`,
 							},
 						});
+
+					// Handle episodes with iTunes episode numbers but no GUIDs
+					await db
+						.insert(episodes)
+						.values(
+							deduplicatedEpisodes.filter(
+								(episode) => !episode.guid && episode.itunesEpisode,
+							) as Episode[],
+						)
+						.onConflictDoUpdate({
+							target: [episodes.podcastId, episodes.itunesEpisode],
+							where: sql`${episodes.itunesEpisode} IS NOT NULL AND EXCLUDED.itunesEpisode IS NOT NULL AND ${episodes.guid} IS NULL`,
+							set: {
+								title: sql`EXCLUDED.title`,
+								episodeSlug: sql`EXCLUDED.episode_slug`,
+								pubDate: sql`EXCLUDED.pub_date`,
+								content: sql`EXCLUDED.content`,
+								link: sql`EXCLUDED.link`,
+								enclosureUrl: sql`EXCLUDED.enclosure_url`,
+								duration: sql`EXCLUDED.duration`,
+								explicit: sql`EXCLUDED.explicit`,
+								image: sql`EXCLUDED.image`,
+								episodeImage: sql`EXCLUDED.episode_image`,
+								guid: sql`EXCLUDED.guid`,
+								updatedAt: sql`CURRENT_TIMESTAMP`,
+							},
+						});
+
+					// Handle episodes without GUIDs or iTunes episode numbers
+					await db
+						.insert(episodes)
+						.values(
+							deduplicatedEpisodes.filter(
+								(episode) => !episode.guid && !episode.itunesEpisode,
+							) as Episode[],
+						)
+						.onConflictDoUpdate({
+							target: [episodes.podcastId, episodes.episodeSlug],
+							where: sql`${episodes.guid} IS NULL AND ${episodes.itunesEpisode} IS NULL`,
+							set: {
+								title: sql`EXCLUDED.title`,
+								pubDate: sql`EXCLUDED.pub_date`,
+								content: sql`EXCLUDED.content`,
+								link: sql`EXCLUDED.link`,
+								enclosureUrl: sql`EXCLUDED.enclosure_url`,
+								duration: sql`EXCLUDED.duration`,
+								explicit: sql`EXCLUDED.explicit`,
+								image: sql`EXCLUDED.image`,
+								episodeImage: sql`EXCLUDED.episode_image`,
+								guid: sql`EXCLUDED.guid`,
+								itunesEpisode: sql`EXCLUDED.itunes_episode`,
+								updatedAt: sql`CURRENT_TIMESTAMP`,
+							},
+						});
+
 					console.log(
-						`[DEBUG] Successfully upserted ${uniqueEpisodes.length} episodes for ${podcast.title}`,
+						`[DEBUG] Successfully upserted ${deduplicatedEpisodes.length} episodes for ${podcast.title}`,
 					);
 				} catch (upsertError) {
 					console.error("[ERROR] Episode upsert error details:", {
 						podcastId: podcast.id,
 						podcastTitle: podcast.title,
-						episodeCount: uniqueEpisodes.length,
+						episodeCount: deduplicatedEpisodes.length,
 						error: upsertError,
 					});
 					throw upsertError;

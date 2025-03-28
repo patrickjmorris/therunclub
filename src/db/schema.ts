@@ -141,13 +141,13 @@ export const episodes = pgTable(
 		id: uuid("id").primaryKey().defaultRandom(),
 		podcastId: uuid("podcast_id")
 			.notNull()
-			.references(() => podcasts.id),
-		episodeSlug: text("episode_slug").notNull(),
+			.references(() => podcasts.id, { onDelete: "cascade" }),
 		title: text("title").notNull(),
+		episodeSlug: text("episode_slug").notNull(),
 		pubDate: timestamp("pub_date"),
 		content: text("content"),
 		link: text("link"),
-		enclosureUrl: text("enclosure_url").notNull().unique(),
+		enclosureUrl: text("enclosure_url").notNull(),
 		duration: text("duration").notNull(),
 		explicit: text("explicit", { enum: ["yes", "no"] }).default("no"),
 		image: text("image"),
@@ -156,9 +156,24 @@ export const episodes = pgTable(
 			false,
 		),
 		updatedAt: timestamp("updated_at").defaultNow(),
+		guid: text("guid"),
+		itunesEpisode: text("itunes_episode"),
 	},
 	(table) => ({
-		enclosureUrlIdx: uniqueIndex("enclosure_url_idx").on(table.enclosureUrl),
+		// Primary identifier: GUID if available
+		guidIdx: uniqueIndex("episodes_guid_idx")
+			.on(table.guid)
+			.where(sql`${table.guid} IS NOT NULL`),
+
+		// Secondary identifier: podcast_id + itunes_episode if available
+		itunesEpisodeIdx: uniqueIndex("episodes_podcast_itunes_episode_idx")
+			.on(table.podcastId, table.itunesEpisode)
+			.where(sql`${table.itunesEpisode} IS NOT NULL AND ${table.guid} IS NULL`),
+
+		// Fallback identifier: podcast_id + episode_slug only if neither guid nor itunes_episode is available
+		slugIdx: uniqueIndex("episodes_podcast_slug_idx")
+			.on(table.podcastId, table.title)
+			.where(sql`${table.guid} IS NULL AND ${table.itunesEpisode} IS NULL`),
 	}),
 );
 

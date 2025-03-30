@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "../ui/card";
+import { nanoid } from "nanoid";
 
 export function LoadingCardSkeleton() {
 	return (
@@ -13,12 +14,14 @@ export function LoadingCardSkeleton() {
 	);
 }
 
-export function LoadingGridSkeleton() {
+export function LoadingGridSkeleton({ count = 6 }: { count?: number }) {
+	// Generate stable keys for skeleton items
+	const keys = Array.from({ length: count }, () => nanoid());
+
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-			{Array.from({ length: 6 }).map((_, i) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: Need skeleton
-				<LoadingCardSkeleton key={`skeleton-${i}`} />
+			{keys.map((key) => (
+				<LoadingCardSkeleton key={key} />
 			))}
 		</div>
 	);

@@ -12,8 +12,25 @@ import { fetchMore } from "./actions";
 import { Suspense } from "react";
 import { BasicEpisode } from "@/types/shared";
 import { EpisodeList } from "@/components/podcasts/episode-list";
+import { createWeeklyCache } from "@/lib/utils/cache";
 
-export const revalidate = 3600;
+// Increase revalidation time to 1 week (604800 seconds)
+export const dynamic = "force-static";
+export const revalidate = 604800;
+
+// Create a cached function for fetching podcast page data
+const getPodcastDetailData = createWeeklyCache(
+	async (podcastSlug: string) => {
+		const podcast = await getPodcastBySlug(podcastSlug);
+		if (!podcast) return null;
+
+		const episodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 10, 0);
+
+		return { podcast, episodes };
+	},
+	["podcast-detail"],
+	["podcasts"],
+);
 
 export async function generateMetadata({
 	params,
@@ -21,10 +38,11 @@ export async function generateMetadata({
 	params: Promise<{ podcast: string }>;
 }): Promise<Metadata> {
 	const resolvedParams = await params;
-	const podcast = await getPodcastBySlug(resolvedParams.podcast);
+	const data = await getPodcastDetailData(resolvedParams.podcast);
 
-	if (!podcast) return {};
+	if (!data || !data.podcast) return {};
 
+	const podcast = data.podcast;
 	const imageUrl = podcast.image || "";
 	const description =
 		podcast.description?.substring(0, 155) ||
@@ -75,14 +93,13 @@ export default async function PodcastPage(props: {
 	params: Promise<{ podcast: string }>;
 }) {
 	const params = await props.params;
-	// console.log("params", params);
-	const podcast = await getPodcastBySlug(params.podcast);
+	const data = await getPodcastDetailData(params.podcast);
 
-	if (!podcast) {
+	if (!data || !data.podcast) {
 		notFound();
 	}
 
-	const episodes = await getLastTenEpisodesByPodcastSlug(params.podcast, 10, 0);
+	const { podcast, episodes } = data;
 
 	const jsonLd = {
 		"@context": "https://schema.org",

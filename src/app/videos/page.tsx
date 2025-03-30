@@ -15,6 +15,8 @@ import {
 import { parseAsString } from "nuqs/server";
 import AddContentWrapper from "@/components/content/AddContentWrapper";
 import { FeaturedChannelsRow } from "@/components/videos/FeaturedChannelsRow";
+import { createDailyCache } from "@/lib/utils/cache";
+import { cache } from "react";
 
 export const metadata: Metadata = {
 	title: "Running Videos | The Run Club",
@@ -35,7 +37,42 @@ interface PageProps {
 	searchParams: Promise<{ q?: string; category?: string }>;
 }
 
-export const revalidate = 3600;
+// Increase revalidation time to 24 hours
+export const dynamic = "force-static";
+export const revalidate = 86400; // 24 hours
+
+// Create cached data fetching function for video page data
+const getVideoPageData = createDailyCache(
+	async (query: string | undefined, tag: string | undefined) => {
+		// Get all base data in parallel (featured channels, tags)
+		const [featuredChannels, topTags] = await Promise.all([
+			getFeaturedChannels(10),
+			getTopVideoTags(10),
+		]);
+
+		// Get videos based on filters or get latest
+		const videos =
+			query || tag
+				? await getFilteredVideos({
+						searchQuery: query || undefined,
+						tag: tag || undefined,
+						limit: 30,
+				  })
+				: await getLatestVideos(30);
+
+		return { featuredChannels, topTags, videos };
+	},
+	["video-page-data"],
+	["videos"],
+);
+
+// Helper function to preload data
+const preloadVideoData = (
+	query: string | undefined,
+	tag: string | undefined,
+) => {
+	void getVideoPageData(query, tag);
+};
 
 export default async function VideosPage({ searchParams }: PageProps) {
 	// Parse search params
@@ -43,26 +80,14 @@ export default async function VideosPage({ searchParams }: PageProps) {
 	const query = parseAsString.withDefault("").parseServerSide(q);
 	const tag = parseAsString.withDefault("").parseServerSide(category);
 
-	// console.log("Search params:", { query, tag });
+	// Preload data
+	preloadVideoData(query || undefined, tag || undefined);
 
-	// Get featured channels and top tags
-	const [featuredChannels, topTags] = await Promise.all([
-		getFeaturedChannels(10),
-		getTopVideoTags(10),
-	]);
-
-	// Get videos based on filters or get latest
-	const videos =
-		query || tag
-			? await getFilteredVideos({
-					searchQuery: query || undefined,
-					tag: tag || undefined,
-					limit: 30,
-			  })
-			: await getLatestVideos(30);
-
-	// console.log("Videos count:", videos.length);
-	// console.log("First video:", videos[0]);
+	// Get all page data from cache
+	const { featuredChannels, topTags, videos } = await getVideoPageData(
+		query || undefined,
+		tag || undefined,
+	);
 
 	return (
 		<div className="container py-8 md:py-12">

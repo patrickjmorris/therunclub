@@ -9,7 +9,7 @@ import { extractUrlsFromText } from "@/lib/extract-urls";
 import { TabsWithState } from "@/components/TabsWithState";
 import Link from "next/link";
 import { eq, desc, isNotNull } from "drizzle-orm";
-import { videos } from "@/db/schema";
+import { videos, channels } from "@/db/schema";
 import { db } from "@/db/client";
 import { Suspense } from "react";
 import { LinkPreviewClientWrapper } from "@/components/LinkPreviewClientWrapper";
@@ -20,6 +20,7 @@ import {
 import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
 import { MoreContent } from "@/components/content/more-content";
 import { createWeeklyCache } from "@/lib/utils/cache";
+import { and } from "drizzle-orm";
 
 // Increase revalidation time to 1 week (604800 seconds)
 export const dynamic = "force-static";
@@ -124,14 +125,50 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
-	const allVideos = await db
-		.select({ id: videos.id })
-		.from(videos)
-		.where(isNotNull(videos.id));
+	console.log("[Build] Starting generateStaticParams for videos");
 
-	return allVideos.map((video) => ({
-		video: video.id,
-	}));
+	try {
+		// Get all channels
+		const allChannels = await db
+			.select({ id: channels.id })
+			.from(channels)
+			.limit(100); // Limit to top 100 channels
+
+		console.log(`[Build] Found ${allChannels.length} channels`);
+
+		const params = [];
+
+		// For each channel, get the 10 most recent videos
+		for (const channel of allChannels) {
+			try {
+				const recentVideos = await db
+					.select({ id: videos.id })
+					.from(videos)
+					.where(and(isNotNull(videos.id), eq(videos.channelId, channel.id)))
+					.orderBy(desc(videos.publishedAt))
+					.limit(10);
+
+				// Add each video to params
+				params.push(
+					...recentVideos.map((video) => ({
+						video: video.id,
+					})),
+				);
+
+				console.log(
+					`[Build] Added ${recentVideos.length} videos from channel ${channel.id}`,
+				);
+			} catch (error) {
+				console.error(`[Build] Error processing channel ${channel.id}:`, error);
+			}
+		}
+
+		console.log(`[Build] Total videos to build: ${params.length}`);
+		return params;
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams for videos:", error);
+		return []; // Return empty array instead of failing the build
+	}
 }
 
 export default async function VideoPage({ params }: VideoPageProps) {

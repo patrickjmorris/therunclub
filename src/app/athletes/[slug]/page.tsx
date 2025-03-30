@@ -15,6 +15,9 @@ import {
 	getAthleteData,
 	getAllAthletes,
 } from "@/lib/services/athlete-service";
+import { db } from "@/db/client";
+import { athletes, athleteHonors } from "@/db/schema";
+import { and, eq, isNotNull, ilike } from "drizzle-orm";
 
 export const revalidate = 86400; // Revalidate every day
 
@@ -34,10 +37,79 @@ async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 }
 
 export async function generateStaticParams() {
-	const allAthletes = await getAllAthletes();
-	return allAthletes.map((athlete) => ({
-		slug: athlete.slug,
-	}));
+	console.log("[Build] Starting generateStaticParams for athletes");
+
+	try {
+		// Get all athletes with their full data
+		const allAthletes = await db
+			.select()
+			.from(athletes)
+			.leftJoin(
+				athleteHonors,
+				eq(athletes.worldAthleticsId, athleteHonors.athleteId),
+			)
+			.where(isNotNull(athletes.slug));
+
+		console.log(`[Build] Found ${allAthletes.length} total athletes`);
+
+		// Group by athlete and check if any honor is Olympic
+		const athleteMap = new Map();
+
+		for (const record of allAthletes) {
+			const athlete = record.athletes;
+			const honor = record.athlete_honors;
+
+			if (!athleteMap.has(athlete.id)) {
+				athleteMap.set(athlete.id, {
+					...athlete,
+					honors: honor ? [honor] : [],
+				});
+			} else if (honor) {
+				const existingAthlete = athleteMap.get(athlete.id);
+				existingAthlete.honors.push(honor);
+			}
+		}
+
+		// Filter to only athletes with Olympic medals
+		const olympicMedalists = Array.from(athleteMap.values()).filter(
+			(athlete) => {
+				// Check if the athlete has any Olympic medals
+				return athlete.honors.some(
+					(honor: {
+						competition?: string;
+						place?: string;
+						discipline?: string;
+						mark?: string;
+					}) => {
+						if (!honor) return false;
+
+						const isOlympicEvent =
+							honor.competition?.toLowerCase().includes("olympic") ||
+							honor.competition?.toLowerCase().includes("olympics");
+
+						const isMedal =
+							honor.place === "1st" ||
+							honor.place === "2nd" ||
+							honor.place === "3rd" ||
+							honor.place?.toLowerCase().includes("gold") ||
+							honor.place?.toLowerCase().includes("silver") ||
+							honor.place?.toLowerCase().includes("bronze");
+
+						return isOlympicEvent && isMedal;
+					},
+				);
+			},
+		);
+
+		console.log(`[Build] Found ${olympicMedalists.length} Olympic medalists`);
+
+		return olympicMedalists.map((athlete) => ({
+			slug: athlete.slug,
+		}));
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams for athletes:", error);
+		return []; // Return empty array instead of failing the build
+	}
 }
 
 export async function generateMetadata({

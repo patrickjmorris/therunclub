@@ -6,7 +6,7 @@ import {
 } from "@/lib/services/podcast-service";
 import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
-import { isNotNull } from "drizzle-orm";
+import { and, isNotNull, like } from "drizzle-orm";
 
 import { fetchMore } from "./actions";
 import { Suspense } from "react";
@@ -79,14 +79,26 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
-	const allPodcasts = await db
-		.select({ slug: podcasts.podcastSlug })
-		.from(podcasts)
-		.where(isNotNull(podcasts.podcastSlug));
+	console.log("[Build] Starting generateStaticParams for podcasts");
 
-	return allPodcasts.map((podcast) => ({
-		podcast: podcast.slug,
-	}));
+	try {
+		// Only generate static parameters for English language podcasts
+		const englishPodcasts = await db
+			.select({ slug: podcasts.podcastSlug })
+			.from(podcasts)
+			.where(
+				and(isNotNull(podcasts.podcastSlug), like(podcasts.language, "%en%")),
+			);
+
+		console.log(`[Build] Found ${englishPodcasts.length} English podcasts`);
+
+		return englishPodcasts.map((podcast) => ({
+			podcast: podcast.slug,
+		}));
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams for podcasts:", error);
+		return []; // Return empty array instead of failing the build
+	}
 }
 
 export default async function PodcastPage(props: {

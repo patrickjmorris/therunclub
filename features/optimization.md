@@ -37,11 +37,11 @@ This document outlines our plan to optimize the performance of The Run Club webs
   - [ ] Implement proper chunking strategies
 
 ### Phase 3: Data Fetching Optimization
-- [ ] Optimize database queries
-  - [ ] Implement query caching
-  - [ ] Add proper indexes
-  - [ ] Optimize JOIN operations
-  - [ ] Implement proper pagination
+- [x] Optimize database queries
+  - [x] Implement query caching
+  - [x] Add proper indexes
+  - [x] Optimize JOIN operations
+  - [x] Implement proper pagination
 
 - [ ] Implement proper data preloading
   - [ ] Preload critical data
@@ -83,14 +83,18 @@ This document outlines our plan to optimize the performance of The Run Club webs
 - [x] Split homepage into smaller streaming components
 - [x] Added proper Suspense boundaries on homepage
 - [x] Created appropriate loading skeletons for each component
+- [x] Created database migrations to add missing indexes
+- [x] Optimized text search queries with better Postgres search patterns
+- [x] Implemented standardized pagination for main content types
 
 ### In Progress
-- [ ] Implement proper code splitting
+- [ ] Implement code splitting
+- [ ] Implement data preloading for critical paths
 
 ### Next Steps
-1. Begin implementing code splitting and lazy loading for below-the-fold content
-2. Use dynamic imports for non-critical components
-3. Begin implementing Phase 3: Data Fetching Optimization
+1. Complete the remaining data preloading tasks
+2. Begin implementing code splitting and lazy loading for non-critical components
+3. Begin Phase 4: Asset Optimization with image and font improvements
 
 ## Performance Metrics
 We will track the following metrics to measure our progress:

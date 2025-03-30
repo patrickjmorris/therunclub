@@ -4,6 +4,8 @@ import { desc, sql, asc } from "drizzle-orm";
 import DOMPurify from "isomorphic-dompurify";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { createWeeklyCache } from "@/lib/utils/cache";
+import { eq } from "drizzle-orm";
 
 export type SearchResult = {
 	type: "video" | "podcast" | "episode" | "channel";
@@ -334,4 +336,234 @@ export const globalSearch = unstable_cache(
 	},
 	["global-search"], // Cache key
 	{ revalidate: 600 }, // 10 minutes TTL
+);
+
+/**
+ * Prepare a search query for PostgreSQL tsquery
+ * This converts a user input string into a properly formatted tsquery
+ */
+function prepareSearchQuery(query: string): string {
+	// Trim whitespace and ensure the query is not empty
+	const trimmedQuery = query.trim();
+	if (!trimmedQuery) return "";
+
+	// Split the query into words and filter out empty strings
+	const words = trimmedQuery
+		.split(/\s+/)
+		.filter(Boolean)
+		.map((word) => {
+			// Escape special characters and add :* for prefix matching
+			const escaped = word.replace(/['&|!:*()]/g, "\\$&");
+			return `${escaped}:*`;
+		});
+
+	// Join words with & for AND logic
+	return words.join(" & ");
+}
+
+/**
+ * Optimized universal search across podcasts, episodes, and videos
+ * Uses plainto_tsquery for safer user input handling
+ */
+export const universalSearch = createWeeklyCache(
+	async (query: string, limit = 30) => {
+		if (!query || query.trim().length < 2) {
+			return {
+				podcasts: [],
+				episodes: [],
+				videos: [],
+			};
+		}
+
+		const preparedQuery = prepareSearchQuery(query);
+
+		// Execute searches in parallel for better performance
+		const [podcastResults, episodeResults, videoResults] = await Promise.all([
+			// Podcast search
+			db
+				.select({
+					id: podcasts.id,
+					title: podcasts.title,
+					image: podcasts.podcastImage,
+					description: podcasts.description,
+					type: sql<string>`'podcast'`.as("type"),
+					rank: sql<number>`ts_rank(
+					to_tsvector('english', ${podcasts.title} || ' ' || COALESCE(${podcasts.description}, '')), 
+					to_tsquery('english', ${preparedQuery})
+				)`.as("rank"),
+				})
+				.from(podcasts)
+				.where(
+					sql`to_tsvector('english', ${podcasts.title} || ' ' || COALESCE(${podcasts.description}, '')) @@ to_tsquery('english', ${preparedQuery})`,
+				)
+				.orderBy(desc(sql<string>`rank`))
+				.limit(Number(limit)),
+
+			// Episode search
+			db
+				.select({
+					id: episodes.id,
+					title: episodes.title,
+					podcastId: episodes.podcastId,
+					podcastTitle: podcasts.title,
+					podcastImage: podcasts.podcastImage,
+					podcastSlug: podcasts.podcastSlug,
+					episodeSlug: episodes.episodeSlug,
+					pubDate: episodes.pubDate,
+					type: sql<string>`'episode'`.as("type"),
+					rank: sql<number>`ts_rank(
+					to_tsvector('english', ${episodes.title} || ' ' || COALESCE(${episodes.content}, '')), 
+					to_tsquery('english', ${preparedQuery})
+				)`.as("rank"),
+				})
+				.from(episodes)
+				.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id)) // Use INNER JOIN instead of LEFT JOIN
+				.where(
+					sql`to_tsvector('english', ${episodes.title} || ' ' || COALESCE(${episodes.content}, '')) @@ to_tsquery('english', ${preparedQuery})`,
+				)
+				.orderBy(desc(sql<string>`rank`))
+				.limit(Number(limit)),
+
+			// Video search
+			db
+				.select({
+					id: videos.id,
+					title: videos.title,
+					description: videos.description,
+					thumbnailUrl: videos.thumbnailUrl,
+					channelTitle: channels.title,
+					publishedAt: videos.publishedAt,
+					type: sql<string>`'video'`.as("type"),
+					rank: sql<number>`ts_rank(
+					to_tsvector('english', ${videos.title} || ' ' || COALESCE(${videos.description}, '')), 
+					to_tsquery('english', ${preparedQuery})
+				)`.as("rank"),
+				})
+				.from(videos)
+				.innerJoin(channels, eq(videos.channelId, channels.id))
+				.where(
+					sql`to_tsvector('english', ${videos.title} || ' ' || COALESCE(${videos.description}, '')) @@ to_tsquery('english', ${preparedQuery})`,
+				)
+				.orderBy(desc(sql<string>`rank`))
+				.limit(Number(limit)),
+		]);
+
+		return {
+			podcasts: podcastResults,
+			episodes: episodeResults,
+			videos: videoResults,
+		};
+	},
+	["universal-search"],
+	["search"],
+);
+
+/**
+ * Enhanced search for podcasts with ranking
+ */
+export const searchPodcasts = createWeeklyCache(
+	async (query: string, limit = 30) => {
+		if (!query || query.trim().length < 2) {
+			return [];
+		}
+
+		const preparedQuery = prepareSearchQuery(query);
+
+		return db
+			.select({
+				id: podcasts.id,
+				title: podcasts.title,
+				image: podcasts.podcastImage,
+				description: podcasts.description,
+				podcastSlug: podcasts.podcastSlug,
+				rank: sql<number>`ts_rank(
+				to_tsvector('english', ${podcasts.title} || ' ' || COALESCE(${podcasts.description}, '')), 
+				to_tsquery('english', ${preparedQuery})
+			)`.as("rank"),
+			})
+			.from(podcasts)
+			.where(
+				sql`to_tsvector('english', ${podcasts.title} || ' ' || COALESCE(${podcasts.description}, '')) @@ to_tsquery('english', ${preparedQuery})`,
+			)
+			.orderBy(desc(sql<string>`rank`))
+			.limit(Number(limit));
+	},
+	["search-podcasts"],
+	["search", "podcasts"],
+);
+
+/**
+ * Enhanced search for episodes with ranking
+ */
+export const searchEpisodes = createWeeklyCache(
+	async (query: string, limit = 30) => {
+		if (!query || query.trim().length < 2) {
+			return [];
+		}
+
+		const preparedQuery = prepareSearchQuery(query);
+
+		return db
+			.select({
+				id: episodes.id,
+				title: episodes.title,
+				content: episodes.content,
+				podcastId: episodes.podcastId,
+				podcastTitle: podcasts.title,
+				podcastImage: podcasts.podcastImage,
+				podcastSlug: podcasts.podcastSlug,
+				episodeSlug: episodes.episodeSlug,
+				pubDate: episodes.pubDate,
+				rank: sql<number>`ts_rank(
+				to_tsvector('english', ${episodes.title} || ' ' || COALESCE(${episodes.content}, '')), 
+				to_tsquery('english', ${preparedQuery})
+			)`.as("rank"),
+			})
+			.from(episodes)
+			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+			.where(
+				sql`to_tsvector('english', ${episodes.title} || ' ' || COALESCE(${episodes.content}, '')) @@ to_tsquery('english', ${preparedQuery})`,
+			)
+			.orderBy(desc(sql<string>`rank`))
+			.limit(Number(limit));
+	},
+	["search-episodes"],
+	["search", "episodes"],
+);
+
+/**
+ * Enhanced search for videos with ranking
+ */
+export const searchVideos = createWeeklyCache(
+	async (query: string, limit = 30) => {
+		if (!query || query.trim().length < 2) {
+			return [];
+		}
+
+		const preparedQuery = prepareSearchQuery(query);
+
+		return db
+			.select({
+				id: videos.id,
+				title: videos.title,
+				description: videos.description,
+				thumbnailUrl: videos.thumbnailUrl,
+				channelId: videos.channelId,
+				channelTitle: channels.title,
+				publishedAt: videos.publishedAt,
+				rank: sql<number>`ts_rank(
+				to_tsvector('english', ${videos.title} || ' ' || COALESCE(${videos.description}, '')), 
+				to_tsquery('english', ${preparedQuery})
+			)`.as("rank"),
+			})
+			.from(videos)
+			.innerJoin(channels, eq(videos.channelId, channels.id))
+			.where(
+				sql`to_tsvector('english', ${videos.title} || ' ' || COALESCE(${videos.description}, '')) @@ to_tsquery('english', ${preparedQuery})`,
+			)
+			.orderBy(desc(sql<string>`rank`))
+			.limit(Number(limit));
+	},
+	["search-videos"],
+	["search", "videos"],
 );

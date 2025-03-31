@@ -1,16 +1,11 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db/client";
-import { eq } from "drizzle-orm";
-import { athletes } from "@/db/schema";
+import { eq, isNotNull } from "drizzle-orm";
+import { athleteHonors, athletes } from "@/db/schema";
 import { ProfileSection } from "./components/profile-section";
 import { AthleteMentions } from "@/components/athlete-mentions";
-import {
-	AthleteWithRelations,
-	Sponsor,
-	GearItem,
-	Event,
-} from "@/types/athlete";
+import { Sponsor, GearItem, Event } from "@/types/athlete";
 import {
 	getAthleteData,
 	getAthleteRecentMentions,
@@ -110,50 +105,132 @@ async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
 	}
 }
 
+export async function generateStaticParams() {
+	console.log("[Build] Starting generateStaticParams for athletes");
+
+	try {
+		// Get all athletes with their full data
+		const allAthletes = await db
+			.select()
+			.from(athletes)
+			.leftJoin(
+				athleteHonors,
+				eq(athletes.worldAthleticsId, athleteHonors.athleteId),
+			)
+			.where(isNotNull(athletes.slug));
+
+		console.log(`[Build] Found ${allAthletes.length} total athletes`);
+
+		// Group by athlete and check if any honor is Olympic
+		const athleteMap = new Map();
+
+		for (const record of allAthletes) {
+			const athlete = record.athletes;
+			const honor = record.athlete_honors;
+
+			if (!athleteMap.has(athlete.id)) {
+				athleteMap.set(athlete.id, {
+					...athlete,
+					honors: honor ? [honor] : [],
+				});
+			} else if (honor) {
+				const existingAthlete = athleteMap.get(athlete.id);
+				existingAthlete.honors.push(honor);
+			}
+		}
+
+		// Filter to only athletes with Olympic medals
+		const olympicMedalists = Array.from(athleteMap.values()).filter(
+			(athlete) => {
+				// Check if the athlete has any Olympic medals
+				return athlete.honors.some(
+					(honor: {
+						competition?: string;
+						place?: string;
+						discipline?: string;
+						mark?: string;
+					}) => {
+						if (!honor) return false;
+
+						const isOlympicEvent =
+							honor.competition?.toLowerCase().includes("olympic") ||
+							honor.competition?.toLowerCase().includes("olympics");
+
+						const isMedal =
+							honor.place === "1st" ||
+							honor.place === "2nd" ||
+							honor.place === "3rd" ||
+							honor.place?.toLowerCase().includes("gold") ||
+							honor.place?.toLowerCase().includes("silver") ||
+							honor.place?.toLowerCase().includes("bronze");
+
+						return isOlympicEvent && isMedal;
+					},
+				);
+			},
+		);
+
+		console.log(`[Build] Found ${olympicMedalists.length} Olympic medalists`);
+
+		return olympicMedalists.map((athlete) => ({
+			slug: athlete.slug,
+		}));
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams for athletes:", error);
+		return []; // Return empty array instead of failing the build
+	}
+}
+
 export async function generateMetadata({
 	params,
 }: {
 	params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-	const { slug } = await params;
-	const athlete = await db.query.athletes.findFirst({
-		where: eq(athletes.slug, slug),
-		columns: {
-			name: true,
-			bio: true,
-			imageUrl: true,
-		},
-	});
+	const resolvedParams = await params;
+	const athlete = await getAthleteData(resolvedParams.slug);
 
 	if (!athlete) {
 		return {
 			title: "Athlete Not Found",
-			description: "The requested athlete could not be found.",
 		};
 	}
 
+	const description =
+		athlete.bio ||
+		`Profile page for ${athlete.name}${
+			athlete.countryName ? ` from ${athlete.countryName}` : ""
+		}`;
+	const imageUrl = athlete.imageUrl || "";
+
 	return {
-		title: `${athlete.name} | The Run Club`,
-		description: athlete.bio || `Profile of ${athlete.name}`,
+		title: athlete.name,
+		description: description,
 		openGraph: {
-			title: `${athlete.name} | The Run Club`,
-			description: athlete.bio || `Profile of ${athlete.name}`,
-			images: athlete.imageUrl ? [athlete.imageUrl] : [],
+			type: "profile",
+			title: athlete.name,
+			description: description,
+			siteName: "The Run Club",
+			images: athlete.imageUrl
+				? [
+						{
+							url: imageUrl,
+							width: 350,
+							height: 350,
+							alt: athlete.name,
+						},
+				  ]
+				: [],
+		},
+		twitter: {
+			card: "summary_large_image",
+			title: athlete.name,
+			description: description,
+			images: athlete.imageUrl ? [imageUrl] : [],
+		},
+		alternates: {
+			canonical: `/athletes/${athlete.slug}`,
 		},
 	};
-}
-
-export async function generateStaticParams() {
-	const params = await Promise.resolve({});
-	const allAthletes = await db.query.athletes.findMany({
-		columns: {
-			slug: true,
-		},
-	});
-
-	return allAthletes.map((athlete) => ({
-		slug: athlete.slug,
-	}));
 }
 
 export default async function AthletePage({

@@ -4,106 +4,15 @@ import { db } from "@/db/client";
 import { eq, isNotNull } from "drizzle-orm";
 import { athleteHonors, athletes } from "@/db/schema";
 import { ProfileSection } from "./components/profile-section";
-import { AthleteMentions } from "@/components/athlete-mentions";
-import { Sponsor, GearItem, Event } from "@/types/athlete";
-import {
-	getAthleteData,
-	getAthleteRecentMentions,
-} from "@/lib/services/athlete-service";
-import dynamic from "next/dynamic";
-import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { nanoid } from "nanoid";
+import { AthleteProfile } from "./athlete-profile";
+import { SponsorsSection } from "./components/sponsors-section";
+import { GearSection } from "./components/gear-section";
+import { EventsSection } from "./components/events-section";
+import AthleteMentionsSection from "./components/mentions-section";
+import { getAthleteData } from "@/lib/services/athlete-service";
 import { canManageContent } from "@/lib/auth-utils";
-
-// Dynamically import components with loading states
-const DynamicAthleteProfile = dynamic(
-	() => import("./athlete-profile").then((mod) => mod.AthleteProfile),
-	{ loading: () => <AthleteProfileSkeleton /> },
-);
-
-const DynamicSponsorsSection = dynamic(
-	() =>
-		import("./components/sponsors-section").then((mod) => mod.SponsorsSection),
-	{ loading: () => <SponsorsSectionSkeleton /> },
-);
-
-const DynamicGearSection = dynamic(
-	() => import("./components/gear-section").then((mod) => mod.GearSection),
-	{ loading: () => <GearSectionSkeleton /> },
-);
-
-const DynamicEventsSection = dynamic(
-	() => import("./components/events-section").then((mod) => mod.EventsSection),
-	{ loading: () => <EventsSectionSkeleton /> },
-);
-
-// Loading state components
-function AthleteProfileSkeleton() {
-	return (
-		<div className="space-y-6">
-			<Skeleton className="h-8 w-1/3" />
-			<Skeleton className="h-4 w-full" />
-			<Skeleton className="h-4 w-2/3" />
-		</div>
-	);
-}
-
-function SponsorsSectionSkeleton() {
-	const skeletonKeys = Array.from({ length: 3 }, () => nanoid());
-	return (
-		<div className="space-y-6">
-			<Skeleton className="h-8 w-1/3" />
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{skeletonKeys.map((key) => (
-					<Skeleton key={key} className="h-32" />
-				))}
-			</div>
-		</div>
-	);
-}
-
-function GearSectionSkeleton() {
-	const skeletonKeys = Array.from({ length: 3 }, () => nanoid());
-	return (
-		<div className="space-y-6">
-			<Skeleton className="h-8 w-1/3" />
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{skeletonKeys.map((key) => (
-					<Skeleton key={key} className="h-32" />
-				))}
-			</div>
-		</div>
-	);
-}
-
-function EventsSectionSkeleton() {
-	const skeletonKeys = Array.from({ length: 3 }, () => nanoid());
-	return (
-		<div className="space-y-6">
-			<Skeleton className="h-8 w-1/3" />
-			<div className="space-y-4">
-				{skeletonKeys.map((key) => (
-					<Skeleton key={key} className="h-24" />
-				))}
-			</div>
-		</div>
-	);
-}
-
-async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
-	try {
-		const mentions = await getAthleteRecentMentions(athleteId);
-		return <AthleteMentions mentions={mentions} />;
-	} catch (error) {
-		console.error("Error loading athlete mentions:", error);
-		return (
-			<div className="text-red-500">
-				Unable to load recent mentions for this athlete.
-			</div>
-		);
-	}
-}
+import { Suspense } from "react";
+import { MentionLoading } from "@/components/mention-loading";
 
 export async function generateStaticParams() {
 	console.log("[Build] Starting generateStaticParams for athletes");
@@ -153,16 +62,13 @@ export async function generateStaticParams() {
 						if (!honor) return false;
 
 						const isOlympicEvent =
-							honor.competition?.toLowerCase().includes("olympic") ||
-							honor.competition?.toLowerCase().includes("olympics");
+							honor.competition?.toLowerCase().includes("olympic") &&
+							!honor.competition?.toLowerCase().includes("youth");
 
 						const isMedal =
-							honor.place === "1st" ||
-							honor.place === "2nd" ||
-							honor.place === "3rd" ||
-							honor.place?.toLowerCase().includes("gold") ||
-							honor.place?.toLowerCase().includes("silver") ||
-							honor.place?.toLowerCase().includes("bronze");
+							honor.place === "1." ||
+							honor.place === "2." ||
+							honor.place === "3.";
 
 						return isOlympicEvent && isMedal;
 					},
@@ -298,13 +204,13 @@ export default async function AthletePage({
 						<div className="mt-8 lg:grid lg:grid-cols-12 lg:gap-8">
 							{/* Left column - Stats and Honors */}
 							<div className="lg:col-span-4">
-								<DynamicAthleteProfile athlete={athlete} isAdmin={isAdmin} />
+								<AthleteProfile athlete={athlete} isAdmin={isAdmin} />
 							</div>
 
 							{/* Right column - Sponsors, Gear, Events */}
 							<div className="mt-8 lg:mt-0 lg:col-span-8">
 								{/* Sponsors Section */}
-								<DynamicSponsorsSection
+								<SponsorsSection
 									athleteSlug={athlete.slug}
 									sponsors={athlete.sponsors.map((sponsor) => ({
 										id: sponsor.id,
@@ -320,7 +226,7 @@ export default async function AthletePage({
 
 								{/* Gear Section */}
 								<div className="mt-8">
-									<DynamicGearSection
+									<GearSection
 										athleteSlug={athlete.slug}
 										gear={athlete.gear.map((item) => ({
 											id: item.id,
@@ -339,7 +245,7 @@ export default async function AthletePage({
 
 								{/* Events Section */}
 								<div className="mt-8">
-									<DynamicEventsSection
+									<EventsSection
 										athleteSlug={athlete.slug}
 										events={athlete.events.map((event) => ({
 											id: event.id,
@@ -364,9 +270,11 @@ export default async function AthletePage({
 
 								{/* Recent Mentions Section */}
 								<div className="mt-8">
-									<Suspense fallback={<EventsSectionSkeleton />}>
+									<Suspense
+										fallback={<MentionLoading title="Recent Mentions" />}
+									>
 										<AthleteMentionsSection
-											athleteId={athlete.worldAthleticsId}
+											athleteId={athlete.worldAthleticsId || ""}
 										/>
 									</Suspense>
 								</div>

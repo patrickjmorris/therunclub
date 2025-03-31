@@ -2,23 +2,29 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PaceCalculator from "@/components/calculator/pace-calculator";
-import { useQueryState } from "nuqs";
 import { QuickTips } from "./quick-tips";
 import { AdvancedTips } from "./advanced-tips";
+import { useQueryState } from "nuqs";
 
 export function CalculatorModeProvider() {
-	const [calculatorMode, setCalculatorMode] = useQueryState("mode", {
+	// Keep URL state management but with simpler parsing
+	const [mode] = useQueryState("mode", {
 		defaultValue: "simple",
-		parse: (value) => value as "simple" | "advanced",
+		parse: (value) => (value === "advanced" ? "advanced" : "simple"),
 		serialize: (value) => value,
 	});
 
 	return (
 		<Tabs
-			defaultValue={calculatorMode}
-			value={calculatorMode}
+			defaultValue={mode}
+			value={mode}
 			className="space-y-8"
-			onValueChange={(value) => setCalculatorMode(value)}
+			// Update URL when tab changes, but avoid unnecessary re-renders
+			onValueChange={(value) => {
+				const url = new URL(window.location.href);
+				url.searchParams.set("mode", value);
+				window.history.replaceState({}, "", url);
+			}}
 		>
 			<div className="flex justify-center sm:justify-start">
 				<TabsList className="grid w-full sm:w-auto grid-cols-2">

@@ -3,16 +3,22 @@ import { runningClubs } from "@/db/schema";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ClubFilters } from "@/app/clubs/club-filters";
-import { Suspense } from "react";
 
-async function getUniqueCities() {
+// This ensures the page and data are generated at build time
+export const revalidate = 3600; // Revalidate every hour
+
+async function getClubsData() {
 	const clubs = await db.select().from(runningClubs);
-	const cities = [...new Set(clubs.map((club) => club.location.city))];
-	return cities.sort();
+	const cities = [...new Set(clubs.map((club) => club.location.city))].sort();
+
+	return {
+		cities,
+		clubs, // Pass clubs directly to avoid another DB query in ClubFilters
+	};
 }
 
 export default async function ClubsPage() {
-	const cities = await getUniqueCities();
+	const { cities, clubs } = await getClubsData();
 
 	return (
 		<div className="container py-8">
@@ -28,9 +34,7 @@ export default async function ClubsPage() {
 				</Link>
 			</div>
 
-			<Suspense>
-				<ClubFilters cities={cities} />
-			</Suspense>
+			<ClubFilters cities={cities} initialClubs={clubs} />
 		</div>
 	);
 }

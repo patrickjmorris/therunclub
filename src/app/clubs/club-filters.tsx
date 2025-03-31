@@ -12,33 +12,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { MapPin, X, ExternalLink, Footprints } from "lucide-react";
 import { useQueryState } from "nuqs";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { type RunningClub } from "@/db/schema";
-import { getFilteredClubs } from "./actions";
+
 interface ClubFiltersProps {
 	cities: string[];
+	initialClubs: RunningClub[];
 }
 
-export function ClubFilters({ cities }: ClubFiltersProps) {
+export function ClubFilters({ cities, initialClubs }: ClubFiltersProps) {
 	const [city, setCity] = useQueryState("city");
-	const [clubs, setClubs] = useState<RunningClub[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	const [filteredClubs, setFilteredClubs] =
+		useState<RunningClub[]>(initialClubs);
 
+	// Filter clubs client-side when city changes
 	useEffect(() => {
-		async function fetchClubs() {
-			setIsLoading(true);
-			try {
-				const data = await getFilteredClubs(city);
-				setClubs(data);
-			} catch (error) {
-				console.error("Failed to fetch clubs:", error);
-			} finally {
-				setIsLoading(false);
-			}
+		if (!city) {
+			setFilteredClubs(initialClubs);
+			return;
 		}
 
-		fetchClubs();
-	}, [city]);
+		const filtered = initialClubs.filter((club) => club.location.city === city);
+		setFilteredClubs(filtered);
+	}, [city, initialClubs]);
 
 	return (
 		<>
@@ -67,7 +63,7 @@ export function ClubFilters({ cities }: ClubFiltersProps) {
 
 			{/* Clubs Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{clubs.map((club) => (
+				{filteredClubs.map((club) => (
 					<Card key={club.id} className="flex flex-col">
 						<CardHeader>
 							<div className="flex items-start justify-between">
@@ -115,7 +111,6 @@ export function ClubFilters({ cities }: ClubFiltersProps) {
 									</a>
 								</Button>
 							)}
-							{/* Other social media buttons */}
 						</CardFooter>
 					</Card>
 				))}

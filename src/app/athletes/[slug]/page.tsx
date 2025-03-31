@@ -236,10 +236,11 @@ export async function generateMetadata({
 export default async function AthletePage({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }) {
+	const resolvedParams = await params;
 	const [athlete, isAdmin] = await Promise.all([
-		getAthleteData(params.slug),
+		getAthleteData(resolvedParams.slug),
 		canManageContent(),
 	]);
 
@@ -250,38 +251,6 @@ export default async function AthletePage({
 	if (!athlete.worldAthleticsId) {
 		notFound();
 	}
-
-	// Transform data to match component prop types
-	const transformedSponsors: Sponsor[] = athlete.sponsors.map((sponsor) => ({
-		id: sponsor.id,
-		name: sponsor.name,
-		logoUrl: sponsor.logo,
-		website: sponsor.website,
-	}));
-
-	const transformedGear: GearItem[] = athlete.gear.map((item) => ({
-		id: item.id,
-		name: item.name,
-		description: item.description,
-		imageUrl: item.imageUrl,
-		link: item.purchaseUrl,
-	}));
-
-	const transformedEvents: Event[] = athlete.events.map((event) => ({
-		id: event.id,
-		name: event.name,
-		date: event.date,
-		location: event.location,
-		discipline: event.discipline,
-		status: event.status as "upcoming" | "completed" | "cancelled",
-		result: event.result
-			? {
-					place: event.result.place?.toString() ?? null,
-					time: event.result.time ?? null,
-					notes: event.result.notes ?? null,
-			  }
-			: null,
-	}));
 
 	// Prepare structured data for SEO
 	const structuredData = {

@@ -1,26 +1,67 @@
 import { Metadata } from "next";
-import { VideoPlayer } from "@/components/videos/video-player";
 import { getVideoById, getChannelVideos } from "@/lib/services/video-service";
 import { notFound } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { extractUrlsFromText } from "@/lib/extract-urls";
-import { TabsWithState } from "@/components/TabsWithState";
 import Link from "next/link";
 import { eq, desc, isNotNull } from "drizzle-orm";
 import { videos, channels } from "@/db/schema";
 import { db } from "@/db/client";
 import { Suspense } from "react";
-import { LinkPreviewClientWrapper } from "@/components/LinkPreviewClientWrapper";
-import {
-	LinkPreviewPreloader,
-	preloadLinks,
-} from "@/components/LinkPreviewPreloader";
-import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
-import { MoreContent } from "@/components/content/more-content";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { and } from "drizzle-orm";
+import { preloadLinks } from "@/components/LinkPreviewPreloader";
+
+// Dynamically import components
+const DynamicVideoPlayer = (await import("next/dynamic")).default(
+	() =>
+		import("@/components/videos/video-player").then((mod) => ({
+			default: mod.VideoPlayer,
+		})),
+	{ ssr: false },
+);
+
+const DynamicTabsWithState = (await import("next/dynamic")).default(
+	() =>
+		import("@/components/TabsWithState").then((mod) => ({
+			default: mod.TabsWithState,
+		})),
+	{ ssr: false },
+);
+
+const DynamicLinkPreviewClientWrapper = (await import("next/dynamic")).default(
+	() =>
+		import("@/components/LinkPreviewClientWrapper").then((mod) => ({
+			default: mod.LinkPreviewClientWrapper,
+		})),
+	{ ssr: false },
+);
+
+const DynamicLinkPreviewPreloader = (await import("next/dynamic")).default(
+	() =>
+		import("@/components/LinkPreviewPreloader").then((mod) => ({
+			default: mod.LinkPreviewPreloader,
+		})),
+	{ ssr: false },
+);
+
+const DynamicLinkPreviewErrorBoundary = (await import("next/dynamic")).default(
+	() =>
+		import("@/components/LinkPreviewErrorBoundary").then((mod) => ({
+			default: mod.LinkPreviewErrorBoundary,
+		})),
+	{ ssr: false },
+);
+
+const DynamicMoreContent = (await import("next/dynamic")).default(
+	() =>
+		import("@/components/content/more-content").then((mod) => ({
+			default: mod.MoreContent,
+		})),
+	{ ssr: false },
+);
 
 // Increase revalidation time to 1 week (604800 seconds)
 export const dynamic = "force-static";
@@ -194,7 +235,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
 
 	return (
 		<div className="container py-8">
-			<VideoPlayer videoId={videoData.youtubeVideoId} title={videoData.title} />
+			<DynamicVideoPlayer
+				videoId={videoData.youtubeVideoId}
+				title={videoData.title}
+			/>
 			<div className="mt-4">
 				<h1 className="text-2xl font-bold">{videoData.title}</h1>
 
@@ -253,8 +297,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
 				<div className="mt-6 max-w-3xl">
 					{urls.length > 0 ? (
 						<>
-							<LinkPreviewPreloader urls={urls} />
-							<TabsWithState
+							<DynamicLinkPreviewPreloader urls={urls} />
+							<DynamicTabsWithState
 								className="max-w-3xl"
 								tabs={[
 									{
@@ -283,7 +327,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 														</div>
 													}
 												>
-													<LinkPreviewErrorBoundary
+													<DynamicLinkPreviewErrorBoundary
 														fallback={
 															<div className="text-sm text-muted-foreground">
 																Unable to load link previews. You can still
@@ -291,11 +335,11 @@ export default async function VideoPage({ params }: VideoPageProps) {
 															</div>
 														}
 													>
-														<LinkPreviewClientWrapper
+														<DynamicLinkPreviewClientWrapper
 															urls={urls}
 															preloadedData={preloadedData}
 														/>
-													</LinkPreviewErrorBoundary>
+													</DynamicLinkPreviewErrorBoundary>
 												</Suspense>
 											</div>
 										),
@@ -318,7 +362,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 
 			{/* More Videos Section */}
 			{moreVideos.length > 0 && (
-				<MoreContent
+				<DynamicMoreContent
 					title={`More from ${videoData.channelTitle}`}
 					items={moreVideos.map((v) => ({
 						id: v.id,

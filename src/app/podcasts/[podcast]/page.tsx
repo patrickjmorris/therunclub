@@ -11,8 +11,29 @@ import { and, isNotNull, like } from "drizzle-orm";
 import { fetchMore } from "./actions";
 import { Suspense } from "react";
 import { BasicEpisode } from "@/types/shared";
-import { EpisodeList } from "@/components/podcasts/episode-list";
 import { createWeeklyCache } from "@/lib/utils/cache";
+import dynamicImport from "next/dynamic";
+import { nanoid } from "nanoid";
+
+// Dynamically import the episode list component
+const DynamicEpisodeList = dynamicImport(
+	() =>
+		import("@/components/podcasts/DynamicEpisodeList").then((mod) => ({
+			default: mod.DynamicEpisodeList,
+		})),
+	{
+		loading: () => (
+			<div className="space-y-4">
+				{Array.from({ length: 3 }).map(() => (
+					<div key={nanoid()} className="animate-pulse">
+						<div className="h-32 bg-muted rounded-lg" />
+					</div>
+				))}
+			</div>
+		),
+		ssr: true,
+	},
+);
 
 // Increase revalidation time to 1 week (604800 seconds)
 export const dynamic = "force-static";
@@ -144,7 +165,7 @@ export default async function PodcastPage(props: {
 			<div className="mt-8">
 				<h2 className="text-xl font-semibold mb-4">Latest Episodes</h2>
 				<Suspense fallback={<div>Loading episodes...</div>}>
-					<EpisodeList
+					<DynamicEpisodeList
 						initialEpisodes={episodes as BasicEpisode[]}
 						fetchMore={fetchMore.bind(null, params.podcast)}
 						hasMore={episodes.length === 10}

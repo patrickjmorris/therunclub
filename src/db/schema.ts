@@ -132,6 +132,8 @@ export const podcasts = pgTable(
 	},
 	(table) => ({
 		feedUrlIdx: uniqueIndex("feed_url_idx").on(table.feedUrl),
+		podcastSlugIdx: uniqueIndex("idx_podcasts_slug").on(table.podcastSlug),
+		podcastTitleIdx: index("idx_podcasts_title").on(table.title),
 	}),
 );
 
@@ -165,15 +167,17 @@ export const episodes = pgTable(
 			.on(table.guid)
 			.where(sql`${table.guid} IS NOT NULL`),
 
-		// Secondary identifier: podcast_id + itunes_episode if available
-		itunesEpisodeIdx: uniqueIndex("episodes_podcast_itunes_episode_idx")
-			.on(table.podcastId, table.itunesEpisode)
-			.where(sql`${table.itunesEpisode} IS NOT NULL AND ${table.guid} IS NULL`),
+		// Secondary identifier: enclosureUrl (required and unique)
+		enclosureUrlIdx: uniqueIndex("episodes_enclosure_url_idx").on(
+			table.enclosureUrl,
+		),
 
-		// Fallback identifier: podcast_id + episode_slug only if neither guid nor itunes_episode is available
-		slugIdx: uniqueIndex("episodes_podcast_slug_idx")
-			.on(table.podcastId, table.title)
-			.where(sql`${table.guid} IS NULL AND ${table.itunesEpisode} IS NULL`),
+		// Performance indexes
+		episodesPodcastPubDateIdx: index("idx_episodes_podcast_pubdate").on(
+			table.podcastId,
+			table.pubDate,
+		),
+		episodesTitleIdx: index("idx_episodes_title").on(table.title),
 	}),
 );
 

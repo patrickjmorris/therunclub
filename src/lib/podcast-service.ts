@@ -365,7 +365,7 @@ async function processPodcast(
 				// Wait for all episode values to be processed
 				const processedEpisodeValues = await Promise.all(episodeValues);
 
-				// Remove duplicates by keeping only the first occurrence of each GUID or iTunes episode number
+				// Remove duplicates by keeping only the first occurrence of each GUID or enclosureUrl
 				const uniqueEpisodes = processedEpisodeValues.reduce((acc, episode) => {
 					// If episode has a GUID, use that as the key
 					if (episode.guid) {
@@ -374,16 +374,9 @@ async function processPodcast(
 							acc.set(key, episode);
 						}
 					}
-					// If no GUID but has iTunes episode number, use podcast ID + episode number as key
-					else if (episode.itunesEpisode) {
-						const key = `${episode.podcastId}-${episode.itunesEpisode}`;
-						if (!acc.has(key)) {
-							acc.set(key, episode);
-						}
-					}
-					// If neither, use podcast ID + episode slug as key
+					// If no GUID, use enclosureUrl as the key
 					else {
-						const key = `${episode.podcastId}-${episode.episodeSlug}`;
+						const key = episode.enclosureUrl;
 						if (!acc.has(key)) {
 							acc.set(key, episode);
 						}
@@ -402,9 +395,14 @@ async function processPodcast(
 				}
 
 				try {
+					// First try to upsert episodes with GUIDs
 					await db
 						.insert(episodes)
-						.values(deduplicatedEpisodes as Episode[])
+						.values(
+							deduplicatedEpisodes.filter(
+								(episode) => episode.guid,
+							) as Episode[],
+						)
 						.onConflictDoUpdate({
 							target: [episodes.guid],
 							where: sql`${episodes.guid} IS NOT NULL AND EXCLUDED.guid IS NOT NULL`,
@@ -424,50 +422,22 @@ async function processPodcast(
 							},
 						});
 
-					// Handle episodes with iTunes episode numbers but no GUIDs
+					// Then handle episodes without GUIDs using enclosureUrl
 					await db
 						.insert(episodes)
 						.values(
 							deduplicatedEpisodes.filter(
-								(episode) => !episode.guid && episode.itunesEpisode,
+								(episode) => !episode.guid,
 							) as Episode[],
 						)
 						.onConflictDoUpdate({
-							target: [episodes.podcastId, episodes.itunesEpisode],
-							where: sql`${episodes.itunesEpisode} IS NOT NULL AND EXCLUDED.itunesEpisode IS NOT NULL AND ${episodes.guid} IS NULL`,
+							target: [episodes.enclosureUrl],
 							set: {
 								title: sql`EXCLUDED.title`,
 								episodeSlug: sql`EXCLUDED.episode_slug`,
 								pubDate: sql`EXCLUDED.pub_date`,
 								content: sql`EXCLUDED.content`,
 								link: sql`EXCLUDED.link`,
-								enclosureUrl: sql`EXCLUDED.enclosure_url`,
-								duration: sql`EXCLUDED.duration`,
-								explicit: sql`EXCLUDED.explicit`,
-								image: sql`EXCLUDED.image`,
-								episodeImage: sql`EXCLUDED.episode_image`,
-								guid: sql`EXCLUDED.guid`,
-								updatedAt: sql`CURRENT_TIMESTAMP`,
-							},
-						});
-
-					// Handle episodes without GUIDs or iTunes episode numbers
-					await db
-						.insert(episodes)
-						.values(
-							deduplicatedEpisodes.filter(
-								(episode) => !episode.guid && !episode.itunesEpisode,
-							) as Episode[],
-						)
-						.onConflictDoUpdate({
-							target: [episodes.podcastId, episodes.episodeSlug],
-							where: sql`${episodes.guid} IS NULL AND ${episodes.itunesEpisode} IS NULL`,
-							set: {
-								title: sql`EXCLUDED.title`,
-								pubDate: sql`EXCLUDED.pub_date`,
-								content: sql`EXCLUDED.content`,
-								link: sql`EXCLUDED.link`,
-								enclosureUrl: sql`EXCLUDED.enclosure_url`,
 								duration: sql`EXCLUDED.duration`,
 								explicit: sql`EXCLUDED.explicit`,
 								image: sql`EXCLUDED.image`,

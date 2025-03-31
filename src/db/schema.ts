@@ -149,7 +149,7 @@ export const episodes = pgTable(
 		pubDate: timestamp("pub_date"),
 		content: text("content"),
 		link: text("link"),
-		enclosureUrl: text("enclosure_url").notNull(),
+		enclosureUrl: text("enclosure_url").notNull().unique(),
 		duration: text("duration").notNull(),
 		explicit: text("explicit", { enum: ["yes", "no"] }).default("no"),
 		image: text("image"),
@@ -158,7 +158,7 @@ export const episodes = pgTable(
 			false,
 		),
 		updatedAt: timestamp("updated_at").defaultNow(),
-		guid: text("guid"),
+		guid: text("guid").unique(),
 		itunesEpisode: text("itunes_episode"),
 	},
 	(table) => ({

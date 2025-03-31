@@ -1,16 +1,31 @@
-import {
-	getChannelById,
-	getChannelVideos,
-	getAllChannels,
-} from "@/lib/services/video-service";
+import { getChannelById, getChannelVideos } from "@/lib/services/video-service";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Suspense } from "react";
 import { Metadata } from "next";
 import { Globe, Play, Users, Video as VideoIcon } from "lucide-react";
-import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
-import { InfiniteVideoGrid } from "@/components/videos/infinite-video-grid";
 import { fetchMore } from "./actions";
+import { sql, isNotNull, desc } from "drizzle-orm";
+import { db } from "@/db/client";
+import { channels } from "@/db/schema";
+import dynamic from "next/dynamic";
+
+// Dynamically import components
+const InfiniteVideoGrid = dynamic(
+	() =>
+		import("@/components/videos/infinite-video-grid").then((mod) => ({
+			default: mod.InfiniteVideoGrid,
+		})),
+	{ ssr: true },
+);
+
+const LoadingGridSkeleton = dynamic(
+	() =>
+		import("@/components/videos/loading-ui").then((mod) => ({
+			default: mod.LoadingGridSkeleton,
+		})),
+	{ ssr: true },
+);
 
 interface ChannelPageProps {
 	params: Promise<{
@@ -20,10 +35,27 @@ interface ChannelPageProps {
 
 // Generate static params for initial channels
 export async function generateStaticParams() {
-	const channels = await getAllChannels();
-	return channels.map((channel) => ({
-		channelId: channel.id,
-	}));
+	console.log("[Build] Starting generateStaticParams for channels");
+
+	try {
+		// Get top 100 channels by subscriber count
+		const subscriberCountCol = sql`CAST(${channels.subscriberCount} AS INTEGER)`;
+		const topChannels = await db
+			.select({ id: channels.id })
+			.from(channels)
+			.where(isNotNull(channels.thumbnailUrl))
+			.orderBy(desc(subscriberCountCol))
+			.limit(100);
+
+		console.log(`[Build] Found ${topChannels.length} top channels`);
+
+		return topChannels.map((channel: { id: string }) => ({
+			channelId: channel.id,
+		}));
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams for channels:", error);
+		return []; // Return empty array instead of failing the build
+	}
 }
 
 // Generate dynamic metadata for SEO

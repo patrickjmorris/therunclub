@@ -36,8 +36,11 @@ import {
 	getAthleteData,
 	getAllAthletes,
 } from "@/lib/services/athlete-service";
+import { formatDistanceToNow, format } from "date-fns";
+import { createWeeklyCache } from "@/lib/utils/cache";
 
-export const revalidate = 86400; // Revalidate every day
+export const dynamic = "force-static";
+export const revalidate = 604800;
 
 interface EpisodePageProps {
 	params: Promise<{
@@ -108,35 +111,68 @@ export async function generateStaticParams() {
 	}
 }
 
+// Create a cached function for fetching episode data
+const getEpisodeData = createWeeklyCache(
+	async (podcastSlug: string, episodeSlug: string) => {
+		const episode = await getEpisode(episodeSlug);
+
+		// Return null if episode doesn't exist or doesn't match podcast
+		if (!episode || episode.podcastSlug !== podcastSlug) {
+			return null;
+		}
+
+		// Get more episodes from the same podcast (fetch 4 to ensure we have enough after filtering)
+		const moreEpisodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 4);
+		const filteredMoreEpisodes = moreEpisodes
+			.filter((e) => e.episodeSlug !== episodeSlug)
+			.slice(0, 3);
+
+		const date = episode.pubDate ? new Date(episode.pubDate) : new Date();
+		const imageUrl = episode.image || episode.podcastImage || "";
+		const duration = episode.duration ? formatDuration(episode.duration) : null;
+		const sanitizedContent = sanitizeHtml(episode.content ?? "");
+		const urls = extractUrlsFromHtml(sanitizedContent);
+
+		return {
+			episode,
+			moreEpisodes: filteredMoreEpisodes,
+			date,
+			imageUrl,
+			duration,
+			sanitizedContent,
+			urls,
+		};
+	},
+	["episode-detail"],
+	["episodes"],
+);
+
 export async function generateMetadata({
 	params,
 }: EpisodePageProps): Promise<Metadata> {
-	const resolvedParams = await params;
-	const episode = await getEpisode(resolvedParams.episode);
+	const { podcast: podcastSlug, episode: episodeSlug } = await params;
+	const data = await getEpisodeData(podcastSlug, episodeSlug);
 
-	if (!episode || episode.podcastSlug !== resolvedParams.podcast) {
-		return {};
+	if (!data) {
+		return {
+			title: "Episode Not Found",
+			description: "The episode you're looking for could not be found.",
+		};
 	}
 
-	const imageUrl = episode.image || episode.podcastImage || "";
-	const description =
-		episode.content?.substring(0, 155) ||
-		`Listen to ${episode.title} on The Run Club`;
+	const { episode, imageUrl } = data;
+	const title = `${episode.title} | ${episode.podcastTitle}`;
+	const description = episode.content
+		? `${episode.content.substring(0, 155).replace(/<[^>]*>/g, "")}...`
+		: `Listen to ${episode.title} on The Run Club`;
 
 	return {
-		title: episode.title,
-		description: description,
+		title,
+		description,
 		openGraph: {
+			title,
+			description,
 			type: "article",
-			title: episode.title,
-			description: description,
-			siteName: "The Run Club",
-			publishedTime: episode.pubDate
-				? new Date(episode.pubDate).toISOString()
-				: "",
-			modifiedTime: episode.pubDate
-				? new Date(episode.pubDate).toISOString()
-				: "",
 			images: [
 				{
 					url: imageUrl,
@@ -145,51 +181,44 @@ export async function generateMetadata({
 					alt: episode.title,
 				},
 			],
-			locale: "en_US",
-			authors: episode.podcastAuthor,
+			audio: episode.enclosureUrl
+				? [
+						{
+							url: episode.enclosureUrl,
+							type: "audio/mpeg",
+						},
+				  ]
+				: undefined,
 		},
 		twitter: {
 			card: "summary_large_image",
-			title: episode.title,
-			description: description,
-			images: [imageUrl],
+			title,
+			description,
+			images: imageUrl ? [imageUrl] : undefined,
 		},
 		alternates: {
-			canonical: `/podcasts/${resolvedParams.podcast}/${resolvedParams.episode}`,
+			canonical: `/podcasts/${podcastSlug}/${episodeSlug}`,
 		},
 	};
 }
 
-// Update link styles function
-function addLinkStyles(html: string): string {
-	return html.replace(
-		/<a\s/g,
-		'<a class="text-blue-600 dark:text-blue-400 underline decoration-blue-600/30 dark:decoration-blue-400/30 hover:decoration-blue-600 dark:hover:decoration-blue-400 transition-colors" ',
-	);
-}
-
 export default async function EpisodePage({ params }: EpisodePageProps) {
-	// console.log("Episode Page - Params:", params);
 	const { podcast: podcastSlug, episode: episodeSlug } = await params;
-	const episode = await getEpisode(episodeSlug);
-	// console.log("Episode Page - Episode Data:", episode);
+	const data = await getEpisodeData(podcastSlug, episodeSlug);
 
-	if (!episode || episode.podcastSlug !== podcastSlug) {
-		console.log("Episode Page - No matching episode found, returning 404");
+	if (!data) {
 		notFound();
 	}
 
-	// Get more episodes from the same podcast (fetch 4 to ensure we have enough after filtering)
-	const moreEpisodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 4);
-	const filteredMoreEpisodes = moreEpisodes
-		.filter((e) => e.episodeSlug !== episodeSlug)
-		.slice(0, 3);
-
-	const date = episode.pubDate ? new Date(episode.pubDate) : new Date();
-	const imageUrl = episode.image || episode.podcastImage;
-	const duration = episode.duration ? formatDuration(episode.duration) : null;
-	const sanitizedContent = addLinkStyles(sanitizeHtml(episode.content ?? ""));
-	const urls = extractUrlsFromHtml(sanitizedContent);
+	const {
+		episode,
+		moreEpisodes,
+		date,
+		imageUrl,
+		duration,
+		sanitizedContent,
+		urls,
+	} = data;
 
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
@@ -347,10 +376,10 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 			</Card>
 
 			{/* More Episodes Section */}
-			{filteredMoreEpisodes.length > 0 && (
+			{moreEpisodes.length > 0 && (
 				<MoreContent
 					title={`More from ${episode.podcastTitle}`}
-					items={filteredMoreEpisodes.map((e) => ({
+					items={moreEpisodes.map((e) => ({
 						id: e.id,
 						title: e.title,
 						thumbnailUrl: e.episodeImage ?? e.podcastImage ?? undefined,

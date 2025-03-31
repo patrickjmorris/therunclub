@@ -1,43 +1,90 @@
-import { Suspense } from "react";
+import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getUserRole } from "@/lib/auth-utils";
+import { db } from "@/db/client";
+import { eq, isNotNull } from "drizzle-orm";
+import { athleteHonors, athletes } from "@/db/schema";
 import { ProfileSection } from "./components/profile-section";
+import { AthleteProfile } from "./athlete-profile";
 import { SponsorsSection } from "./components/sponsors-section";
 import { GearSection } from "./components/gear-section";
 import { EventsSection } from "./components/events-section";
-import { AthleteProfile } from "./athlete-profile";
-import { Metadata } from "next";
-import { AthleteMentions } from "@/components/athlete-mentions";
+import AthleteMentionsSection from "./components/mentions-section";
+import { getAthleteData } from "@/lib/services/athlete-service";
+import { canManageContent } from "@/lib/auth-utils";
+import { Suspense } from "react";
 import { MentionLoading } from "@/components/mention-loading";
-import { MentionError } from "@/components/mention-error";
-import {
-	getAthleteRecentMentions,
-	getAthleteData,
-	getAllAthletes,
-} from "@/lib/services/athlete-service";
-
-export const revalidate = 86400; // Revalidate every day
-
-async function AthleteMentionsSection({ athleteId }: { athleteId: string }) {
-	try {
-		const mentions = await getAthleteRecentMentions(athleteId);
-		return <AthleteMentions mentions={mentions} />;
-	} catch (error) {
-		console.error("Error loading athlete mentions:", error);
-		return (
-			<MentionError
-				title="Error Loading Mentions"
-				message="Unable to load recent mentions for this athlete."
-			/>
-		);
-	}
-}
 
 export async function generateStaticParams() {
-	const allAthletes = await getAllAthletes();
-	return allAthletes.map((athlete) => ({
-		slug: athlete.slug,
-	}));
+	console.log("[Build] Starting generateStaticParams for athletes");
+
+	try {
+		// Get all athletes with their full data
+		const allAthletes = await db
+			.select()
+			.from(athletes)
+			.leftJoin(
+				athleteHonors,
+				eq(athletes.worldAthleticsId, athleteHonors.athleteId),
+			)
+			.where(isNotNull(athletes.slug));
+
+		console.log(`[Build] Found ${allAthletes.length} total athletes`);
+
+		// Group by athlete and check if any honor is Olympic
+		const athleteMap = new Map();
+
+		for (const record of allAthletes) {
+			const athlete = record.athletes;
+			const honor = record.athlete_honors;
+
+			if (!athleteMap.has(athlete.id)) {
+				athleteMap.set(athlete.id, {
+					...athlete,
+					honors: honor ? [honor] : [],
+				});
+			} else if (honor) {
+				const existingAthlete = athleteMap.get(athlete.id);
+				existingAthlete.honors.push(honor);
+			}
+		}
+
+		// Filter to only athletes with Olympic medals
+		const olympicMedalists = Array.from(athleteMap.values()).filter(
+			(athlete) => {
+				// Check if the athlete has any Olympic medals
+				return athlete.honors.some(
+					(honor: {
+						competition?: string;
+						place?: string;
+						discipline?: string;
+						mark?: string;
+					}) => {
+						if (!honor) return false;
+
+						const isOlympicEvent =
+							honor.competition?.toLowerCase().includes("olympic") &&
+							!honor.competition?.toLowerCase().includes("youth");
+
+						const isMedal =
+							honor.place === "1." ||
+							honor.place === "2." ||
+							honor.place === "3.";
+
+						return isOlympicEvent && isMedal;
+					},
+				);
+			},
+		);
+
+		console.log(`[Build] Found ${olympicMedalists.length} Olympic medalists`);
+
+		return olympicMedalists.map((athlete) => ({
+			slug: athlete.slug,
+		}));
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams for athletes:", error);
+		return []; // Return empty array instead of failing the build
+	}
 }
 
 export async function generateMetadata({
@@ -92,39 +139,40 @@ export async function generateMetadata({
 	};
 }
 
-export default async function AthletePage(props: {
+export default async function AthletePage({
+	params,
+}: {
 	params: Promise<{ slug: string }>;
 }) {
-	const params = await props.params;
-	const athlete = await getAthleteData(params.slug);
+	const resolvedParams = await params;
+	const [athlete, isAdmin] = await Promise.all([
+		getAthleteData(resolvedParams.slug),
+		canManageContent(),
+	]);
 
-	if (!athlete) notFound();
+	if (!athlete) {
+		notFound();
+	}
 
-	const userRole = await getUserRole();
-	const isAdmin = userRole === "admin";
+	if (!athlete.worldAthleticsId) {
+		notFound();
+	}
 
-	// Prepare JSON-LD structured data
-	const jsonLd = {
+	// Prepare structured data for SEO
+	const structuredData = {
 		"@context": "https://schema.org",
 		"@type": "Person",
 		name: athlete.name,
-		description: athlete.bio,
+		bio: athlete.bio,
 		nationality: athlete.countryName,
 		image: athlete.imageUrl,
-		url: `https://therunclub.xyz/athletes/${athlete.slug}`,
+		url: `https://therunclub.com/athletes/${athlete.slug}`,
 		sameAs: [
-			athlete.socialMedia?.twitter &&
-				`https://x.com/${athlete.socialMedia.twitter}`,
-			athlete.socialMedia?.instagram &&
-				`https://instagram.com/${athlete.socialMedia.instagram}`,
+			athlete.socialMedia?.twitter,
+			athlete.socialMedia?.instagram,
 			athlete.socialMedia?.facebook,
 			athlete.socialMedia?.website,
-		].filter(Boolean),
-		award: athlete.honors.map((honor) => ({
-			"@type": "Award",
-			name: `${honor.place} place in ${honor.competition}`,
-			description: `${honor.discipline} - ${honor.mark}`,
-		})),
+		].filter((url): url is string => typeof url === "string"),
 	};
 
 	return (
@@ -132,7 +180,7 @@ export default async function AthletePage(props: {
 			<script
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+				dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
 			/>
 			<main className="min-h-screen bg-gray-50 dark:bg-gray-900/50">
 				<div className="container mx-auto py-8 px-4">
@@ -143,11 +191,11 @@ export default async function AthletePage(props: {
 								athleteSlug={athlete.slug}
 								name={athlete.name}
 								bio={athlete.bio}
-								socialMedia={athlete.socialMedia}
-								verified={athlete.verified ?? false}
 								imageUrl={athlete.imageUrl}
 								countryName={athlete.countryName}
 								countryCode={athlete.countryCode}
+								socialMedia={athlete.socialMedia}
+								verified={athlete.verified ?? undefined}
 								isAdmin={isAdmin}
 							/>
 						</div>
@@ -164,7 +212,15 @@ export default async function AthletePage(props: {
 								{/* Sponsors Section */}
 								<SponsorsSection
 									athleteSlug={athlete.slug}
-									sponsors={athlete.sponsors}
+									sponsors={athlete.sponsors.map((sponsor) => ({
+										id: sponsor.id,
+										name: sponsor.name,
+										website: sponsor.website,
+										logo: sponsor.logo,
+										startDate: sponsor.startDate,
+										endDate: sponsor.endDate,
+										isPrimary: sponsor.isPrimary,
+									}))}
 									isAdmin={isAdmin}
 								/>
 
@@ -172,7 +228,17 @@ export default async function AthletePage(props: {
 								<div className="mt-8">
 									<GearSection
 										athleteSlug={athlete.slug}
-										gear={athlete.gear}
+										gear={athlete.gear.map((item) => ({
+											id: item.id,
+											name: item.name,
+											brand: item.brand || "",
+											category: item.category || "other",
+											model: item.model,
+											description: item.description,
+											purchaseUrl: item.purchaseUrl,
+											imageUrl: item.imageUrl,
+											isCurrent: item.isCurrent,
+										}))}
 										isAdmin={isAdmin}
 									/>
 								</div>
@@ -181,7 +247,23 @@ export default async function AthletePage(props: {
 								<div className="mt-8">
 									<EventsSection
 										athleteSlug={athlete.slug}
-										events={athlete.events}
+										events={athlete.events.map((event) => ({
+											id: event.id,
+											name: event.name,
+											date: event.date,
+											location: event.location,
+											discipline: event.discipline,
+											description: event.description,
+											website: event.website,
+											status: event.status,
+											result: event.result
+												? {
+														place: event.result.place ? 1 : undefined,
+														time: event.result.time || undefined,
+														notes: event.result.notes || undefined,
+												  }
+												: undefined,
+										}))}
 										isAdmin={isAdmin}
 									/>
 								</div>

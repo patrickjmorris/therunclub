@@ -14,7 +14,7 @@ export async function AthleteReferences({
 	contentType,
 	title = "Athletes Mentioned",
 }: AthleteReferencesProps) {
-	console.log("[Debug] Query params:", { contentId, contentType });
+	// console.log("[Debug] Query params:", { contentId, contentType });
 
 	try {
 		const mentions = await db
@@ -44,8 +44,8 @@ export async function AthleteReferences({
 			)
 			.orderBy(desc(athleteMentions.confidence));
 
-		console.log("[Debug] Found mentions:", mentions.length);
-		console.log("[Debug] Sample mention:", mentions[0]);
+		// console.log("[Debug] Found mentions:", mentions.length);
+		// console.log("[Debug] Sample mention:", mentions[0]);
 
 		if (mentions.length === 0) {
 			return null;

@@ -6,14 +6,52 @@ import {
 } from "@/lib/services/podcast-service";
 import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
-import { isNotNull } from "drizzle-orm";
+import { and, isNotNull, like } from "drizzle-orm";
 
 import { fetchMore } from "./actions";
 import { Suspense } from "react";
 import { BasicEpisode } from "@/types/shared";
-import { EpisodeList } from "@/components/podcasts/episode-list";
+import { createWeeklyCache } from "@/lib/utils/cache";
+import dynamicImport from "next/dynamic";
+import { nanoid } from "nanoid";
 
-export const revalidate = 3600;
+// Dynamically import the episode list component
+const DynamicEpisodeList = dynamicImport(
+	() =>
+		import("@/components/podcasts/DynamicEpisodeList").then((mod) => ({
+			default: mod.DynamicEpisodeList,
+		})),
+	{
+		loading: () => (
+			<div className="space-y-4">
+				{Array.from({ length: 3 }).map(() => (
+					<div key={nanoid()} className="animate-pulse">
+						<div className="h-32 bg-muted rounded-lg" />
+					</div>
+				))}
+			</div>
+		),
+		ssr: true,
+	},
+);
+
+// Increase revalidation time to 1 week (604800 seconds)
+export const dynamic = "force-static";
+export const revalidate = 604800;
+
+// Create a cached function for fetching podcast page data
+const getPodcastDetailData = createWeeklyCache(
+	async (podcastSlug: string) => {
+		const podcast = await getPodcastBySlug(podcastSlug);
+		if (!podcast) return null;
+
+		const episodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 10, 0);
+
+		return { podcast, episodes };
+	},
+	["podcast-detail"],
+	["podcasts"],
+);
 
 export async function generateMetadata({
 	params,
@@ -21,10 +59,11 @@ export async function generateMetadata({
 	params: Promise<{ podcast: string }>;
 }): Promise<Metadata> {
 	const resolvedParams = await params;
-	const podcast = await getPodcastBySlug(resolvedParams.podcast);
+	const data = await getPodcastDetailData(resolvedParams.podcast);
 
-	if (!podcast) return {};
+	if (!data || !data.podcast) return {};
 
+	const podcast = data.podcast;
 	const imageUrl = podcast.image || "";
 	const description =
 		podcast.description?.substring(0, 155) ||
@@ -61,28 +100,39 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
-	const allPodcasts = await db
-		.select({ slug: podcasts.podcastSlug })
-		.from(podcasts)
-		.where(isNotNull(podcasts.podcastSlug));
+	console.log("[Build] Starting generateStaticParams for podcasts");
 
-	return allPodcasts.map((podcast) => ({
-		podcast: podcast.slug,
-	}));
+	try {
+		// Only generate static parameters for English language podcasts
+		const englishPodcasts = await db
+			.select({ slug: podcasts.podcastSlug })
+			.from(podcasts)
+			.where(
+				and(isNotNull(podcasts.podcastSlug), like(podcasts.language, "%en%")),
+			);
+
+		console.log(`[Build] Found ${englishPodcasts.length} English podcasts`);
+
+		return englishPodcasts.map((podcast) => ({
+			podcast: podcast.slug,
+		}));
+	} catch (error) {
+		console.error("[Build] Error in generateStaticParams for podcasts:", error);
+		return []; // Return empty array instead of failing the build
+	}
 }
 
 export default async function PodcastPage(props: {
 	params: Promise<{ podcast: string }>;
 }) {
 	const params = await props.params;
-	// console.log("params", params);
-	const podcast = await getPodcastBySlug(params.podcast);
+	const data = await getPodcastDetailData(params.podcast);
 
-	if (!podcast) {
+	if (!data || !data.podcast) {
 		notFound();
 	}
 
-	const episodes = await getLastTenEpisodesByPodcastSlug(params.podcast, 10, 0);
+	const { podcast, episodes } = data;
 
 	const jsonLd = {
 		"@context": "https://schema.org",
@@ -115,7 +165,7 @@ export default async function PodcastPage(props: {
 			<div className="mt-8">
 				<h2 className="text-xl font-semibold mb-4">Latest Episodes</h2>
 				<Suspense fallback={<div>Loading episodes...</div>}>
-					<EpisodeList
+					<DynamicEpisodeList
 						initialEpisodes={episodes as BasicEpisode[]}
 						fetchMore={fetchMore.bind(null, params.podcast)}
 						hasMore={episodes.length === 10}

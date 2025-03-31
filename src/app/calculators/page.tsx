@@ -1,27 +1,5 @@
-import { Suspense } from "react";
-import dynamic from "next/dynamic";
+import { CalculatorModeProvider } from "./calculator-mode-provider";
 
-// Dynamically import the client component with no SSR
-const CalculatorModeProvider = dynamic(
-	() =>
-		import("./calculator-mode-provider").then(
-			(mod) => mod.CalculatorModeProvider,
-		),
-	{ ssr: true },
-);
-
-// Loading state component
-function CalculatorLoading() {
-	return (
-		<div className="container mx-auto py-8 space-y-8">
-			<div className="h-8 bg-muted animate-pulse rounded" />
-			<div className="h-4 bg-muted animate-pulse rounded w-2/3" />
-			<div className="h-[600px] bg-muted animate-pulse rounded" />
-		</div>
-	);
-}
-
-// Main page component (Server Component)
 export default function CalculatorsPage() {
 	return (
 		<div className="container mx-auto py-8 space-y-8">
@@ -33,11 +11,7 @@ export default function CalculatorsPage() {
 				</p>
 			</div>
 
-			<div>
-				<Suspense fallback={<CalculatorLoading />}>
-					<CalculatorModeProvider />
-				</Suspense>
-			</div>
+			<CalculatorModeProvider />
 
 			<div className="prose dark:prose-invert max-w-none">
 				<h2>How to Use the Pace Calculator</h2>

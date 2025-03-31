@@ -21,6 +21,7 @@ import { FeaturedPodcastsRow } from "@/components/podcasts/FeaturedPodcastsRow";
 import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
 import { PodcastGrid } from "@/components/podcasts/PodcastGrid";
 import { PodcastGridSkeleton } from "@/components/podcasts/PodcastGridSkeleton";
+import { createDailyCache } from "@/lib/utils/cache";
 
 export const metadata: Metadata = {
 	title: "Running Podcasts | The Run Club",
@@ -40,7 +41,48 @@ export const metadata: Metadata = {
 interface PageProps {
 	searchParams: Promise<{ q?: string; category?: string }>;
 }
-export const revalidate = 3600;
+
+// Increase revalidation time to 24 hours
+export const dynamic = "force-static";
+export const revalidate = 86400; // 24 hours
+
+// Create cached data fetching function for podcast page data
+const getPodcastPageData = createDailyCache(
+	async (categoryFilter: string | undefined) => {
+		// Get all base data in parallel
+		const [podcastTags, featuredPodcasts, latestEpisodes, allPodcasts] =
+			await Promise.all([
+				getPodcastTags(10),
+				getFeaturedPodcasts(10),
+				getNewEpisodes(20),
+				getAllPodcastAndLastEpisodes(),
+			]);
+
+		// Filter podcasts by category if needed
+		let filteredPodcasts = allPodcasts;
+
+		// Apply category filter if provided
+		if (categoryFilter) {
+			filteredPodcasts = allPodcasts.filter((podcast) =>
+				podcast.title.toLowerCase().includes(categoryFilter.toLowerCase()),
+			);
+		}
+
+		return {
+			podcastTags,
+			featuredPodcasts,
+			latestEpisodes,
+			filteredPodcasts,
+		};
+	},
+	["podcast-page-data"],
+	["podcasts"],
+);
+
+// Helper function to preload data
+const preloadPodcastData = (categoryFilter: string | undefined) => {
+	void getPodcastPageData(categoryFilter);
+};
 
 export default async function PodcastList({ searchParams }: PageProps) {
 	// Parse search params
@@ -50,27 +92,12 @@ export default async function PodcastList({ searchParams }: PageProps) {
 		.withDefault("")
 		.parseServerSide(category);
 
-	// Get podcast tags for filter
-	const podcastTags = await getPodcastTags(10);
+	// Preload data
+	preloadPodcastData(categoryFilter || undefined);
 
-	// Get featured podcasts (increased to 10)
-	const featuredPodcasts = await getFeaturedPodcasts(10);
-
-	// Get latest episodes - we're not using search anymore
-	const latestEpisodes = await getNewEpisodes(20);
-
-	// Get all podcasts with their latest episode
-	const allPodcasts = await getAllPodcastAndLastEpisodes();
-
-	// Filter podcasts by category if needed
-	let filteredPodcasts = allPodcasts;
-
-	// Apply category filter if provided
-	if (categoryFilter) {
-		filteredPodcasts = allPodcasts.filter((podcast) =>
-			podcast.title.toLowerCase().includes(categoryFilter.toLowerCase()),
-		);
-	}
+	// Get page data from cache
+	const { podcastTags, featuredPodcasts, latestEpisodes, filteredPodcasts } =
+		await getPodcastPageData(categoryFilter || undefined);
 
 	return (
 		<div className="container py-8 md:py-12">

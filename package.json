@@ -39,7 +39,8 @@
 		"db:migrate:athletes": "bun run scripts/migrate-athletes.ts",
 		"db:rollback:athletes": "bun run scripts/rollback-athletes.ts",
 		"reprocess:mentions": "bun run scripts/reprocess-athlete-mentions.ts",
-		"reprocess:mentions:prod": "NODE_ENV=production bun run scripts/reprocess-athlete-mentions.ts"
+		"reprocess:mentions:prod": "NODE_ENV=production bun run scripts/reprocess-athlete-mentions.ts",
+		"optimize:images": "NODE_ENV=production bun run scripts/optimize-content-images.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {

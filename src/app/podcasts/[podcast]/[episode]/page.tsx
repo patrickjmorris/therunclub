@@ -220,6 +220,19 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		urls,
 	} = data;
 
+	// Helper function to safely format date
+	const safeFormatDate = (
+		dateInput: string | Date | null | undefined,
+	): string => {
+		if (!dateInput) return "";
+		try {
+			const date = new Date(dateInput);
+			return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+		} catch {
+			return "";
+		}
+	};
+
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
 
@@ -227,9 +240,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		"@context": "https://schema.org",
 		"@type": "PodcastEpisode",
 		name: episode.title,
-		datePublished: episode.pubDate
-			? new Date(episode.pubDate).toISOString()
-			: "",
+		datePublished: safeFormatDate(episode.pubDate),
 		description:
 			episode.content || `Listen to ${episode.title} on The Run Club`,
 		duration: episode.duration,

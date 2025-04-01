@@ -12,6 +12,131 @@ import { parseDate, safeDateParse } from "@/lib/date-utils";
 import { optimizeImage } from "@/lib/image-utils";
 
 const BATCH_SIZE = 5;
+// Set to true to temporarily disable image processing if there are issues
+const SKIP_IMAGE_PROCESSING = false;
+// Skip actual image processing in development (faster, saves storage)
+// but still validate the logic flow by returning a mock URL
+// Can be overridden with FORCE_IMAGE_PROCESSING=true environment variable
+const DEV_MODE_SKIP_ACTUAL_PROCESSING =
+	process.env.NODE_ENV === "development" &&
+	process.env.FORCE_IMAGE_PROCESSING !== "true";
+
+// Function to simulate image processing in development
+async function mockImageProcessing(
+	imageUrl: string,
+	prefix: string,
+): Promise<string | null> {
+	// Validate URL and check skipImageProcessing logic
+	if (!imageUrl || shouldSkipImageProcessing(imageUrl)) {
+		console.log(`[DEV-IMAGE] Would skip processing for: ${imageUrl}`);
+		return null;
+	}
+
+	console.log(`[DEV-IMAGE] Would process image: ${imageUrl}`);
+
+	// Generate a deterministic mock URL based on the input URL
+	// This ensures we get the same result for the same input, which helps with testing
+	// Using a hash of the URL would be better, but for simplicity:
+	const mockId = imageUrl
+		.replace(/[^a-z0-9]/gi, "") // Remove special chars
+		.substring(0, 8); // Take first 8 chars
+
+	return `https://dev-mocked-image-cdn.example.com/${prefix}/${mockId}.webp`;
+}
+
+// Wrapper function to handle image processing based on environment
+async function processImage(
+	imageUrl: string,
+	size: number,
+	prefix: string,
+): Promise<string | null> {
+	if (DEV_MODE_SKIP_ACTUAL_PROCESSING) {
+		return mockImageProcessing(imageUrl, prefix);
+	}
+	return optimizeImage(imageUrl, size, prefix);
+}
+
+// Add a function to check if image processing should be skipped
+function shouldSkipImageProcessing(url: string): boolean {
+	// Global override
+	if (SKIP_IMAGE_PROCESSING) return true;
+
+	// Skip if URL is empty or null
+	if (!url) return true;
+
+	try {
+		// Validate URL format
+		new URL(url);
+	} catch (e) {
+		console.log(`[DEBUG] Skipping invalid image URL: ${url}`);
+		return true;
+	}
+
+	// Skip based on known problematic hosts or patterns
+	const problematicPatterns: string[] = [
+		// Websites that commonly return HTML instead of images
+		"cloudfront.net/image",
+		"google.com",
+		"facebook.com",
+		"twitter.com",
+		"instagram.com",
+		// File types known to cause issues
+		".php",
+		"?",
+		".aspx",
+		"imgur.com/a/", // Album URLs instead of direct image URLs
+		// Common redirectors
+		"bit.ly",
+		"tinyurl.com",
+		"ow.ly",
+		// Protocols other than http/https
+		"data:",
+		"ftp:",
+	];
+
+	const hasProblematicPattern = problematicPatterns.some((pattern) =>
+		url.includes(pattern),
+	);
+	if (hasProblematicPattern) {
+		console.log(`[DEBUG] Skipping problematic image URL pattern: ${url}`);
+		return true;
+	}
+
+	// Skip non-image URLs (based on extension)
+	const validImageExtensions = [
+		".jpg",
+		".jpeg",
+		".png",
+		".gif",
+		".webp",
+		".svg",
+		".avif",
+	];
+	const hasValidExtension = validImageExtensions.some((ext) =>
+		url.toLowerCase().includes(ext),
+	);
+
+	// Only process URLs that appear to be image files
+	if (!hasValidExtension) {
+		// Exception for common image CDNs that might not have extensions
+		const trustedImageCDNs = [
+			"imagecdn.app",
+			"cloudinary.com",
+			"res.cloudinary.com",
+			"cdn.sanity.io",
+			"images.unsplash.com",
+			"storage.googleapis.com",
+		];
+
+		const isTrustedCDN = trustedImageCDNs.some((cdn) => url.includes(cdn));
+		if (!isTrustedCDN) {
+			console.log(`[DEBUG] Skipping URL without valid image extension: ${url}`);
+			return true;
+		}
+	}
+
+	return false;
+}
 
 const podcastIndex = createPodcastIndexClient({
 	key: process.env.PODCAST_INDEX_API_KEY || "",
@@ -213,9 +338,9 @@ async function processPodcast(
 
 		// Optimize podcast image if we have one
 		let podcast_image = null;
-		if (podcastImageUrl) {
+		if (podcastImageUrl && !shouldSkipImageProcessing(podcastImageUrl)) {
 			try {
-				podcast_image = await optimizeImage(podcastImageUrl, 1400, "podcasts");
+				podcast_image = await processImage(podcastImageUrl, 1400, "podcasts");
 			} catch (error) {
 				console.error(
 					`Error optimizing podcast image for ${podcast.title}:`,
@@ -324,9 +449,9 @@ async function processPodcast(
 
 					// Optimize episode image if we have one
 					let episode_image = null;
-					if (episodeImageUrl) {
+					if (episodeImageUrl && !shouldSkipImageProcessing(episodeImageUrl)) {
 						try {
-							episode_image = await optimizeImage(
+							episode_image = await processImage(
 								episodeImageUrl,
 								1400,
 								"episodes",
@@ -365,7 +490,7 @@ async function processPodcast(
 				// Wait for all episode values to be processed
 				const processedEpisodeValues = await Promise.all(episodeValues);
 
-				// Remove duplicates by keeping only the first occurrence of each GUID or iTunes episode number
+				// Remove duplicates by keeping only the first occurrence of each GUID or enclosureUrl
 				const uniqueEpisodes = processedEpisodeValues.reduce((acc, episode) => {
 					// If episode has a GUID, use that as the key
 					if (episode.guid) {
@@ -374,16 +499,9 @@ async function processPodcast(
 							acc.set(key, episode);
 						}
 					}
-					// If no GUID but has iTunes episode number, use podcast ID + episode number as key
-					else if (episode.itunesEpisode) {
-						const key = `${episode.podcastId}-${episode.itunesEpisode}`;
-						if (!acc.has(key)) {
-							acc.set(key, episode);
-						}
-					}
-					// If neither, use podcast ID + episode slug as key
+					// If no GUID, use enclosureUrl as the key
 					else {
-						const key = `${episode.podcastId}-${episode.episodeSlug}`;
+						const key = episode.enclosureUrl;
 						if (!acc.has(key)) {
 							acc.set(key, episode);
 						}
@@ -401,82 +519,90 @@ async function processPodcast(
 					);
 				}
 
+				// --- Add Logging Here ---
+				console.log(
+					`[DEBUG] Data prepared for upsert for ${podcast.title} (${deduplicatedEpisodes.length} episodes):`,
+				);
+				deduplicatedEpisodes.forEach((ep, index) => {
+					console.log(
+						`  [${index + 1}] guid: ${ep.guid}, enclosureUrl: ${
+							ep.enclosureUrl
+						}, title: ${ep.title}, pubDate: ${ep.pubDate}`,
+					);
+				});
+				// --- End Logging ---
+
 				try {
-					await db
-						.insert(episodes)
-						.values(deduplicatedEpisodes as Episode[])
-						.onConflictDoUpdate({
-							target: [episodes.guid],
-							where: sql`${episodes.guid} IS NOT NULL AND EXCLUDED.guid IS NOT NULL`,
-							set: {
-								title: sql`EXCLUDED.title`,
-								episodeSlug: sql`EXCLUDED.episode_slug`,
-								pubDate: sql`EXCLUDED.pub_date`,
-								content: sql`EXCLUDED.content`,
-								link: sql`EXCLUDED.link`,
-								enclosureUrl: sql`EXCLUDED.enclosure_url`,
-								duration: sql`EXCLUDED.duration`,
-								explicit: sql`EXCLUDED.explicit`,
-								image: sql`EXCLUDED.image`,
-								episodeImage: sql`EXCLUDED.episode_image`,
-								itunesEpisode: sql`EXCLUDED.itunes_episode`,
-								updatedAt: sql`CURRENT_TIMESTAMP`,
-							},
-						});
+					// First try to upsert episodes with GUIDs
+					const episodesWithGuid = deduplicatedEpisodes.filter(
+						(episode) => episode.guid,
+					) as Episode[];
 
-					// Handle episodes with iTunes episode numbers but no GUIDs
-					await db
-						.insert(episodes)
-						.values(
-							deduplicatedEpisodes.filter(
-								(episode) => !episode.guid && episode.itunesEpisode,
-							) as Episode[],
-						)
-						.onConflictDoUpdate({
-							target: [episodes.podcastId, episodes.itunesEpisode],
-							where: sql`${episodes.itunesEpisode} IS NOT NULL AND EXCLUDED.itunesEpisode IS NOT NULL AND ${episodes.guid} IS NULL`,
-							set: {
-								title: sql`EXCLUDED.title`,
-								episodeSlug: sql`EXCLUDED.episode_slug`,
-								pubDate: sql`EXCLUDED.pub_date`,
-								content: sql`EXCLUDED.content`,
-								link: sql`EXCLUDED.link`,
-								enclosureUrl: sql`EXCLUDED.enclosure_url`,
-								duration: sql`EXCLUDED.duration`,
-								explicit: sql`EXCLUDED.explicit`,
-								image: sql`EXCLUDED.image`,
-								episodeImage: sql`EXCLUDED.episode_image`,
-								guid: sql`EXCLUDED.guid`,
-								updatedAt: sql`CURRENT_TIMESTAMP`,
-							},
-						});
+					if (episodesWithGuid.length > 0) {
+						console.log(
+							`[DEBUG] Upserting ${episodesWithGuid.length} episodes with GUIDs for ${podcast.title}`,
+						);
+						await db
+							.insert(episodes)
+							.values(episodesWithGuid)
+							.onConflictDoUpdate({
+								target: episodes.guid,
+								where: sql`${episodes.guid} IS NOT NULL AND EXCLUDED.guid IS NOT NULL`,
+								set: {
+									title: sql`EXCLUDED.title`,
+									episodeSlug: sql`EXCLUDED.episode_slug`,
+									pubDate: sql`EXCLUDED.pub_date`,
+									content: sql`EXCLUDED.content`,
+									link: sql`EXCLUDED.link`,
+									enclosureUrl: sql`EXCLUDED.enclosure_url`,
+									duration: sql`EXCLUDED.duration`,
+									explicit: sql`EXCLUDED.explicit`,
+									image: sql`EXCLUDED.image`,
+									episodeImage: sql`EXCLUDED.episode_image`,
+									itunesEpisode: sql`EXCLUDED.itunes_episode`,
+									updatedAt: sql`CURRENT_TIMESTAMP`,
+								},
+							});
+					} else {
+						console.log(
+							`[DEBUG] No episodes with GUIDs to upsert for ${podcast.title}`,
+						);
+					}
 
-					// Handle episodes without GUIDs or iTunes episode numbers
-					await db
-						.insert(episodes)
-						.values(
-							deduplicatedEpisodes.filter(
-								(episode) => !episode.guid && !episode.itunesEpisode,
-							) as Episode[],
-						)
-						.onConflictDoUpdate({
-							target: [episodes.podcastId, episodes.episodeSlug],
-							where: sql`${episodes.guid} IS NULL AND ${episodes.itunesEpisode} IS NULL`,
-							set: {
-								title: sql`EXCLUDED.title`,
-								pubDate: sql`EXCLUDED.pub_date`,
-								content: sql`EXCLUDED.content`,
-								link: sql`EXCLUDED.link`,
-								enclosureUrl: sql`EXCLUDED.enclosure_url`,
-								duration: sql`EXCLUDED.duration`,
-								explicit: sql`EXCLUDED.explicit`,
-								image: sql`EXCLUDED.image`,
-								episodeImage: sql`EXCLUDED.episode_image`,
-								guid: sql`EXCLUDED.guid`,
-								itunesEpisode: sql`EXCLUDED.itunes_episode`,
-								updatedAt: sql`CURRENT_TIMESTAMP`,
-							},
-						});
+					// Then handle episodes without GUIDs using enclosureUrl
+					const episodesWithoutGuid = deduplicatedEpisodes.filter(
+						(episode) => !episode.guid,
+					) as Episode[];
+
+					if (episodesWithoutGuid.length > 0) {
+						console.log(
+							`[DEBUG] Upserting ${episodesWithoutGuid.length} episodes without GUIDs for ${podcast.title}`,
+						);
+						await db
+							.insert(episodes)
+							.values(episodesWithoutGuid)
+							.onConflictDoUpdate({
+								target: episodes.enclosureUrl,
+								set: {
+									title: sql`EXCLUDED.title`,
+									episodeSlug: sql`EXCLUDED.episode_slug`,
+									pubDate: sql`EXCLUDED.pub_date`,
+									content: sql`EXCLUDED.content`,
+									link: sql`EXCLUDED.link`,
+									duration: sql`EXCLUDED.duration`,
+									explicit: sql`EXCLUDED.explicit`,
+									image: sql`EXCLUDED.image`,
+									episodeImage: sql`EXCLUDED.episode_image`,
+									guid: sql`EXCLUDED.guid`,
+									itunesEpisode: sql`EXCLUDED.itunes_episode`,
+									updatedAt: sql`CURRENT_TIMESTAMP`,
+								},
+							});
+					} else {
+						console.log(
+							`[DEBUG] No episodes without GUIDs to upsert for ${podcast.title}`,
+						);
+					}
 
 					console.log(
 						`[DEBUG] Successfully upserted ${deduplicatedEpisodes.length} episodes for ${podcast.title}`,
@@ -527,6 +653,19 @@ interface UpdatePodcastOptions {
 
 export async function updatePodcastData(options: UpdatePodcastOptions = {}) {
 	const { minHoursSinceUpdate = 24, limit, randomSample = false } = options;
+
+	// Log the current image processing configuration
+	console.log("\n--- Podcast Update Configuration ---");
+	console.log({
+		environment: process.env.NODE_ENV || "unknown",
+		skipImageProcessing: SKIP_IMAGE_PROCESSING,
+		devModeSkipActualProcessing: DEV_MODE_SKIP_ACTUAL_PROCESSING,
+		isUsingMockedImages: DEV_MODE_SKIP_ACTUAL_PROCESSING
+			? "Yes - using mock URLs"
+			: "No - processing real images",
+		processingLimit: limit || "unlimited",
+		batchSize: BATCH_SIZE,
+	});
 
 	// Calculate the cutoff time for updates
 	const cutoffDate = new Date();

@@ -135,7 +135,7 @@ export default async function TagPage(props: TagPageProps) {
 								podcastTitle: episode.podcastTitle,
 								podcastSlug: episode.podcastSlug,
 								podcastImage: episode.podcastImage,
-								itunesImage: episode.image,
+								episodeImage: episode.image,
 								enclosureUrl: episode.enclosureUrl,
 								pubDate: episode.pubDate ? new Date(episode.pubDate) : null,
 							}}

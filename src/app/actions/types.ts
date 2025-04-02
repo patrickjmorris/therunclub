@@ -15,7 +15,16 @@ export interface AddChannelState {
 		url?: string[];
 		_form?: string[];
 	};
-	message?: string | null;
-	data?: Channel | null;
+	message?: string;
+	redirect?: string;
+}
+
+export interface AddVideoState {
+	errors?: {
+		url?: string[];
+		forceUpdate?: string[];
+		_form?: string[];
+	};
+	message?: string;
 	redirect?: string;
 }

@@ -144,7 +144,7 @@ export const addChannel = requireRole(["admin", "editor"])(
 				});
 
 				if (processResult.status === "error") {
-					console.error("Error refreshing videos:", processResult.error);
+					console.error("Error refreshing videos:", processResult.message);
 					return {
 						errors: {
 							_form: ["Failed to refresh channel videos"],
@@ -211,7 +211,7 @@ export const addChannel = requireRole(["admin", "editor"])(
 					processResult.videos.map((v) => v.status),
 				);
 			} else if (processResult.status === "error") {
-				console.error("Error importing videos:", processResult.error);
+				console.error("Error importing videos:", processResult.message);
 				videoMessage = "Could not import videos. Please try again later.";
 			} else if (processResult.status === "cached") {
 				videoMessage = "Channel information cached. No videos imported.";

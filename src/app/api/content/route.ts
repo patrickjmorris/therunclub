@@ -148,6 +148,9 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				);
 				const randomSample =
 					request.nextUrl.searchParams.get("randomSample") === "true";
+				const importTypeFilter = request.nextUrl.searchParams.get(
+					"importType",
+				) as "full_channel" | "selected_videos" | "none" | undefined;
 
 				console.log("API Request parameters:", {
 					updateStrategy,
@@ -156,6 +159,7 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					videosPerChannel,
 					maxVideos,
 					randomSample,
+					importTypeFilter,
 				});
 
 				const results = await updateVideos({
@@ -166,6 +170,7 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					updateByLastUpdated: updateStrategy === "lastUpdated",
 					minHoursSinceUpdate,
 					randomSample,
+					importTypeFilter: importTypeFilter || "full_channel", // Default to full_channel if not specified
 				});
 
 				return NextResponse.json({
@@ -189,6 +194,7 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 							cached: results.videos.cached,
 							failed: results.videos.failed,
 						},
+						importType: importTypeFilter || "full_channel",
 					},
 				});
 			} catch (error) {
@@ -444,6 +450,23 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					{ status: 500 },
 				);
 			}
+		} else if (type === "tagging") {
+			// This is handled by the dedicated /api/content/video endpoint
+			return NextResponse.json(
+				{
+					message:
+						"For tagging imports, use the /api/content/video endpoint with a POST request",
+					example: {
+						method: "POST",
+						url: "/api/content/video",
+						body: {
+							videoUrl: "https://www.youtube.com/watch?v=VIDEO_ID",
+							forceUpdate: false,
+						},
+					},
+				},
+				{ status: 400 },
+			);
 		}
 
 		return NextResponse.json(
@@ -484,7 +507,7 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json(
 			{
 				message:
-					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', 'channel-videos', 'athletes', 'athlete-detection', or 'tagging'",
+					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', 'channel-videos', 'athletes', 'athlete-detection', 'individual-video', or 'tagging'",
 			},
 			{ status: 400 },
 		);

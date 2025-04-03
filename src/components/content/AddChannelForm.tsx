@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 
 const initialState: AddChannelState = {
 	errors: {},
-	message: null,
+	message: undefined,
 };
 
 function SubmitButton() {

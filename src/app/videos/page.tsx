@@ -13,7 +13,6 @@ import {
 	getTopVideoTags,
 } from "@/lib/services/video-service";
 import { parseAsString } from "nuqs/server";
-import AddContentWrapper from "@/components/content/AddContentWrapper";
 import { FeaturedChannelsRow } from "@/components/videos/FeaturedChannelsRow";
 import { createDailyCache } from "@/lib/utils/cache";
 import { cache } from "react";
@@ -91,11 +90,6 @@ export default async function VideosPage({ searchParams }: PageProps) {
 
 	return (
 		<div className="container py-8 md:py-12">
-			{/* Search Section */}
-			<div className="flex items-center justify-between mb-8">
-				<AddContentWrapper defaultTab="channel" />
-			</div>
-
 			{/* Featured Channels Section */}
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">

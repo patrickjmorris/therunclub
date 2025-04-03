@@ -63,6 +63,11 @@ export const channels = pgTable(
 		subscriberCount: text("subscriber_count"),
 		videoCount: text("video_count"),
 		uploadsPlaylistId: text("uploads_playlist_id"),
+		importType: text("import_type", {
+			enum: ["full_channel", "selected_videos", "none"],
+		})
+			.default("full_channel")
+			.notNull(),
 		createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
 		updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
 	},
@@ -97,6 +102,10 @@ export const videos = pgTable(
 	(table) => ({
 		youtubeVideoIdIdx: uniqueIndex("youtube_video_id_idx").on(
 			table.youtubeVideoId,
+		),
+		channelUpdatedIdx: index("idx_videos_channel_updated").on(
+			table.channelId,
+			table.updatedAt,
 		),
 	}),
 );

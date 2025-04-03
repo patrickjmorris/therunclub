@@ -25,7 +25,7 @@ export default async function PodcastLayout({
 	return (
 		<div className="min-h-screen">
 			<DynamicHeader
-				imageUrl={data.image ?? ""}
+				imageUrl={data.image ?? data.itunesImage ?? ""}
 				title={data.title}
 				vibrantColor={data.vibrantColor ?? "#1e3a8a"}
 				podcastSlug={data.podcastSlug ?? ""}

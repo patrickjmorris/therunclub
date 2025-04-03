@@ -15,7 +15,6 @@ import { LoadingGridSkeleton } from "@/components/videos/loading-ui";
 import { Suspense } from "react";
 import { parseAsString } from "nuqs/server";
 import { PodcastFilter } from "@/components/podcasts/podcast-filter";
-import AddContentWrapper from "@/components/content/AddContentWrapper";
 import { CompactEpisodeCard } from "@/components/podcasts/CompactEpisodeCard";
 import { FeaturedPodcastsRow } from "@/components/podcasts/FeaturedPodcastsRow";
 import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
@@ -103,7 +102,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 		<div className="container py-8 md:py-12">
 			{/* Search Section */}
 			<div className="flex items-center justify-between mb-8">
-				<AddContentWrapper defaultTab="podcast" />
+				{/* Removed AddContentWrapper */}
 			</div>
 
 			{/* Featured Podcasts Section */}

@@ -8,6 +8,9 @@ import type { AddPodcastState } from "./types";
 import { requireRole, AuthError } from "@/lib/auth-utils";
 import { updatePodcastColors } from "@/lib/update-podcast-colors";
 import { revalidatePodcastsAndEpisodes } from "@/db/queries";
+import { db } from "@/db/client";
+import { podcasts } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
 
 export const addPodcast = requireRole(["admin", "editor"])(
 	async (
@@ -81,3 +84,28 @@ export const addPodcast = requireRole(["admin", "editor"])(
 		}
 	},
 );
+
+export async function deletePodcast(id: string) {
+	return requireRole(["admin", "editor"])(async () => {
+		await db.delete(podcasts).where(eq(podcasts.id, id));
+		revalidatePath("/dashboard/podcasts");
+		revalidatePath("/podcasts");
+		return { success: true };
+	})();
+}
+
+export async function bulkDeletePodcasts(ids: string[]) {
+	return requireRole(["admin", "editor"])(async () => {
+		await db.delete(podcasts).where(inArray(podcasts.id, ids));
+		revalidatePath("/dashboard/podcasts");
+		revalidatePath("/podcasts");
+		return { success: true };
+	})();
+}
+
+export async function getAllPodcastsForManagement() {
+	return requireRole(["admin", "editor"])(async () => {
+		const allPodcasts = await db.select().from(podcasts);
+		return allPodcasts;
+	})();
+}

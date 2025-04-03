@@ -44,16 +44,23 @@ export default function PodcastManagementClient({
 	const router = useRouter();
 
 	useEffect(() => {
-		setPodcasts(
-			initialPodcasts.map((p) => ({
-				id: p.id,
-				title: p.title,
-				feedUrl: p.feedUrl,
-				imageUrl: p.podcastImage || p.image || null,
-				createdAt: new Date(),
-				updatedAt: p.updatedAt || new Date(),
-			})),
-		);
+		try {
+			setPodcasts(
+				initialPodcasts.map((p) => ({
+					id: p.id,
+					title: p.title,
+					feedUrl: p.feedUrl,
+					imageUrl: p.podcastImage || p.image || null,
+					createdAt: new Date(),
+					updatedAt: p.updatedAt || new Date(),
+				})),
+			);
+		} catch (error) {
+			console.error("Error transforming podcast data:", error);
+			toast.error("Error loading podcasts");
+		} finally {
+			setIsLoading(false);
+		}
 	}, [initialPodcasts]);
 
 	const handleEdit = (podcast: PodcastData) => {

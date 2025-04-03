@@ -37,6 +37,7 @@ export async function fetchMore(
 			podcastSlug: episode.podcastSlug,
 			podcastTitle: episode.podcastTitle,
 			podcastImage: episode.podcastImage,
+			itunesImage: episode.itunesImage,
 			episodeImage: episode.episodeImage,
 			duration: episode.duration,
 			content: episode.content,

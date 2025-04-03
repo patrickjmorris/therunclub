@@ -2,7 +2,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
 import { Headphones } from "lucide-react";
-import { EpisodeWithPodcast } from "@/types/episodeWithPodcast";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +15,7 @@ interface CompactEpisodeCardProps {
 		podcastSlug?: string | null;
 		podcastImage: string | null;
 		episodeImage?: string | null;
+		itunesImage?: string | null;
 		enclosureUrl?: string | null;
 		pubDate?: Date | null;
 	};
@@ -41,7 +41,12 @@ export function CompactEpisodeCard({
 								className="object-cover transition-transform hover:scale-105"
 								width={180}
 								height={180}
-								src={episode.episodeImage || episode.podcastImage || ""}
+								src={
+									episode.episodeImage ||
+									episode.podcastImage ||
+									episode.itunesImage ||
+									""
+								}
 							/>
 						</div>
 						<div className="space-y-1 flex-1">

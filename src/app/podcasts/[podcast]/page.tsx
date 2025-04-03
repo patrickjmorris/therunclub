@@ -64,7 +64,7 @@ export async function generateMetadata({
 	if (!data || !data.podcast) return {};
 
 	const podcast = data.podcast;
-	const imageUrl = podcast.image || "";
+	const imageUrl = podcast.image || podcast.itunesImage || "";
 	const description =
 		podcast.description?.substring(0, 155) ||
 		`Listen to ${podcast.title} on The Run Club`;
@@ -143,7 +143,7 @@ export default async function PodcastPage(props: {
 			"@type": "Person",
 			name: podcast.author,
 		},
-		image: podcast.image,
+		image: podcast.image || podcast.itunesImage,
 		url: `/podcasts/${podcast.podcastSlug}`,
 		episodes: episodes.map((episode) => ({
 			"@type": "PodcastEpisode",

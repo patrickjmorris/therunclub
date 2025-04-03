@@ -111,6 +111,23 @@ export async function generateStaticParams() {
 	}
 }
 
+// Helper function to safely handle dates with configurable fallback
+const safeHandleDate = (
+	dateInput: string | Date | null | undefined,
+	options: { returnEmpty?: boolean } = {},
+): string => {
+	if (!dateInput) return options.returnEmpty ? "" : new Date().toISOString();
+	try {
+		const date = new Date(dateInput);
+		if (Number.isNaN(date.getTime())) {
+			return options.returnEmpty ? "" : new Date().toISOString();
+		}
+		return date.toISOString();
+	} catch {
+		return options.returnEmpty ? "" : new Date().toISOString();
+	}
+};
+
 // Create a cached function for fetching episode data
 const getEpisodeData = createWeeklyCache(
 	async (podcastSlug: string, episodeSlug: string) => {
@@ -127,7 +144,7 @@ const getEpisodeData = createWeeklyCache(
 			.filter((e) => e.episodeSlug !== episodeSlug)
 			.slice(0, 3);
 
-		const date = episode.pubDate ? new Date(episode.pubDate) : new Date();
+		const date = safeHandleDate(episode.pubDate);
 		const imageUrl = episode.image || episode.podcastImage || "";
 		const duration = episode.duration ? formatDuration(episode.duration) : null;
 		const sanitizedContent = sanitizeHtml(episode.content ?? "");
@@ -220,19 +237,6 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		urls,
 	} = data;
 
-	// Helper function to safely format date
-	const safeFormatDate = (
-		dateInput: string | Date | null | undefined,
-	): string => {
-		if (!dateInput) return "";
-		try {
-			const date = new Date(dateInput);
-			return Number.isNaN(date.getTime()) ? "" : date.toISOString();
-		} catch {
-			return "";
-		}
-	};
-
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
 
@@ -240,7 +244,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 		"@context": "https://schema.org",
 		"@type": "PodcastEpisode",
 		name: episode.title,
-		datePublished: safeFormatDate(episode.pubDate),
+		datePublished: safeHandleDate(episode.pubDate, { returnEmpty: true }),
 		description:
 			episode.content || `Listen to ${episode.title} on The Run Club`,
 		duration: episode.duration,

@@ -10,7 +10,6 @@ import {
 	getAllCategories,
 } from "@/lib/services/athlete-service";
 import { canManageContent } from "@/lib/auth-utils";
-import { CreateAthleteModal } from "./components/create-athlete-modal";
 
 const ATHLETES_PER_PAGE = 24;
 
@@ -149,7 +148,6 @@ export default async function AthletesPage({
 		<div className="container mx-auto py-8">
 			<div className="flex justify-between items-center mb-8">
 				<h1 className="text-3xl font-bold">Athletes</h1>
-				<CreateAthleteModal categories={categories} canEdit={canEdit} />
 			</div>
 
 			<Suspense fallback={<div>Loading athletes...</div>}>

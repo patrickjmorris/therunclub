@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { updateVideos } from "@/lib/services/video-service";
 import { updatePodcastData } from "@/lib/podcast-service";
-import { updateChannelColors } from "../../../../scripts/update-channel-colors";
+import { updateChannelColors } from "@/lib/server/channel-colors";
 import {
 	importAthleteData,
 	processEpisodeAthletes,

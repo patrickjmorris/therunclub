@@ -2,11 +2,10 @@
 
 import { addNewPodcast } from "@/lib/podcast-service";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { type PodcastSearchResult } from "@/lib/podcast-index";
 import { addPodcastSchema } from "./validation";
 import type { AddPodcastState } from "./types";
-import { requireRole, AuthError } from "@/lib/auth-utils";
-import { updatePodcastColors } from "@/lib/update-podcast-colors";
+import { requireRole } from "@/lib/auth-utils";
+import { updatePodcastColors } from "@/lib/server/update-podcast-colors";
 import { revalidatePodcastsAndEpisodes } from "@/db/queries";
 import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";

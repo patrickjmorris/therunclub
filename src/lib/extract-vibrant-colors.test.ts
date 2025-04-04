@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractVibrantColors } from "./extract-vibrant-colors";
+import { extractVibrantColors } from "@/lib/server/extract-vibrant-colors";
 
 describe("extractVibrantColors", () => {
 	it("should successfully extract colors from a WebP image", async () => {

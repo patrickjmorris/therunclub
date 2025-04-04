@@ -2,7 +2,7 @@ import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-import { extractVibrantColors } from "./extract-vibrant-colors";
+import { extractVibrantColors } from "@/lib/server/extract-vibrant-colors";
 
 export async function updatePodcastColors(podcastId: string, imageUrl: string) {
 	try {

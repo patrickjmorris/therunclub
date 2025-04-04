@@ -3,8 +3,7 @@ import { channels, videos, podcasts, episodes } from "@/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { FeaturedChannelClient } from "./featured-channel-client";
-import { updateChannelColor } from "@/lib/update-channel-colors";
-import { updatePodcastColors } from "@/lib/update-podcast-colors";
+import { updateChannelColor } from "@/lib/server/channel-colors";
 
 const getChannelWithVideos = unstable_cache(
 	async (channelId: string) => {
@@ -92,17 +91,7 @@ const getPodcastWithEpisodes = unstable_cache(
 			throw new Error(`Podcast not found: ${podcastId}`);
 		}
 
-		// Extract vibrant color if not already present
-		if (podcast.podcastImage && !podcast.vibrantColor) {
-			const vibrantColor = await updatePodcastColors(
-				podcast.id,
-				podcast.podcastImage,
-			);
-			if (vibrantColor) {
-				podcast.vibrantColor = vibrantColor;
-			}
-		}
-
+		// Remove real-time color extraction since it's handled by backend routes
 		const podcastEpisodes = await db
 			.select()
 			.from(episodes)

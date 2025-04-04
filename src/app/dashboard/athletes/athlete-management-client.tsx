@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { CreateAthleteModal } from "@/app/athletes/components/create-athlete-modal";
-import { DataTable } from "@/components/dashboard/data-table/data-table";
+import { DataTable } from "@/app/dashboard/components/data-table/data-table";
 import {
 	getAthleteColumns,
 	type AthleteData,
-} from "@/components/dashboard/athletes/columns";
+} from "@/app/dashboard/components/athletes/columns";
 import { Button } from "@/components/ui/button";
 import {
 	AlertDialog,

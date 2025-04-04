@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { InfiniteScroll } from "@/components/infinite-scroll";
+import { InfiniteScroll } from "@/components/common/infinite-scroll";
 import type { BasicEpisode } from "@/types/shared";
 import dynamic from "next/dynamic";
 

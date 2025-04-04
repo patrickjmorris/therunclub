@@ -1,4 +1,4 @@
-import { PodcastSearch } from "@/components/podcast-search";
+import { PodcastSearch } from "@/components/podcasts/podcast-search";
 import Link from "next/link";
 
 export default function PodcastSearchPage() {

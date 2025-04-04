@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { VideoGrid } from "./video-grid";
-import { InfiniteScroll } from "@/components/infinite-scroll";
+import { VideoGrid } from "@/components/videos/video-grid";
+import { InfiniteScroll } from "@/components/common/infinite-scroll";
 import type { BasicVideo } from "@/types/shared";
 
 interface InfiniteVideoGridProps {

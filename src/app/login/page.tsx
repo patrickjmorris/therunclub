@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { LoginForm } from "@/components/login-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoginForm } from "./components/login-form";
 
 function LoginFormSkeleton() {
 	return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { ContentFilter } from "@/components/shared/content-filter";
+import { ContentFilter } from "@/components/common/shared/content-filter";
 import { useState, useEffect } from "react";
 
 interface PodcastFilterProps {

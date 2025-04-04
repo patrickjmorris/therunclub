@@ -4,11 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import { FormattedDate } from "../FormattedDate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { formatDuration } from "@/lib/formatDuration";
 import { sanitizeHtml } from "@/lib/sanitize";
 import type { BasicEpisode } from "@/types/shared";
-import { EpisodePlayControls } from "./episode-play-controls";
+import { EpisodePlayControls } from "@/components/podcasts/episode-play-controls";
 
 interface EpisodeEntryProps {
 	episode: BasicEpisode;

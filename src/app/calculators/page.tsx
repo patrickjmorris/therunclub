@@ -1,4 +1,4 @@
-import { CalculatorModeProvider } from "./calculator-mode-provider";
+import { CalculatorModeProvider } from "./components/calculator-mode-provider";
 
 export default function CalculatorsPage() {
 	return (

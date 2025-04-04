@@ -12,7 +12,7 @@ import AthleteMentionsSection from "./components/mentions-section";
 import { getAthleteData } from "@/lib/services/athlete-service";
 import { canManageContent } from "@/lib/auth-utils";
 import { Suspense } from "react";
-import { MentionLoading } from "@/components/mention-loading";
+import { MentionLoading } from "@/components/common/mention-loading";
 
 export async function generateStaticParams() {
 	console.log("[Build] Starting generateStaticParams for athletes");

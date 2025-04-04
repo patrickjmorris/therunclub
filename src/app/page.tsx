@@ -1,24 +1,24 @@
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/common/page-header";
 import { Suspense } from "react";
-import { GlobalSearch } from "@/components/search/global-search";
+import { GlobalSearch } from "@/components/common/search/global-search";
 import {
 	VideoSection,
 	VideoSectionSkeleton,
-} from "@/components/homepage/VideoSection";
+} from "@/components/common/homepage/VideoSection";
 import {
 	PodcastSection,
 	PodcastSectionSkeleton,
-} from "@/components/homepage/PodcastSection";
+} from "@/components/common/homepage/PodcastSection";
 import {
 	TaggedContentSection,
 	TaggedContentSkeleton,
-} from "@/components/homepage/TaggedContentSection";
+} from "@/components/common/homepage/TaggedContentSection";
 import {
 	FeaturedChannelsSection,
 	FeaturedPodcastsSection,
 	FeaturedChannelsSkeleton,
 	FeaturedPodcastsSkeleton,
-} from "@/components/homepage/FeaturedSection";
+} from "@/components/common/homepage/FeaturedSection";
 
 // Route segment config
 export const dynamic = "force-static";

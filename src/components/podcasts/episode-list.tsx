@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import EpisodeEntry from "./EpisodeEntry";
-import { InfiniteScroll } from "@/components/infinite-scroll";
+import { InfiniteScroll } from "@/components/common/infinite-scroll";
 import type { BasicEpisode } from "@/types/shared";
 
 interface EpisodeListProps {

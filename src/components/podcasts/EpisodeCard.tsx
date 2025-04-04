@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormattedDate } from "@/components/FormattedDate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import Link from "next/link";
 import Image from "next/image";
-import { ListenNowButton } from "@/components/ListenNowButton";
+import { ListenNowButton } from "@/components/podcasts/listen-now-button";
 import { EpisodeWithPodcast } from "@/types/episodeWithPodcast";
 
 interface EpisodeCardProps {

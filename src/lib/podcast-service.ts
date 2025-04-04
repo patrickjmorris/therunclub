@@ -3,7 +3,7 @@ import { podcasts, episodes, type Episode, type Podcast } from "@/db/schema";
 import { webSubManager } from "@/lib/websub-manager";
 import { eq, sql, isNull } from "drizzle-orm";
 import Parser from "rss-parser";
-import { updatePodcastColors } from "@/lib/update-podcast-colors";
+import { updatePodcastColors } from "@/lib/server/update-podcast-colors";
 import { createPodcastIndexClient } from "@/lib/podcast-index";
 import type { iTunesSearchResponse } from "@/lib/itunes-types";
 import { decode } from "html-entities";

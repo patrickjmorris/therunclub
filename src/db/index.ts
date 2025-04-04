@@ -1,17 +1,8 @@
 import { db } from "./client";
-import {
-	podcasts,
-	episodes,
-	Episode,
-	Podcast,
-	channels,
-	videos,
-} from "./schema";
+import { channels, videos } from "./schema";
 import { eq, sql } from "drizzle-orm";
-import { updatePodcastColors } from "@/lib/update-podcast-colors";
-import { decode } from "html-entities";
+import { updatePodcastColors } from "@/lib/server/update-podcast-colors";
 import { config } from "dotenv";
-import { slugify } from "@/lib/utils";
 import { safeDateParse } from "@/lib/date-utils";
 import {
 	fetchChannelData,

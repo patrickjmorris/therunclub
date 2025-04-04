@@ -1,8 +1,37 @@
+import "server-only";
 import { db, client } from "@/db/client";
 import { channels } from "@/db/schema";
 import { eq, isNull } from "drizzle-orm";
-import { extractVibrantColors } from "@/lib/extract-vibrant-colors";
+import { extractVibrantColors } from "./extract-vibrant-colors";
 
+/**
+ * Updates the vibrant color for a single channel
+ */
+export async function updateChannelColor(
+	channelId: string,
+	thumbnailUrl: string,
+) {
+	try {
+		const vibrantColor = await extractVibrantColors(thumbnailUrl);
+
+		if (vibrantColor) {
+			await db
+				.update(channels)
+				.set({ vibrantColor })
+				.where(eq(channels.id, channelId));
+
+			return vibrantColor;
+		}
+	} catch (error) {
+		console.error("Error updating channel color:", error);
+	}
+
+	return null;
+}
+
+/**
+ * Updates vibrant colors for all channels that don't have one
+ */
 export async function updateChannelColors() {
 	console.log("Starting channel color update...");
 
@@ -46,14 +75,13 @@ export async function updateChannelColors() {
 					channel.title
 				}`,
 			);
-			const vibrantColor = await extractVibrantColors(channel.thumbnailUrl);
+
+			const vibrantColor = await updateChannelColor(
+				channel.id,
+				channel.thumbnailUrl,
+			);
 
 			if (vibrantColor) {
-				await db
-					.update(channels)
-					.set({ vibrantColor })
-					.where(eq(channels.id, channel.id));
-
 				console.log(
 					`[${index + 1}/${channelsToUpdate.length}] Updated channel ${
 						channel.title

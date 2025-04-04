@@ -336,22 +336,86 @@ async function processPodcast(
 			itunesData?.artworkUrl600 ||
 			podcast.image;
 
+		console.log(`[IMAGE-DEBUG] Podcast: ${podcast.title}`, {
+			currentPodcastImage: podcast.podcastImage,
+			newImageUrl: podcastImageUrl,
+			imageSource: data.image?.url
+				? "RSS feed image"
+				: data.itunes?.image
+				  ? "iTunes feed image"
+				  : itunesData?.artworkUrl600
+					  ? "iTunes API image"
+					  : podcast.image
+						  ? "Existing image"
+						  : "No image found",
+		});
+
 		// Optimize podcast image if we have one
-		let podcast_image = null;
+		let podcast_image = undefined;
 		if (podcastImageUrl && !shouldSkipImageProcessing(podcastImageUrl)) {
+			console.log(
+				`[IMAGE-DEBUG] Attempting to process image for ${podcast.title}`,
+				{
+					url: podcastImageUrl,
+					skipImageProcessing: SKIP_IMAGE_PROCESSING,
+					devMode: DEV_MODE_SKIP_ACTUAL_PROCESSING,
+				},
+			);
+
 			try {
-				podcast_image = await processImage(podcastImageUrl, 1400, "podcasts");
+				const processedImage = await processImage(
+					podcastImageUrl,
+					1400,
+					"podcasts",
+				);
+				if (processedImage) {
+					podcast_image = processedImage;
+					console.log(
+						`[IMAGE-DEBUG] Successfully processed image for ${podcast.title}`,
+						{
+							originalUrl: podcastImageUrl,
+							processedUrl: processedImage,
+						},
+					);
+				} else {
+					console.log(
+						`[IMAGE-DEBUG] Image processing returned null for ${podcast.title}`,
+						{
+							originalUrl: podcastImageUrl,
+						},
+					);
+				}
 			} catch (error) {
 				console.error(
-					`Error optimizing podcast image for ${podcast.title}:`,
-					error,
+					`[IMAGE-DEBUG] Error optimizing podcast image for ${podcast.title}:`,
+					{
+						error,
+						originalUrl: podcastImageUrl,
+						willPreserveExisting: true,
+					},
 				);
-				podcast_image = null;
+				// Don't set podcast_image to null, leave it undefined to preserve existing
 			}
+		} else {
+			console.log(
+				`[IMAGE-DEBUG] Skipping image processing for ${podcast.title}`,
+				{
+					hasUrl: !!podcastImageUrl,
+					url: podcastImageUrl,
+					skipReason: !podcastImageUrl ? "No URL" : "Failed skip check",
+				},
+			);
 		}
 
+		// Log the final state before update
+		console.log(`[IMAGE-DEBUG] Final image state for ${podcast.title}`, {
+			willUpdate: podcast_image !== undefined,
+			newImageValue: podcast_image,
+			willPreserveExisting: podcast_image === undefined,
+			currentValue: podcast.podcastImage,
+		});
+
 		// Update podcast metadata with what we have
-		// IMPORTANT: Always keep existing data if new data is not available
 		console.log(`[DEBUG] Updating podcast metadata for ${podcast.title}`);
 		const [updatedPodcast] = await db
 			.insert(podcasts)
@@ -395,7 +459,10 @@ async function processPodcast(
 					title: sql`EXCLUDED.title`,
 					description: sql`EXCLUDED.description`,
 					image: sql`EXCLUDED.image`,
-					podcastImage: sql`EXCLUDED.podcast_image`,
+					podcastImage:
+						podcast_image !== undefined
+							? sql`EXCLUDED.podcast_image`
+							: undefined,
 					author: sql`EXCLUDED.author`,
 					link: sql`EXCLUDED.link`,
 					language: sql`EXCLUDED.language`,

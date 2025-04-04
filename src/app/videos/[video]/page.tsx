@@ -12,7 +12,7 @@ import { db } from "@/db/client";
 import { Suspense } from "react";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { and } from "drizzle-orm";
-import { preloadLinks } from "@/components/LinkPreviewPreloader";
+import { preloadLinks } from "@/components/common/link-preview/link-preview-preloader";
 
 // Dynamically import components
 const DynamicVideoPlayer = (await import("next/dynamic")).default(
@@ -25,7 +25,7 @@ const DynamicVideoPlayer = (await import("next/dynamic")).default(
 
 const DynamicTabsWithState = (await import("next/dynamic")).default(
 	() =>
-		import("@/components/TabsWithState").then((mod) => ({
+		import("@/components/common/tabs-with-state").then((mod) => ({
 			default: mod.TabsWithState,
 		})),
 	{ ssr: false },
@@ -33,31 +33,37 @@ const DynamicTabsWithState = (await import("next/dynamic")).default(
 
 const DynamicLinkPreviewClientWrapper = (await import("next/dynamic")).default(
 	() =>
-		import("@/components/LinkPreviewClientWrapper").then((mod) => ({
-			default: mod.LinkPreviewClientWrapper,
-		})),
+		import("@/components/common/link-preview/link-preview-client-wrapper").then(
+			(mod) => ({
+				default: mod.LinkPreviewClientWrapper,
+			}),
+		),
 	{ ssr: false },
 );
 
 const DynamicLinkPreviewPreloader = (await import("next/dynamic")).default(
 	() =>
-		import("@/components/LinkPreviewPreloader").then((mod) => ({
-			default: mod.LinkPreviewPreloader,
-		})),
+		import("@/components/common/link-preview/link-preview-preloader").then(
+			(mod) => ({
+				default: mod.LinkPreviewPreloader,
+			}),
+		),
 	{ ssr: false },
 );
 
 const DynamicLinkPreviewErrorBoundary = (await import("next/dynamic")).default(
 	() =>
-		import("@/components/LinkPreviewErrorBoundary").then((mod) => ({
-			default: mod.LinkPreviewErrorBoundary,
-		})),
+		import("@/components/common/link-preview/link-preview-error-boundary").then(
+			(mod) => ({
+				default: mod.LinkPreviewErrorBoundary,
+			}),
+		),
 	{ ssr: false },
 );
 
 const DynamicMoreContent = (await import("next/dynamic")).default(
 	() =>
-		import("@/components/content/more-content").then((mod) => ({
+		import("@/components/common/content/more-content").then((mod) => ({
 			default: mod.MoreContent,
 		})),
 	{ ssr: false },

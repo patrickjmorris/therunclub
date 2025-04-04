@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AddContentDialog from "@/components/content/AddContentDialog";
-import { DataTable } from "@/components/dashboard/data-table/data-table";
+
+import { DataTable } from "@/app/dashboard/components/data-table/data-table";
 import {
 	getPodcastColumns,
 	type PodcastData,
-} from "@/components/dashboard/podcasts/columns";
+} from "@/app/dashboard/components/podcasts/columns";
 import { Button } from "@/components/ui/button";
 import {
 	AlertDialog,
@@ -26,6 +26,7 @@ import {
 } from "@/app/actions/podcasts";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import AddContentDialog from "@/components/common/content/AddContentDialog";
 
 interface PodcastManagementClientProps {
 	initialPodcasts: Awaited<ReturnType<typeof getAllPodcastsForManagement>>;

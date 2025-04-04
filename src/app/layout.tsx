@@ -1,16 +1,17 @@
 import "@/styles/tailwind.css";
-import { AudioProvider } from "@/components/AudioProvider";
-import { AudioPlayer } from "@/components/player/AudioPlayer";
+
 import { Metadata, Viewport } from "next";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
-import { Analytics } from "@/components/analytics";
-import { ThemeProvider } from "@/components/theme-provider";
-import { TailwindIndicator } from "@/components/tailwind-indicator";
+import { Analytics } from "@/components/common/analytics";
+import { ThemeProvider } from "@/components/common/theme-provider";
+import { TailwindIndicator } from "@/components/common/tailwind-indicator";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeader } from "@/components/common/site-header";
+import { AudioPlayer } from "@/components/podcasts/player/AudioPlayer";
+import { AudioProvider } from "@/components/podcasts/audio-provider";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(siteConfig.url),

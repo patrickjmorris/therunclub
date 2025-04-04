@@ -1,5 +1,5 @@
 import { Separator } from "@/components/ui/separator";
-import { AboutSection } from "@/components/AboutSection";
+import { AboutSection } from "@/components/common/about-section";
 import { getPodcastBySlug } from "@/lib/services/podcast-service";
 import { notFound } from "next/navigation";
 import DynamicHeader from "@/components/podcasts/DynamicHeader";

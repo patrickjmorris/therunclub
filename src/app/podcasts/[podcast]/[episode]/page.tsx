@@ -7,37 +7,27 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Play, Calendar, Clock, Pause } from "lucide-react";
-import { FormattedDate } from "@/components/FormattedDate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { formatDuration } from "@/lib/formatDuration";
-import { EpisodePlayButton } from "@/components/EpisodePlayButton";
+import { EpisodePlayButton } from "@/components/podcasts/episode-play-button";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { extractUrlsFromHtml } from "@/lib/extract-urls";
-import { TabsWithState } from "@/components/TabsWithState";
+import { TabsWithState } from "@/components/common/tabs-with-state";
 import Image from "next/image";
 import { Suspense } from "react";
-import { AthleteReferences } from "@/components/athlete-references";
-import { MentionLoading } from "@/components/mention-loading";
-import { MentionError } from "@/components/mention-error";
-import { getEpisodeAthleteReferences } from "@/lib/services/athlete-service";
+import { AthleteReferences } from "@/components/athletes/athlete-references";
+import { MentionLoading } from "@/components/common/mention-loading";
 import { eq, desc, and, isNotNull, like, gt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { episodes, podcasts } from "@/db/schema";
-import { LinkPreviewClientWrapper } from "@/components/LinkPreviewClientWrapper";
 import {
 	LinkPreviewPreloader,
 	preloadLinks,
-} from "@/components/LinkPreviewPreloader";
-import { LinkPreviewErrorBoundary } from "@/components/LinkPreviewErrorBoundary";
-import { MoreContent } from "@/components/content/more-content";
-import { getUserRole } from "@/lib/auth-utils";
-import { AthleteMentions } from "@/components/athlete-mentions";
-import {
-	getAthleteRecentMentions,
-	getAthleteData,
-	getAllAthletes,
-} from "@/lib/services/athlete-service";
-import { formatDistanceToNow, format } from "date-fns";
+} from "@/components/common/link-preview/link-preview-preloader";
+import { LinkPreviewErrorBoundary } from "@/components/common/link-preview/link-preview-error-boundary";
+import { MoreContent } from "@/components/common/content/more-content";
 import { createWeeklyCache } from "@/lib/utils/cache";
+import { LinkPreviewClientWrapper } from "@/components/common/link-preview/link-preview-client-wrapper";
 
 export const dynamic = "force-static";
 export const revalidate = 604800;

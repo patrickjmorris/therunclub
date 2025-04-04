@@ -40,7 +40,8 @@
 		"db:rollback:athletes": "bun run scripts/rollback-athletes.ts",
 		"reprocess:mentions": "bun run scripts/reprocess-athlete-mentions.ts",
 		"reprocess:mentions:prod": "NODE_ENV=production bun run scripts/reprocess-athlete-mentions.ts",
-		"optimize:images": "NODE_ENV=production bun run scripts/optimize-content-images.ts"
+		"optimize:images": "NODE_ENV=production bun run scripts/optimize-content-images.ts",
+		"test": "vitest"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {
@@ -135,6 +136,8 @@
 		"@types/node-cron": "^3.0.11",
 		"drizzle-kit": "0.28.0",
 		"supabase": "^1.226.4",
-		"ts-node": "^10.9.2"
-	}
+		"ts-node": "^10.9.2",
+		"vitest": "^3.1.1"
+	},
+	"packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
 }

@@ -1,9 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { FormattedDate } from "@/components/FormattedDate";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { Metadata } from "next";
 import {
 	getFeaturedPodcasts,

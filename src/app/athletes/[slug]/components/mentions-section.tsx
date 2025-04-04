@@ -1,5 +1,5 @@
-import { AthleteMentions } from "@/components/athlete-mentions";
-import { MentionError } from "@/components/mention-error";
+import { AthleteMentions } from "@/components/athletes/athlete-mentions";
+import { MentionError } from "@/components/common/mention-error";
 import { getAthleteRecentMentions } from "@/lib/services/athlete-service";
 
 export default async function AthleteMentionsSection({

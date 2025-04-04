@@ -1,6 +1,6 @@
 "use client";
 
-import { EpisodePlayButton } from "../EpisodePlayButton";
+import { EpisodePlayButton } from "@/components/podcasts/episode-play-button";
 import { Play, Pause } from "lucide-react";
 import type { BasicEpisode } from "@/types/shared";
 

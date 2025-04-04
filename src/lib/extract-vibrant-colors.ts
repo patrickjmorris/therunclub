@@ -10,13 +10,14 @@ export async function extractVibrantColors(
 		const arrayBuffer = await response.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
 
-		// Resize image for better performance
-		const resizedBuffer = await sharp(buffer)
+		// Resize and convert to JPEG for better compatibility
+		const processedBuffer = await sharp(buffer)
 			.resize(300, 300, { fit: "inside" })
+			.jpeg() // Convert to JPEG format
 			.toBuffer();
 
 		// Extract colors using Vibrant
-		const palette = await Vibrant.from(resizedBuffer).getPalette();
+		const palette = await Vibrant.from(processedBuffer).getPalette();
 
 		// Convert to array of color strings, filtering out null values
 		const vibrantColor = palette.Vibrant?.hex;

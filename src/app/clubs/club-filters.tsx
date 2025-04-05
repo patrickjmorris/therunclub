@@ -10,20 +10,24 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, X, ExternalLink, Footprints } from "lucide-react";
+import { MapPin, X, ExternalLink, Footprints, Instagram } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useState, useEffect } from "react";
 import { type RunningClub } from "@/db/schema";
+import { ClubLinkPreview } from "./club-link-preview";
+import type { OpenGraphData } from "@/lib/og";
 
 interface ClubFiltersProps {
 	cities: string[];
-	initialClubs: RunningClub[];
+	initialClubs: Array<RunningClub & { ogData: OpenGraphData | null }>;
 }
 
 export function ClubFilters({ cities, initialClubs }: ClubFiltersProps) {
 	const [city, setCity] = useQueryState("city");
 	const [filteredClubs, setFilteredClubs] =
-		useState<RunningClub[]>(initialClubs);
+		useState<Array<RunningClub & { ogData: OpenGraphData | null }>>(
+			initialClubs,
+		);
 
 	// Filter clubs client-side when city changes
 	useEffect(() => {
@@ -79,6 +83,9 @@ export function ClubFilters({ cities, initialClubs }: ClubFiltersProps) {
 						</CardHeader>
 
 						<CardContent className="flex-grow">
+							{club.website && (
+								<ClubLinkPreview website={club.website} ogData={club.ogData} />
+							)}
 							<p className="text-sm text-muted-foreground">
 								{club.description}
 							</p>
@@ -108,6 +115,19 @@ export function ClubFilters({ cities, initialClubs }: ClubFiltersProps) {
 									>
 										<Footprints className="h-4 w-4 mr-2" />
 										Strava
+									</a>
+								</Button>
+							)}
+							{club.socialMedia?.instagram && (
+								<Button variant="outline" size="sm" asChild>
+									<a
+										href={club.socialMedia.instagram}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="flex items-center"
+									>
+										<Instagram className="h-4 w-4 mr-2" />
+										Instagram
 									</a>
 								</Button>
 							)}

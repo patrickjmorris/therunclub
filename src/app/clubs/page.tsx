@@ -3,19 +3,10 @@ import { runningClubs } from "@/db/schema";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ClubFilters } from "@/app/clubs/club-filters";
+import { getClubsData } from "@/lib/services/club-service";
 
 // This ensures the page and data are generated at build time
 export const revalidate = 3600; // Revalidate every hour
-
-async function getClubsData() {
-	const clubs = await db.select().from(runningClubs);
-	const cities = [...new Set(clubs.map((club) => club.location.city))].sort();
-
-	return {
-		cities,
-		clubs, // Pass clubs directly to avoid another DB query in ClubFilters
-	};
-}
 
 export default async function ClubsPage() {
 	const { cities, clubs } = await getClubsData();

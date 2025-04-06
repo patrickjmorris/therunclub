@@ -6,10 +6,17 @@ import { updateChannelColors } from "@/lib/server/channel-colors";
 import {
 	importAthleteData,
 	processEpisodeAthletes,
-	updateExistingAthletes,
+	processContentBatch,
 } from "@/lib/services/athlete-service";
 import { db } from "@/db/client";
-import { episodes, podcasts, videos, channels, athletes } from "@/db/schema";
+import {
+	episodes,
+	podcasts,
+	videos,
+	channels,
+	athletes,
+	athleteMentions,
+} from "@/db/schema";
 import { and, sql, not, eq, desc } from "drizzle-orm";
 
 type ContentType =
@@ -19,6 +26,7 @@ type ContentType =
 	| "channel-videos"
 	| "athletes"
 	| "athlete-detection"
+	| "video-mentions"
 	| "tagging";
 
 const isUpdating = {
@@ -28,6 +36,7 @@ const isUpdating = {
 	"channel-videos": false,
 	athletes: false,
 	"athlete-detection": false,
+	"video-mentions": false,
 	tagging: false,
 };
 
@@ -92,6 +101,12 @@ async function updateTimestamp(type: ContentType) {
 				// Update all episodes' updated_at column
 				await db.execute(
 					sql`UPDATE ${episodes} SET updated_at = NOW() WHERE TRUE`,
+				);
+				break;
+			case "video-mentions":
+				// Update all videos' updated_at column
+				await db.execute(
+					sql`UPDATE ${videos} SET updated_at = NOW() WHERE TRUE`,
 				);
 				break;
 			default:
@@ -306,10 +321,8 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				);
 				const updateMode = request.nextUrl.searchParams.get("mode");
 
-				const results =
-					updateMode === "existing"
-						? await updateExistingAthletes(limit)
-						: await importAthleteData(limit);
+				// Handle the athlete update mode
+				const results = await importAthleteData(limit);
 
 				return NextResponse.json({
 					message: "Athletes updated successfully",
@@ -450,6 +463,63 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					{ status: 500 },
 				);
 			}
+		} else if (type === "video-mentions") {
+			try {
+				// Get videos updated in the last 24 hours by default
+				const minHoursSinceUpdate = parseInt(
+					request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
+					10,
+				);
+				const batchSize = parseInt(
+					request.nextUrl.searchParams.get("batchSize") || "10",
+					10,
+				);
+
+				console.log(
+					"[Video Mention Detection] Starting detection with params:",
+					{
+						minHoursSinceUpdate,
+						batchSize,
+					},
+				);
+
+				// Use the shared content processing function instead of duplicating code
+				const results = await processContentBatch({
+					contentType: "video",
+					limit: batchSize,
+					minHoursSinceUpdate,
+				});
+
+				console.log("[Video Mention Detection] Processing complete:", {
+					processed: results.processed,
+					errors: results.errors,
+					successRate: results.successRate,
+					athleteMatches: results.athleteMatches,
+				});
+
+				return NextResponse.json({
+					message: "Video mention detection completed successfully",
+					results: {
+						...results,
+						athleteMatches: {
+							...results.athleteMatches,
+							description: results.athleteMatches.content, // Map content field to description for backward compatibility
+						},
+					},
+				});
+			} catch (error) {
+				console.error(
+					"[Video Mention Detection] Error in batch processing:",
+					error,
+				);
+				return NextResponse.json(
+					{
+						message: "Error in video mention detection",
+						error: error instanceof Error ? error.message : String(error),
+					},
+					{ status: 500 },
+				);
+			}
 		} else if (type === "tagging") {
 			// This is handled by the dedicated /api/content/video endpoint
 			return NextResponse.json(
@@ -501,13 +571,14 @@ export async function GET(request: NextRequest) {
 			"channel-videos",
 			"athletes",
 			"athlete-detection",
+			"video-mentions",
 			"tagging",
 		].includes(type)
 	) {
 		return NextResponse.json(
 			{
 				message:
-					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', 'channel-videos', 'athletes', 'athlete-detection', 'individual-video', or 'tagging'",
+					"Invalid content type. Must be 'videos', 'podcasts', 'channel-colors', 'channel-videos', 'athletes', 'athlete-detection', 'video-mentions', 'individual-video', or 'tagging'",
 			},
 			{ status: 400 },
 		);

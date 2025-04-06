@@ -7,6 +7,17 @@ export default async function AthleteMentionsSection({
 }: { athleteId: string }) {
 	try {
 		const mentions = await getAthleteRecentMentions(athleteId);
+
+		// Server-side debugging
+		console.log("MENTIONS DEBUG (server):", {
+			athlete: athleteId,
+			totalMentions: mentions.length,
+			podcastMentions: mentions.filter((m) => m.contentType === "podcast")
+				.length,
+			videoMentions: mentions.filter((m) => m.contentType === "video").length,
+			firstType: mentions.length > 0 ? mentions[0].contentType : "none",
+		});
+
 		return <AthleteMentions mentions={mentions} />;
 	} catch (error) {
 		console.error("Error loading athlete mentions:", error);

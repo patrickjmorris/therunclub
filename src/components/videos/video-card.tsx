@@ -11,9 +11,10 @@ import type { BasicVideo } from "@/types/shared";
 interface VideoCardProps {
 	video: BasicVideo;
 	onShare?: (id: string) => Promise<void>;
+	hideShare?: boolean;
 }
 
-export function VideoCard({ video, onShare }: VideoCardProps) {
+export function VideoCard({ video, onShare, hideShare }: VideoCardProps) {
 	return (
 		<Card className="overflow-hidden">
 			<Link href={`/videos/${encodeURIComponent(video.id)}`}>
@@ -42,12 +43,14 @@ export function VideoCard({ video, onShare }: VideoCardProps) {
 					</div>
 				</CardContent>
 			</Link>
-			<CardFooter className="flex justify-end p-4 pt-0">
-				<Button variant="ghost" size="sm" onClick={() => onShare?.(video.id)}>
-					<Share2 className="h-4 w-4 mr-2" />
-					Share
-				</Button>
-			</CardFooter>
+			{!hideShare && (
+				<CardFooter className="flex justify-end p-4 pt-0">
+					<Button variant="ghost" size="sm" onClick={() => onShare?.(video.id)}>
+						<Share2 className="h-4 w-4 mr-2" />
+						Share
+					</Button>
+				</CardFooter>
+			)}
 		</Card>
 	);
 }

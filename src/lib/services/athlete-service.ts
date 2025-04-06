@@ -7,6 +7,7 @@ import {
 	episodes,
 	podcasts,
 	athleteCategories,
+	videos,
 } from "@/db/schema";
 import {
 	desc,
@@ -20,6 +21,7 @@ import {
 	gte,
 	or,
 	notInArray,
+	not,
 } from "drizzle-orm";
 import { gqlClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
@@ -262,37 +264,51 @@ export type AthleteMention = {
 	id: string;
 	athleteId: string;
 	contentId: string;
+	contentType: "podcast" | "video";
 	source: "title" | "description";
 	confidence: string;
 	context: string;
-	createdAt: Date | null;
-	episode: {
+	createdAt: Date;
+	episode?: {
 		id: string;
 		title: string;
 		episodeSlug: string;
 		content: string | null;
 		pubDate: Date | null;
 		episodeImage: string | null;
-		duration: string;
-		podcastSlug: string;
-		podcastTitle: string;
+		duration: string | null;
+		podcastSlug: string | null;
+		podcastTitle: string | null;
 		podcastImage: string | null;
 		podcastId: string;
 		podcastAuthor: string | null;
-		enclosureUrl: string | null;
-		explicit: "yes" | "no" | null;
+		enclosureUrl: string;
+		explicit: string | null;
 		link: string | null;
 	};
-	podcast: {
+	podcast?: {
 		id: string;
 		title: string;
 		image: string | null;
-		podcastSlug: string;
+		podcastSlug: string | null;
 	};
+	video?: {
+		id: string;
+		title: string;
+		thumbnailUrl: string | null;
+		channelTitle: string | null;
+		publishedAt: Date | null;
+		description: string | null;
+		youtubeVideoId: string;
+		duration: string | null;
+		viewCount: string | null;
+		likeCount: string | null;
+	};
+	publishedDate?: Date | null;
 };
 
 export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
-	// Get the highest confidence mention IDs for each episode
+	// Get the highest confidence mention IDs for each content (episode or video)
 	const mentionIds = await db.execute<{ id: string }>(sql`
 		SELECT DISTINCT ON (content_id) id
 		FROM athlete_mentions
@@ -301,13 +317,14 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 		LIMIT ${limit}
 	`);
 
-	// Fetch full details with an explicit join so we can sort by episodes.pubDate
-	return await db
+	// First fetch podcast mentions
+	const podcastMentions = await db
 		.select({
 			// Top-level mention fields
 			id: athleteMentions.id,
 			athleteId: athleteMentions.athleteId,
 			contentId: athleteMentions.contentId,
+			contentType: athleteMentions.contentType,
 			source: athleteMentions.source,
 			confidence: athleteMentions.confidence,
 			context: athleteMentions.context,
@@ -347,10 +364,76 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 					athleteMentions.id,
 					mentionIds.map((m) => m.id),
 				),
+				eq(athleteMentions.contentType, "podcast"),
 				like(podcasts.language, "en%"),
 			),
 		)
-		.orderBy(desc(episodes.pubDate), desc(athleteMentions.confidence));
+		.orderBy(desc(episodes.pubDate));
+
+	// Then fetch video mentions
+	const videoMentions = await db
+		.select({
+			// Top-level mention fields
+			id: athleteMentions.id,
+			athleteId: athleteMentions.athleteId,
+			contentId: athleteMentions.contentId,
+			contentType: athleteMentions.contentType,
+			source: athleteMentions.source,
+			confidence: athleteMentions.confidence,
+			context: athleteMentions.context,
+			createdAt: athleteMentions.createdAt,
+
+			// Video fields
+			video: {
+				id: videos.id,
+				title: videos.title,
+				thumbnailUrl: videos.thumbnailUrl,
+				channelTitle: videos.channelTitle,
+				publishedAt: videos.publishedAt,
+				description: videos.description,
+				youtubeVideoId: videos.youtubeVideoId,
+				duration: videos.duration,
+				viewCount: videos.viewCount,
+				likeCount: videos.likeCount,
+			},
+		})
+		.from(athleteMentions)
+		.innerJoin(videos, eq(athleteMentions.contentId, videos.id))
+		.where(
+			and(
+				inArray(
+					athleteMentions.id,
+					mentionIds.map((m) => m.id),
+				),
+				eq(athleteMentions.contentType, "video"),
+			),
+		)
+		.orderBy(desc(videos.publishedAt));
+
+	// Combine the results and sort by date, with most recent first
+	const combinedMentions = [
+		...podcastMentions.map((mention) => ({
+			...mention,
+			video: undefined,
+			publishedDate: mention.episode.pubDate,
+			// Ensure createdAt is always a valid Date
+			createdAt: mention.createdAt || new Date(),
+		})),
+		...videoMentions.map((mention) => ({
+			...mention,
+			episode: undefined,
+			podcast: undefined,
+			publishedDate: mention.video.publishedAt,
+			// Ensure createdAt is always a valid Date
+			createdAt: mention.createdAt || new Date(),
+		})),
+	].sort((a, b) => {
+		if (!a.publishedDate) return 1;
+		if (!b.publishedDate) return -1;
+		return b.publishedDate.getTime() - a.publishedDate.getTime();
+	});
+
+	return combinedMentions.slice(0, limit);
 }
 
 export async function getEpisodeAthleteReferences(
@@ -809,67 +892,7 @@ export async function importAthleteData(limit?: number) {
 	return results;
 }
 
-/**
- * Process an episode to detect and store athlete mentions
- */
-export async function processEpisodeAthletes(episodeId: string) {
-	console.time(`processEpisode:${episodeId}`);
-
-	const episode = await db.query.episodes.findFirst({
-		where: eq(episodes.id, episodeId),
-		columns: {
-			id: true,
-			title: true,
-			content: true,
-		},
-	});
-
-	if (!episode) {
-		throw new Error(`Episode not found: ${episodeId}`);
-	}
-
-	// Process title
-	const titleAthletes = await detectAthletes(episode.title);
-	for (const athlete of titleAthletes) {
-		await db.insert(athleteMentions).values({
-			athleteId: athlete.athleteId,
-			contentId: episode.id,
-			contentType: "podcast" as const,
-			source: "title" as const,
-			confidence: athlete.confidence.toString(),
-			context: athlete.context,
-		});
-	}
-
-	// Process description/content if available
-	let contentAthletes: DetectedAthlete[] = [];
-	if (episode.content) {
-		contentAthletes = await detectAthletes(episode.content);
-		for (const athlete of contentAthletes) {
-			await db.insert(athleteMentions).values({
-				athleteId: athlete.athleteId,
-				contentId: episode.id,
-				contentType: "podcast" as const,
-				source: "description" as const,
-				confidence: athlete.confidence.toString(),
-				context: athlete.context,
-			});
-		}
-	}
-
-	// Mark episode as processed
-	await db
-		.update(episodes)
-		.set({ athleteMentionsProcessed: true })
-		.where(eq(episodes.id, episodeId));
-
-	console.timeEnd(`processEpisode:${episodeId}`);
-	return {
-		titleMatches: titleAthletes.length,
-		contentMatches: contentAthletes.length,
-	};
-}
-
+// Make sure we're using the DetectedAthlete interface before processContentAthletes
 interface DetectedAthlete {
 	athleteId: string;
 	confidence: number;
@@ -877,45 +900,32 @@ interface DetectedAthlete {
 }
 
 /**
- * Detects athlete mentions in text using exact matching
+ * Detects athlete mentions in text
  */
 async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	console.time("detectAthletes");
 
-	// Cache athletes in memory for faster lookups
-	const allAthletes = await db
-		.select({
-			id: athletes.worldAthleticsId,
-			name: athletes.name,
-		})
-		.from(athletes);
+	// Get all athletes
+	const allAthletes = await db.query.athletes.findMany({
+		columns: {
+			worldAthleticsId: true,
+			name: true,
+		},
+	});
 
 	const detectedAthletes: DetectedAthlete[] = [];
 	const athleteMap = new Map(
 		allAthletes
-			.filter(
-				(athlete): athlete is { id: string; name: string } =>
-					athlete.id !== null,
-			)
-			.map((athlete) => [athlete.name.toLowerCase(), athlete.id]),
+			.filter((athlete) => athlete.worldAthleticsId !== null)
+			.map((athlete) => [
+				athlete.name.toLowerCase(),
+				athlete.worldAthleticsId as string,
+			]),
 	);
 
-	console.log(
-		`[Athlete Detection] Found ${athleteMap.size} athletes to check against`,
-	);
-	console.log(
-		`[Athlete Detection] Sample athlete names: ${Array.from(athleteMap.keys())
-			.slice(0, 5)
-			.join(", ")}`,
-	);
-
-	// Try exact matches
+	// First try exact matches (faster)
 	console.time("exactMatches");
 	for (const [name, id] of athleteMap.entries()) {
-		// Skip very short names to avoid false matches
-		if (name.length < 4) continue;
-
-		// Try exact match with word boundaries
 		const regex = new RegExp(`\\b${name}\\b`, "gi");
 		const matches = Array.from(text.matchAll(regex));
 
@@ -935,6 +945,37 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 	}
 	console.timeEnd("exactMatches");
 
+	// Then try fuzzy matches
+	console.time("fuzzyMatches");
+	const fuzzyMatcher = createFuzzyMatcher(Array.from(athleteMap.keys()));
+	const words = text.split(/\s+/);
+
+	for (let i = 0; i < words.length; i++) {
+		const phrase = words.slice(i, i + 3).join(" ");
+		const matches = fuzzyMatcher.search(phrase);
+
+		for (const match of matches) {
+			if (match.score >= 0.8) {
+				const athleteId = athleteMap.get(match.target.toLowerCase());
+				if (athleteId) {
+					const start = Math.max(0, text.indexOf(phrase) - 50);
+					const end = Math.min(
+						text.length,
+						text.indexOf(phrase) + phrase.length + 50,
+					);
+					const context = text.slice(start, end).toString();
+
+					detectedAthletes.push({
+						athleteId,
+						confidence: match.score,
+						context,
+					});
+				}
+			}
+		}
+	}
+	console.timeEnd("fuzzyMatches");
+
 	// Remove duplicates, keeping highest confidence match
 	const uniqueAthletes = new Map<string, DetectedAthlete>();
 	for (const athlete of detectedAthletes) {
@@ -944,24 +985,330 @@ async function detectAthletes(text: string): Promise<DetectedAthlete[]> {
 		}
 	}
 
-	const results = Array.from(uniqueAthletes.values());
-	console.log(
-		`[Athlete Detection] Found ${results.length} unique athlete mentions`,
-	);
-	if (results.length > 0) {
-		console.log(
-			`[Athlete Detection] Sample mentions: ${results
-				.slice(0, 3)
-				.map((r) => `${r.athleteId} (${r.confidence})`)
-				.join(", ")}`,
-		);
-	}
-
 	console.timeEnd("detectAthletes");
-	return results;
+	return Array.from(uniqueAthletes.values());
 }
 
-// Update existing athletes in the database
+/**
+ * Process content (podcast or video) to detect and store athlete mentions
+ */
+export async function processContentAthletes(
+	contentId: string,
+	contentType: "podcast" | "video",
+) {
+	console.time(`processContent:${contentId}`);
+
+	// Get content data based on type
+	let content: {
+		id: string;
+		title: string;
+		content?: string;
+		description?: string;
+	} | null = null;
+
+	if (contentType === "podcast") {
+		const episode = await db.query.episodes.findFirst({
+			where: eq(episodes.id, contentId),
+			columns: {
+				id: true,
+				title: true,
+				content: true,
+			},
+		});
+
+		if (episode) {
+			content = {
+				id: episode.id,
+				title: episode.title,
+				content: episode.content || undefined,
+			};
+		}
+	} else if (contentType === "video") {
+		const video = await db.query.videos.findFirst({
+			where: eq(videos.id, contentId),
+			columns: {
+				id: true,
+				title: true,
+				description: true,
+			},
+		});
+
+		if (video) {
+			content = {
+				id: video.id,
+				title: video.title,
+				description: video.description || undefined,
+			};
+
+			// Map description to content for consistent processing
+			if (content.description) {
+				// Only use first 500 chars of video description
+				content.content = content.description.slice(0, 500);
+			}
+		}
+	}
+
+	if (!content) {
+		throw new Error(`Content not found: ${contentId} (type: ${contentType})`);
+	}
+
+	console.log(
+		`[Athlete Detection] Processing ${contentType}: ${content.title}`,
+	);
+
+	// Process title
+	console.log("[Athlete Detection] Processing title...");
+	const titleAthletes = await detectAthletes(content.title);
+	console.log(
+		`[Athlete Detection] Found ${titleAthletes.length} athletes in title`,
+	);
+
+	for (const athlete of titleAthletes) {
+		try {
+			console.log(
+				`[Athlete Detection] Inserting title mention for athlete ${athlete.athleteId}`,
+			);
+			await db
+				.insert(athleteMentions)
+				.values({
+					athleteId: athlete.athleteId,
+					contentId: content.id,
+					contentType,
+					source: "title" as const,
+					confidence: athlete.confidence.toString(),
+					context: athlete.context,
+				})
+				.onConflictDoUpdate({
+					target: [
+						athleteMentions.athleteId,
+						athleteMentions.contentId,
+						athleteMentions.contentType,
+						athleteMentions.source,
+					],
+					set: {
+						confidence: athlete.confidence.toString(),
+						context: athlete.context,
+					},
+				});
+		} catch (error) {
+			console.error(
+				"[Athlete Detection] Error upserting title mention:",
+				error,
+			);
+		}
+	}
+
+	// Process description/content if available
+	let contentAthletes: DetectedAthlete[] = [];
+	if (content.content) {
+		contentAthletes = await detectAthletes(content.content);
+		console.log(
+			`[Athlete Detection] Found ${contentAthletes.length} athletes in content`,
+		);
+
+		for (const athlete of contentAthletes) {
+			try {
+				console.log(
+					`[Athlete Detection] Inserting content mention for athlete ${athlete.athleteId}`,
+				);
+				await db
+					.insert(athleteMentions)
+					.values({
+						athleteId: athlete.athleteId,
+						contentId: content.id,
+						contentType,
+						source: "description" as const,
+						confidence: athlete.confidence.toString(),
+						context: athlete.context,
+					})
+					.onConflictDoUpdate({
+						target: [
+							athleteMentions.athleteId,
+							athleteMentions.contentId,
+							athleteMentions.contentType,
+							athleteMentions.source,
+						],
+						set: {
+							confidence: athlete.confidence.toString(),
+							context: athlete.context,
+						},
+					});
+			} catch (error) {
+				console.error(
+					"[Athlete Detection] Error upserting content mention:",
+					error,
+				);
+			}
+		}
+	}
+
+	// Mark content as processed based on type
+	if (contentType === "podcast") {
+		await db
+			.update(episodes)
+			.set({ athleteMentionsProcessed: true })
+			.where(eq(episodes.id, contentId));
+	} else {
+		// Update the athleteMentionsProcessed field for videos
+		await db
+			.update(videos)
+			.set({ athleteMentionsProcessed: true })
+			.where(eq(videos.id, contentId));
+	}
+
+	console.timeEnd(`processContent:${contentId}`);
+	return {
+		titleMatches: titleAthletes.length,
+		contentMatches: contentAthletes.length,
+	};
+}
+
+/**
+ * Process a batch of content (podcasts or videos) for athlete mentions
+ */
+export async function processContentBatch({
+	contentType,
+	limit = 100,
+	minHoursSinceUpdate = 24,
+}: {
+	contentType: "podcast" | "video";
+	limit?: number;
+	minHoursSinceUpdate?: number;
+}) {
+	console.log(
+		`[Athlete Detection] Starting batch processing for ${contentType}s...`,
+	);
+
+	// Get content items that need processing
+	let contentItems: { id: string; title: string }[] = [];
+
+	if (contentType === "podcast") {
+		// For podcasts, we use the athleteMentionsProcessed field
+		contentItems = await db
+			.select({
+				id: episodes.id,
+				title: episodes.title,
+			})
+			.from(episodes)
+			.where(
+				and(
+					sql`${episodes.updatedAt} >= NOW() - (${minHoursSinceUpdate} * INTERVAL '1 hour')`,
+					not(eq(episodes.athleteMentionsProcessed, true)),
+				),
+			)
+			.orderBy(desc(episodes.updatedAt))
+			.limit(limit);
+	} else {
+		// For videos, use the athleteMentionsProcessed field
+		contentItems = await db
+			.select({
+				id: videos.id,
+				title: videos.title,
+			})
+			.from(videos)
+			.where(
+				// Simply check for unprocessed videos without time constraint
+				not(eq(videos.athleteMentionsProcessed, true)),
+			)
+			.orderBy(desc(videos.updatedAt))
+			.limit(limit);
+	}
+
+	console.log(
+		`[Athlete Detection] Found ${contentItems.length} ${contentType}s to process`,
+	);
+
+	const results = {
+		processed: 0,
+		errors: 0,
+		total: contentItems.length,
+		errorDetails: [] as { id: string; error: string }[],
+		athleteMatches: {
+			total: 0,
+			title: 0,
+			content: 0,
+		},
+	};
+
+	// Process each content item
+	for (const item of contentItems) {
+		try {
+			console.log(
+				`[Athlete Detection] Processing ${contentType}: ${item.title} (${item.id})`,
+			);
+			const matches = await processContentAthletes(item.id, contentType);
+
+			results.processed++;
+			results.athleteMatches.title += matches.titleMatches;
+			results.athleteMatches.content += matches.contentMatches;
+			results.athleteMatches.total +=
+				matches.titleMatches + matches.contentMatches;
+
+			console.log(`[Athlete Detection] ${contentType} processed:`, {
+				id: item.id,
+				titleMatches: matches.titleMatches,
+				contentMatches: matches.contentMatches,
+			});
+		} catch (error) {
+			console.error(
+				`[Athlete Detection] Error processing ${contentType} ${item.id}:`,
+				error,
+			);
+			results.errors++;
+			results.errorDetails.push({
+				id: item.id,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
+	}
+
+	// Calculate success rate
+	const successRate = results.processed
+		? ((results.processed - results.errors) / results.processed) * 100
+		: 0;
+
+	console.log(`[Athlete Detection] ${contentType} batch processing complete:`, {
+		processed: results.processed,
+		errors: results.errors,
+		successRate: `${successRate.toFixed(1)}%`,
+		athleteMatches: results.athleteMatches,
+	});
+
+	return {
+		...results,
+		successRate: `${successRate.toFixed(1)}%`,
+	};
+}
+
+// Helper function aliases for backward compatibility
+export async function processEpisodeAthletes(episodeId: string) {
+	return processContentAthletes(episodeId, "podcast");
+}
+
+export async function processVideoAthletes(videoId: string) {
+	return processContentAthletes(videoId, "video");
+}
+
+export async function getAllCategories() {
+	try {
+		const result = await db
+			.select({
+				id: athleteCategories.id,
+				name: athleteCategories.name,
+				description: athleteCategories.description,
+			})
+			.from(athleteCategories)
+			.orderBy(athleteCategories.name);
+		return result;
+	} catch (error) {
+		console.error("Error fetching categories:", error);
+		throw new Error("Failed to fetch categories");
+	}
+}
+
+/**
+ * Update existing athletes in the database
+ */
 export async function updateExistingAthletes(limit?: number) {
 	const results = {
 		processed: 0,
@@ -1107,159 +1454,4 @@ export async function updateExistingAthletes(limit?: number) {
 
 	console.log("[Athlete Update] Update complete:", results);
 	return results;
-}
-
-export async function getAllCategories() {
-	try {
-		const result = await db
-			.select({
-				id: athleteCategories.id,
-				name: athleteCategories.name,
-				description: athleteCategories.description,
-			})
-			.from(athleteCategories)
-			.orderBy(athleteCategories.name);
-		return result;
-	} catch (error) {
-		console.error("Error fetching categories:", error);
-		throw new Error("Failed to fetch categories");
-	}
-}
-
-export async function processContentAthletes(
-	contentId: string,
-	contentType: "podcast" | "video",
-) {
-	console.time(`processContent:${contentId}`);
-
-	// Get content based on type
-	let content: { id: string; title: string; content: string | null } | null =
-		null;
-	if (contentType === "podcast") {
-		const episode = await db.query.episodes.findFirst({
-			where: eq(episodes.id, contentId),
-			columns: {
-				id: true,
-				title: true,
-				content: true,
-			},
-		});
-		content = episode || null;
-	} else {
-		// TODO: Add video content fetching once video schema is implemented
-		throw new Error("Video content processing not yet implemented");
-	}
-
-	if (!content) {
-		throw new Error(`Content not found: ${contentId}`);
-	}
-
-	console.log(
-		`[Athlete Detection] Processing ${contentType} with ID: ${contentId}`,
-	);
-	console.log(`[Athlete Detection] Title: ${content.title}`);
-	console.log(
-		`[Athlete Detection] Content length: ${content.content?.length || 0}`,
-	);
-
-	// Process title
-	const titleAthletes = await detectAthletes(content.title);
-	console.log(
-		`[Athlete Detection] Found ${titleAthletes.length} athletes in title`,
-	);
-
-	for (const athlete of titleAthletes) {
-		try {
-			console.log(
-				`[Athlete Detection] Inserting title mention for athlete ${athlete.athleteId}`,
-			);
-			await db
-				.insert(athleteMentions)
-				.values({
-					athleteId: athlete.athleteId,
-					contentId: content.id,
-					contentType,
-					source: "title" as const,
-					confidence: athlete.confidence.toString(),
-					context: athlete.context,
-				})
-				.onConflictDoUpdate({
-					target: [
-						athleteMentions.athleteId,
-						athleteMentions.contentId,
-						athleteMentions.contentType,
-						athleteMentions.source,
-					],
-					set: {
-						confidence: athlete.confidence.toString(),
-						context: athlete.context,
-					},
-				});
-		} catch (error) {
-			console.error(
-				"[Athlete Detection] Error upserting title mention:",
-				error,
-			);
-		}
-	}
-
-	// Process description/content if available
-	let contentAthletes: DetectedAthlete[] = [];
-	if (content.content) {
-		contentAthletes = await detectAthletes(content.content);
-		console.log(
-			`[Athlete Detection] Found ${contentAthletes.length} athletes in content`,
-		);
-
-		for (const athlete of contentAthletes) {
-			try {
-				console.log(
-					`[Athlete Detection] Inserting content mention for athlete ${athlete.athleteId}`,
-				);
-				await db
-					.insert(athleteMentions)
-					.values({
-						athleteId: athlete.athleteId,
-						contentId: content.id,
-						contentType,
-						source: "description" as const,
-						confidence: athlete.confidence.toString(),
-						context: athlete.context,
-					})
-					.onConflictDoUpdate({
-						target: [
-							athleteMentions.athleteId,
-							athleteMentions.contentId,
-							athleteMentions.contentType,
-							athleteMentions.source,
-						],
-						set: {
-							confidence: athlete.confidence.toString(),
-							context: athlete.context,
-						},
-					});
-			} catch (error) {
-				console.error(
-					"[Athlete Detection] Error upserting content mention:",
-					error,
-				);
-			}
-		}
-	}
-
-	// Mark content as processed based on type
-	if (contentType === "podcast") {
-		await db
-			.update(episodes)
-			.set({ athleteMentionsProcessed: true })
-			.where(eq(episodes.id, contentId));
-	} else {
-		// TODO: Add video processing status update once video schema is implemented
-	}
-
-	console.timeEnd(`processContent:${contentId}`);
-	return {
-		titleMatches: titleAthletes.length,
-		contentMatches: contentAthletes.length,
-	};
 }

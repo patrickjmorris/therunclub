@@ -1,13 +1,45 @@
 import { db } from "@/db/client";
 import { videos, athleteMentions } from "@/db/schema";
-import { eq, desc, not, sql } from "drizzle-orm";
+import { eq, desc, not, sql, isNull, or } from "drizzle-orm";
 import {
 	processContentBatch,
 	processContentAthletes,
 } from "@/lib/services/athlete-service";
 
-// Determine if we're processing a single video or a batch
-const videoId = process.argv[2];
+// Parse command line arguments
+const args = process.argv.slice(2);
+
+// Parse flags
+const isDebug = args.includes("--debug");
+
+// Parse parameters with values (like --limit=50)
+const parseParam = (prefix: string, defaultValue: number): number => {
+	const param = args.find((arg) => arg.startsWith(prefix));
+	if (!param) return defaultValue;
+
+	const value = param.split("=")[1];
+	if (!value) return defaultValue;
+
+	const parsed = Number(value);
+	return Number.isNaN(parsed) ? defaultValue : parsed;
+};
+
+// Get options
+const options = {
+	limit: parseParam("--limit=", 100),
+	maxAgeHours: parseParam("--hours=", 24),
+};
+
+// Filter out all flags and parameters to identify a potential videoId
+const nonOptionArgs = args.filter(
+	(arg) =>
+		!arg.startsWith("--debug") &&
+		!arg.startsWith("--limit=") &&
+		!arg.startsWith("--hours="),
+);
+
+// The first non-option argument is the videoId (if provided)
+const videoId = nonOptionArgs.length > 0 ? nonOptionArgs[0] : null;
 
 if (videoId) {
 	// Process a single video
@@ -27,25 +59,22 @@ if (videoId) {
 } else {
 	// Process a batch of videos
 	console.log("Starting batch processing of video athlete mentions...");
-
-	// Get command line options
-	const options = {
-		limit: Number(
-			process.argv.find((arg) => arg.startsWith("--limit="))?.split("=")[1] ||
-				100,
-		),
-		minHoursSinceUpdate: Number(
-			process.argv.find((arg) => arg.startsWith("--hours="))?.split("=")[1] ||
-				24,
-		),
-	};
+	if (isDebug) {
+		console.log("Debug mode enabled - will show detailed logging");
+	}
 
 	console.log("Options:", options);
+
+	// First, let's check for unprocessed videos
+	countRemainingVideos().then((count) => {
+		console.log(`Found ${count} unprocessed videos in database`);
+	});
 
 	processContentBatch({
 		contentType: "video",
 		limit: options.limit,
-		minHoursSinceUpdate: options.minHoursSinceUpdate,
+		maxAgeHours: options.maxAgeHours,
+		debug: isDebug,
 	})
 		.then((results) => {
 			console.log("\nBatch processing complete!");
@@ -92,5 +121,20 @@ async function countRemainingVideos() {
 		.where(eq(videos.athleteMentionsProcessed, true));
 
 	const processedCount = processedResult?.count || 0;
+
+	if (isDebug) {
+		// If we're debugging, also check for videos with athlete mentions to confirm processing worked
+		const [mentionsResult] = await db
+			.select({
+				count: sql<number>`COUNT(DISTINCT content_id)`,
+			})
+			.from(athleteMentions)
+			.where(eq(athleteMentions.contentType, "video"));
+
+		console.log(
+			`Videos with athlete mentions in DB: ${mentionsResult?.count || 0}`,
+		);
+	}
+
 	return totalVideos - processedCount;
 }

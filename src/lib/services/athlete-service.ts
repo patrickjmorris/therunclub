@@ -22,6 +22,7 @@ import {
 	or,
 	notInArray,
 	not,
+	isNull,
 } from "drizzle-orm";
 import { gqlClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
@@ -1170,11 +1171,18 @@ export async function processContentBatch({
 	contentType,
 	limit = 100,
 	minHoursSinceUpdate = 24,
+	maxAgeHours,
+	debug = false,
 }: {
 	contentType: "podcast" | "video";
 	limit?: number;
 	minHoursSinceUpdate?: number;
+	maxAgeHours?: number;
+	debug?: boolean;
 }) {
+	// Use maxAgeHours if provided, otherwise fall back to minHoursSinceUpdate
+	const timeConstraint = maxAgeHours || minHoursSinceUpdate;
+
 	console.log(
 		`[Athlete Detection] Starting batch processing for ${contentType}s...`,
 	);
@@ -1183,7 +1191,7 @@ export async function processContentBatch({
 	let contentItems: { id: string; title: string }[] = [];
 
 	if (contentType === "podcast") {
-		// For podcasts, we use the athleteMentionsProcessed field
+		// For podcasts, we use the athleteMentionsProcessed field and time constraint
 		contentItems = await db
 			.select({
 				id: episodes.id,
@@ -1192,14 +1200,15 @@ export async function processContentBatch({
 			.from(episodes)
 			.where(
 				and(
-					sql`${episodes.updatedAt} >= NOW() - (${minHoursSinceUpdate} * INTERVAL '1 hour')`,
+					sql`${episodes.updatedAt} >= NOW() - (${timeConstraint} * INTERVAL '1 hour')`,
 					not(eq(episodes.athleteMentionsProcessed, true)),
 				),
 			)
 			.orderBy(desc(episodes.updatedAt))
 			.limit(limit);
 	} else {
-		// For videos, use the athleteMentionsProcessed field
+		// For videos, use only the athleteMentionsProcessed field without time constraint
+		// and order by creation date instead of update date
 		contentItems = await db
 			.select({
 				id: videos.id,
@@ -1207,11 +1216,36 @@ export async function processContentBatch({
 			})
 			.from(videos)
 			.where(
-				// Simply check for unprocessed videos without time constraint
-				not(eq(videos.athleteMentionsProcessed, true)),
+				or(
+					isNull(videos.athleteMentionsProcessed),
+					eq(videos.athleteMentionsProcessed, false),
+				),
 			)
-			.orderBy(desc(videos.updatedAt))
+			.orderBy(desc(videos.createdAt))
 			.limit(limit);
+
+		if (debug) {
+			console.log(
+				`[Athlete Detection] Found ${contentItems.length} videos to process`,
+			);
+
+			// Get some sample video details for debugging
+			if (contentItems.length > 0) {
+				const sampleIds = contentItems
+					.slice(0, Math.min(3, contentItems.length))
+					.map((item) => item.id);
+				const samples = await db
+					.select({
+						id: videos.id,
+						title: videos.title,
+						athleteMentionsProcessed: videos.athleteMentionsProcessed,
+					})
+					.from(videos)
+					.where(inArray(videos.id, sampleIds));
+
+				console.log("[Athlete Detection] Sample videos:", samples);
+			}
+		}
 	}
 
 	console.log(

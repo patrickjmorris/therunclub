@@ -9,14 +9,7 @@ import {
 	processContentBatch,
 } from "@/lib/services/athlete-service";
 import { db } from "@/db/client";
-import {
-	episodes,
-	podcasts,
-	videos,
-	channels,
-	athletes,
-	athleteMentions,
-} from "@/db/schema";
+import { episodes, podcasts, videos, channels, athletes } from "@/db/schema";
 import { and, sql, not, eq, desc } from "drizzle-orm";
 
 type ContentType =
@@ -465,9 +458,11 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 			}
 		} else if (type === "video-mentions") {
 			try {
-				// Get videos updated in the last 24 hours by default
-				const minHoursSinceUpdate = parseInt(
-					request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
+				// Get videos based on creation date
+				const maxAgeHours = parseInt(
+					request.nextUrl.searchParams.get("maxAgeHours") ||
+						request.nextUrl.searchParams.get("minHoursSinceUpdate") || // Support legacy parameter
+						"24",
 					10,
 				);
 				const batchSize = parseInt(
@@ -478,7 +473,7 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				console.log(
 					"[Video Mention Detection] Starting detection with params:",
 					{
-						minHoursSinceUpdate,
+						maxAgeHours,
 						batchSize,
 					},
 				);
@@ -487,7 +482,7 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				const results = await processContentBatch({
 					contentType: "video",
 					limit: batchSize,
-					minHoursSinceUpdate,
+					minHoursSinceUpdate: maxAgeHours, // Keep the parameter name for backward compatibility
 				});
 
 				console.log("[Video Mention Detection] Processing complete:", {

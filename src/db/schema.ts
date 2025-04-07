@@ -96,6 +96,9 @@ export const videos = pgTable(
 		commentCount: text("comment_count"),
 		tags: text("tags").array(),
 		duration: text("duration"),
+		athleteMentionsProcessed: boolean("athlete_mentions_processed").default(
+			false,
+		),
 		createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
 		updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`),
 	},
@@ -503,7 +506,9 @@ export const athleteMentions = pgTable(
 		source: text("source", { enum: ["title", "description"] }).notNull(),
 		confidence: numeric("confidence").notNull(),
 		context: text("context").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 	},
 	(table) => ({

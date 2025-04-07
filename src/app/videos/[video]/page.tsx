@@ -13,6 +13,9 @@ import { Suspense } from "react";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { and } from "drizzle-orm";
 import { preloadLinks } from "@/components/common/link-preview/link-preview-preloader";
+import { AthleteMentions } from "@/components/athletes/athlete-mentions";
+import { AthleteReferences } from "@/components/athletes/athlete-references";
+import { MentionLoading } from "@/components/common/mention-loading";
 
 // Dynamically import components
 const DynamicVideoPlayer = (await import("next/dynamic")).default(
@@ -298,6 +301,17 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						))}
 					</div>
 				)}
+
+				{/* Athletes Mentioned */}
+				<div className="mt-8">
+					<Suspense fallback={<MentionLoading title="Athletes Mentioned" />}>
+						<AthleteReferences
+							contentId={videoData.id}
+							contentType="video"
+							title="Athletes Mentioned"
+						/>
+					</Suspense>
+				</div>
 
 				{/* Content */}
 				<div className="mt-6 max-w-3xl">

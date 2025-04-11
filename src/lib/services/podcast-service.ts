@@ -1,7 +1,14 @@
 import { db } from "@/db/client";
-import { podcasts, episodes, type Podcast, type Episode } from "@/db/schema";
+import {
+	podcasts,
+	episodes,
+	type Podcast,
+	type Episode,
+	podcastRankings,
+} from "@/db/schema";
 import { desc, ilike, sql, eq, and, like, isNotNull } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
+import { fetchTopRunningPodcasts } from "./taddy-service";
 
 // Get latest podcasts
 export async function getLatestPodcasts(limit = 30, offset = 0) {
@@ -459,4 +466,172 @@ export const getPodcastTags = unstable_cache(
 	},
 	["podcast-tags"],
 	{ tags: ["podcasts"], revalidate: 3600 }, // 1 hour in seconds
+);
+
+/**
+ * Fetches the latest top running podcasts from Taddy API and updates the podcast_rankings table.
+ * Does not delete old rankings, allowing for historical tracking.
+ * @returns {Promise<{ inserted: number, totalFetched: number }>} Results of the update operation.
+ * @throws {Error} If fetching from Taddy fails or database insertion fails.
+ */
+export async function updatePodcastRankings(): Promise<{
+	inserted: number;
+	totalFetched: number;
+}> {
+	console.log("[Podcast Ranking] Starting update process...");
+	try {
+		const topPodcasts = await fetchTopRunningPodcasts();
+		console.log(
+			`[Podcast Ranking] Fetched ${topPodcasts.length} podcasts from Taddy.`,
+		);
+
+		if (topPodcasts.length === 0) {
+			console.warn("[Podcast Ranking] No podcasts returned from Taddy API.");
+			return { inserted: 0, totalFetched: 0 };
+		}
+
+		const rankingDataToInsert = topPodcasts.map((podcast, index) => ({
+			rank: index + 1, // Rank based on position (1-10)
+			taddyUuid: podcast.uuid,
+			itunesId: podcast.itunesId,
+			podcastName: podcast.name,
+			// createdAt will be set by default in the database
+		}));
+
+		console.log(
+			`[Podcast Ranking] Inserting ${rankingDataToInsert.length} records into podcast_rankings...`,
+		);
+
+		const result = await db
+			.insert(podcastRankings)
+			.values(rankingDataToInsert)
+			.returning(); // Return the inserted rows
+
+		console.log(
+			`[Podcast Ranking] Successfully inserted ${result.length} records.`, // Drizzle returns array of inserted rows
+		);
+
+		return {
+			inserted: result.length,
+			totalFetched: topPodcasts.length,
+		};
+	} catch (error) {
+		console.error("[Podcast Ranking] Error updating podcast rankings:", error);
+		throw error; // Re-throw to be handled by the API route
+	}
+}
+
+export interface TopRankedPodcast {
+	id: string; // Our internal podcast ID
+	title: string;
+	slug: string; // Our internal podcast slug
+	imageUrl: string | null; // Use our podcast image
+	rank: number;
+	taddyUuid: string;
+	podcastName: string; // Name from Taddy ranking
+	itunesId: number | null;
+}
+
+/**
+ * Fetches the latest batch of top ranked podcasts.
+ * Queries the podcast_rankings table for the most recent timestamp,
+ * joins with the podcasts table on iTunes ID, orders by rank, and limits to 10.
+ * Filters out podcasts not found in our database.
+ * Cached for 24 hours.
+ */
+export const getTopRankedPodcasts = unstable_cache(
+	async (): Promise<TopRankedPodcast[]> => {
+		console.log("[Data Fetching] Fetching top ranked podcasts...");
+		try {
+			// Subquery to get the latest timestamp directly
+			const latestTimestampSubquery = db
+				.select({ value: sql<Date>`max(${podcastRankings.createdAt})` })
+				.from(podcastRankings);
+
+			// Get rankings joining with podcasts and filtering by the latest timestamp using the subquery
+			const results = await db
+				.select({
+					// Select required fields from podcasts table
+					id: podcasts.id,
+					title: podcasts.title,
+					slug: podcasts.podcastSlug,
+					imageUrl: podcasts.podcastImage, // Use our main image
+					// Select required fields from podcastRankings table
+					rank: podcastRankings.rank,
+					taddyUuid: podcastRankings.taddyUuid,
+					podcastName: podcastRankings.podcastName,
+					itunesId: podcastRankings.itunesId,
+				})
+				.from(podcastRankings)
+				.innerJoin(
+					podcasts,
+					// Ensure iTunesId is not null and cast integer ranking ID to text for comparison
+					and(
+						eq(
+							sql<string>`${podcastRankings.itunesId}::text`,
+							podcasts.iTunesId,
+						),
+						isNotNull(podcastRankings.itunesId),
+						isNotNull(podcasts.iTunesId),
+					),
+				)
+				.where(eq(podcastRankings.createdAt, latestTimestampSubquery)) // Filter using the subquery
+				.orderBy(podcastRankings.rank) // Order by rank ascending
+				.limit(10); // Limit to top 10
+
+			// Check if any results were found (subquery might return null if table is empty)
+			if (results.length === 0) {
+				// Attempt to fetch without the timestamp filter if the first query failed,
+				// possibly because the subquery didn't resolve as expected or no matches
+				console.log(
+					"[Data Fetching] No podcasts found with latest timestamp, attempting join without timestamp filter...",
+				);
+				const fallbackResults = await db
+					.select(
+						/* same fields */ {
+							id: podcasts.id,
+							title: podcasts.title,
+							slug: podcasts.podcastSlug,
+							imageUrl: podcasts.podcastImage,
+							rank: podcastRankings.rank,
+							taddyUuid: podcastRankings.taddyUuid,
+							podcastName: podcastRankings.podcastName,
+							itunesId: podcastRankings.itunesId,
+						},
+					)
+					.from(podcastRankings)
+					.innerJoin(
+						podcasts,
+						and(
+							eq(
+								sql<string>`${podcastRankings.itunesId}::text`,
+								podcasts.iTunesId,
+							),
+							isNotNull(podcastRankings.itunesId),
+							isNotNull(podcasts.iTunesId),
+						),
+					)
+					.orderBy(podcastRankings.createdAt, desc(podcastRankings.rank)) // Order by timestamp first, then rank
+					.limit(10);
+				console.log(
+					`[Data Fetching] Fallback query found ${fallbackResults.length} podcasts.`,
+				);
+				return fallbackResults;
+			}
+
+			console.log(
+				`[Data Fetching] Found ${results.length} top ranked podcasts after join and timestamp filter.`,
+			);
+
+			return results;
+		} catch (error) {
+			console.error(
+				"[Data Fetching] Error fetching top ranked podcasts:",
+				error,
+			);
+			return []; // Return empty array on error to avoid breaking the UI
+		}
+	},
+	["top-ranked-podcasts"], // Cache key
+	{ revalidate: 86400, tags: ["podcasts", "rankings"] }, // Revalidate daily (24 hours)
 );

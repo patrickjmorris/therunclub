@@ -13,6 +13,7 @@ import {
 	date,
 	numeric,
 	index,
+	serial,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -678,3 +679,25 @@ export const worldRecordsRelations = relations(worldRecords, ({ one }) => ({
 		references: [athletes.worldAthleticsId],
 	}),
 }));
+
+export const podcastRankings = pgTable(
+	"podcast_rankings",
+	{
+		id: serial("id").primaryKey(),
+		rank: integer("rank").notNull(), // Position 1-10 based on Taddy API order
+		taddyUuid: text("taddy_uuid").notNull(), // Taddy's unique ID for the podcast
+		itunesId: integer("itunes_id"), // iTunes ID for joining with our podcasts table
+		podcastName: text("podcast_name").notNull(), // Name from Taddy API
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(), // Timestamp of when the ranking was fetched
+	},
+	(table) => {
+		return {
+			itunesIdIndex: index("podcast_rankings_itunes_id_idx").on(table.itunesId),
+			createdAtTimestampIndex: index("podcast_rankings_created_at_idx").on(
+				table.createdAt,
+			),
+		};
+	},
+);

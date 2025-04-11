@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { updateVideos } from "@/lib/services/video-service";
 import { updatePodcastData } from "@/lib/podcast-service";
+import { updatePodcastRankings } from "@/lib/services/taddy-service";
 import { updateChannelColors } from "@/lib/server/channel-colors";
 import {
 	importAthleteData,
@@ -20,7 +21,8 @@ type ContentType =
 	| "athletes"
 	| "athlete-detection"
 	| "video-mentions"
-	| "tagging";
+	| "tagging"
+	| "podcast-rankings";
 
 const isUpdating = {
 	videos: false,
@@ -31,6 +33,7 @@ const isUpdating = {
 	"athlete-detection": false,
 	"video-mentions": false,
 	tagging: false,
+	"podcast-rankings": false,
 };
 
 const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -515,6 +518,25 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					{ status: 500 },
 				);
 			}
+		} else if (type === "podcast-rankings") {
+			console.log("[API] Starting podcast ranking update...");
+			try {
+				const results = await updatePodcastRankings();
+				console.log("[API] Podcast ranking update completed.", results);
+				return NextResponse.json({
+					message: "Podcast rankings updated successfully",
+					results,
+				});
+			} catch (error) {
+				console.error("[API] Error updating podcast rankings:", error);
+				return NextResponse.json(
+					{
+						message: "Error updating podcast rankings",
+						error: error instanceof Error ? error.message : String(error),
+					},
+					{ status: 500 },
+				);
+			}
 		} else if (type === "tagging") {
 			// This is handled by the dedicated /api/content/video endpoint
 			return NextResponse.json(
@@ -568,6 +590,7 @@ export async function GET(request: NextRequest) {
 			"athlete-detection",
 			"video-mentions",
 			"tagging",
+			"podcast-rankings",
 		].includes(type)
 	) {
 		return NextResponse.json(

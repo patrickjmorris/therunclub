@@ -18,6 +18,10 @@ import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
 import { PodcastGrid } from "@/components/podcasts/PodcastGrid";
 import { PodcastGridSkeleton } from "@/components/podcasts/PodcastGridSkeleton";
 import { createDailyCache } from "@/lib/utils/cache";
+import {
+	TopRankedPodcastsRow,
+	TopRankedPodcastsSkeleton,
+} from "@/components/podcasts/TopRankedPodcastsRow";
 
 export const metadata: Metadata = {
 	title: "Running Podcasts | The Run Club",
@@ -100,6 +104,16 @@ export default async function PodcastList({ searchParams }: PageProps) {
 			{/* Search Section */}
 			<div className="flex items-center justify-between mb-8">
 				{/* Removed AddContentWrapper */}
+			</div>
+
+			{/* Top Ranked Podcasts Section */}
+			<div className="mb-12">
+				<div className="flex items-center justify-between mb-6">
+					<h2 className="text-2xl font-bold">ExploreTop Ranked Podcasts</h2>
+				</div>
+				<Suspense fallback={<TopRankedPodcastsSkeleton />}>
+					<TopRankedPodcastsRow />
+				</Suspense>
 			</div>
 
 			{/* Featured Podcasts Section */}

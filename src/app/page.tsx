@@ -19,6 +19,11 @@ import {
 	FeaturedChannelsSkeleton,
 	FeaturedPodcastsSkeleton,
 } from "@/components/common/homepage/FeaturedSection";
+import {
+	TopRankedPodcastsSection,
+	TopRankedPodcastsSkeleton,
+} from "@/components/common/homepage/TopRankedPodcastsSection";
+// import { TopRankedPodcastsSkeleton } from "@/components/podcasts/TopRankedPodcastsRow";
 
 // Route segment config
 export const dynamic = "force-static";
@@ -43,6 +48,11 @@ export default function HomePage() {
 					<GlobalSearch />
 				</div>
 			</section>
+
+			{/* Top Ranked Podcasts Section */}
+			<Suspense fallback={<TopRankedPodcastsSkeleton />}>
+				<TopRankedPodcastsSection />
+			</Suspense>
 
 			{/* Videos Section with Suspense */}
 			<Suspense fallback={<VideoSectionSkeleton />}>

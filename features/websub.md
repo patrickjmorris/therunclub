@@ -1,5 +1,5 @@
 Please enter planner mode, and think thru ways to improve this process. For our websub subscriptions, I'm looking to make a few adjustments and have a few questions:. 
-1. We are currently updating the websub subscriptions as part of the podcast update process (/content api route). But that is only part of the update process. Is there a way to configure the api route so that we can specifically target podcasts that have a websub subscription that gets updated every 24 hours so that the lease doesn't expire.
+1. We are currently updating the websub subscriptions as part of the /websub/manage route.
 2. While we are successfully updating the subscriptions, I'm not seeing any POST requests to the api/websub/callback route when new content is added
 
 Review the existing code and the pubsubhub for ways to ensure we're receiving the updates via POST requests: @https://pubsubhubbub.appspot.com 

@@ -153,7 +153,7 @@ async function handleUpdateExpiring() {
 			}
 
 			// Add a small delay between requests to avoid overwhelming servers
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await new Promise<void>((resolve) => resolve());
 		}
 
 		return NextResponse.json({

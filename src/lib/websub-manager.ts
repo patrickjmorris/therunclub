@@ -137,25 +137,41 @@ class WebSubManager {
 
 		while (retryCount < MAX_RETRIES) {
 			try {
-				// Check if we already have an active subscription
+				// Check if we already have a subscription (any status)
 				const existingSubscription =
 					await db.query.websubSubscriptions.findFirst({
-						where: and(
-							eq(websubSubscriptions.topic, feedUrl),
-							eq(websubSubscriptions.status, "active"),
-						),
+						where: eq(websubSubscriptions.topic, feedUrl),
 					});
 
+				let secret: string;
+				let isNewSubscription = false;
+
+				// Determine if we should reuse the secret or generate a new one
 				if (
 					existingSubscription &&
-					existingSubscription.expiresAt > new Date()
+					(existingSubscription.status === "active" ||
+						existingSubscription.status === "pending") &&
+					existingSubscription.secret // Ensure secret exists
 				) {
-					console.log(`Active subscription already exists for ${feedUrl}`);
-					return true;
+					// Reuse existing secret for active or pending subscriptions
+					secret = existingSubscription.secret;
+					console.log(`Reusing existing secret for ${feedUrl}`);
+					if (existingSubscription.expiresAt > new Date()) {
+						console.log(`Active subscription already exists for ${feedUrl}`);
+						// Optionally: If it's active and not expiring soon, maybe just return true?
+						// Or proceed to ensure the hub knows about it / refresh lease.
+						// Current logic proceeds with renewal request using the existing secret.
+					}
+				} else {
+					// Generate a new secret for new or expired subscriptions
+					secret = this.generateSecret();
+					isNewSubscription = true;
+					console.log(
+						`Generating new secret for ${
+							existingSubscription ? "expired" : "new"
+						} subscription: ${feedUrl}`,
+					);
 				}
-
-				// Generate a unique secret for this subscription
-				const secret = this.generateSecret();
 
 				// Prepare the subscription request according to WebSub spec
 				const formData = new URLSearchParams();
@@ -194,27 +210,42 @@ class WebSubManager {
 					expiresAt.setSeconds(expiresAt.getSeconds() + DEFAULT_LEASE_SECONDS);
 
 					// Store subscription in database
-					await db
-						.insert(websubSubscriptions)
-						.values({
-							topic: feedUrl,
-							hub: hubUrl,
-							secret,
-							leaseSeconds: DEFAULT_LEASE_SECONDS,
-							expiresAt,
-							status: "pending",
-						})
-						.onConflictDoUpdate({
-							target: websubSubscriptions.topic,
-							set: {
+					if (isNewSubscription || !existingSubscription) {
+						// Insert new or replace expired subscription
+						await db
+							.insert(websubSubscriptions)
+							.values({
+								topic: feedUrl,
 								hub: hubUrl,
-								secret,
+								secret, // Store the potentially new secret
 								leaseSeconds: DEFAULT_LEASE_SECONDS,
 								expiresAt,
 								status: "pending",
+							})
+							.onConflictDoUpdate({
+								target: websubSubscriptions.topic,
+								set: {
+									hub: hubUrl,
+									secret, // Update secret if it was newly generated
+									leaseSeconds: DEFAULT_LEASE_SECONDS,
+									expiresAt,
+									status: "pending",
+									updatedAt: new Date(),
+								},
+							});
+					} else {
+						// Update existing active/pending subscription (without changing secret)
+						await db
+							.update(websubSubscriptions)
+							.set({
+								hub: hubUrl, // Hub might have changed
+								leaseSeconds: DEFAULT_LEASE_SECONDS,
+								expiresAt,
+								status: "pending", // Hub needs to re-verify
 								updatedAt: new Date(),
-							},
-						});
+							})
+							.where(eq(websubSubscriptions.topic, feedUrl));
+					}
 
 					return true;
 				}

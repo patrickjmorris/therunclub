@@ -11,7 +11,7 @@ import {
 } from "@/lib/services/athlete-service";
 import { db } from "@/db/client";
 import { episodes, podcasts, videos, channels, athletes } from "@/db/schema";
-import { and, sql, not, eq, desc } from "drizzle-orm";
+import { and, sql, not, eq, desc, or, isNull } from "drizzle-orm";
 
 type ContentType =
 	| "videos"
@@ -69,38 +69,32 @@ async function updateTimestamp(type: ContentType) {
 	try {
 		switch (type) {
 			case "podcasts":
-				// Update all podcasts' updated_at column
 				await db.execute(
 					sql`UPDATE ${podcasts} SET updated_at = NOW() WHERE TRUE`,
 				);
 				break;
 			case "videos":
 			case "channel-videos":
-				// Update all videos' updated_at column
 				await db.execute(
 					sql`UPDATE ${videos} SET updated_at = NOW() WHERE TRUE`,
 				);
 				break;
 			case "channel-colors":
-				// Update all channels' updated_at column
 				await db.execute(
 					sql`UPDATE ${channels} SET updated_at = NOW() WHERE TRUE`,
 				);
 				break;
 			case "athletes":
-				// Update all athletes' updated_at column
 				await db.execute(
 					sql`UPDATE ${athletes} SET updated_at = NOW() WHERE TRUE`,
 				);
 				break;
 			case "athlete-detection":
-				// Update all episodes' updated_at column
 				await db.execute(
 					sql`UPDATE ${episodes} SET updated_at = NOW() WHERE TRUE`,
 				);
 				break;
 			case "video-mentions":
-				// Update all videos' updated_at column
 				await db.execute(
 					sql`UPDATE ${videos} SET updated_at = NOW() WHERE TRUE`,
 				);
@@ -133,9 +127,6 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 			isUpdating[type] = false;
 		}, LOCK_TIMEOUT);
 
-		// Update the updated_at column for the corresponding table
-		await updateTimestamp(type);
-
 		if (type === "videos") {
 			try {
 				const updateStrategy =
@@ -162,16 +153,6 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				const importTypeFilter = request.nextUrl.searchParams.get(
 					"importType",
 				) as "full_channel" | "selected_videos" | "none" | undefined;
-
-				console.log("API Request parameters:", {
-					updateStrategy,
-					minHoursSinceUpdate,
-					channelLimit,
-					videosPerChannel,
-					maxVideos,
-					randomSample,
-					importTypeFilter,
-				});
 
 				const results = await updateVideos({
 					forceUpdate: true,
@@ -278,12 +259,6 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 			const randomSample =
 				request.nextUrl.searchParams.get("randomSample") === "true";
 
-			console.log("Podcast update parameters:", {
-				minHoursSinceUpdate,
-				limit,
-				randomSample,
-			});
-
 			const results = await updatePodcastData({
 				minHoursSinceUpdate,
 				limit,
@@ -338,9 +313,9 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 
 		if (type === "athlete-detection") {
 			try {
-				// Get episodes updated in the last 24 hours by default
-				const minHoursSinceUpdate = parseInt(
-					request.nextUrl.searchParams.get("minHoursSinceUpdate") || "24",
+				// Get episodes based on publication date
+				const maxAgeHours = parseInt(
+					request.nextUrl.searchParams.get("maxAgeHours") || "24", // Use maxAgeHours
 					10,
 				);
 				const batchSize = parseInt(
@@ -348,23 +323,23 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					10,
 				);
 
-				console.log("[Athlete Detection] Starting detection with params:", {
-					minHoursSinceUpdate,
-					batchSize,
-				});
-
-				// Get total count of unprocessed episodes
+				// Get total count of unprocessed episodes based on pubDate
 				const [totalCount] = await db
 					.select({ count: sql<number>`count(*)` })
 					.from(episodes)
 					.where(
 						and(
-							sql`${episodes.updatedAt} >= NOW() - (${minHoursSinceUpdate} * INTERVAL '1 hour')`,
-							not(eq(episodes.athleteMentionsProcessed, true)),
+							// Filter by pubDate
+							sql`${episodes.pubDate} >= NOW() - (${maxAgeHours} * INTERVAL '1 hour')`,
+							// Ensure not already processed
+							or(
+								isNull(episodes.athleteMentionsProcessed),
+								eq(episodes.athleteMentionsProcessed, false),
+							),
 						),
 					);
 
-				// Query for recently updated episodes
+				// Query for recently published episodes
 				const recentEpisodes = await db
 					.select({
 						id: episodes.id,
@@ -373,17 +348,18 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					.from(episodes)
 					.where(
 						and(
-							sql`${episodes.updatedAt} >= NOW() - (${minHoursSinceUpdate} * INTERVAL '1 hour')`,
-							not(eq(episodes.athleteMentionsProcessed, true)),
+							// Filter by pubDate
+							sql`${episodes.pubDate} >= NOW() - (${maxAgeHours} * INTERVAL '1 hour')`,
+							// Ensure not already processed
+							or(
+								isNull(episodes.athleteMentionsProcessed),
+								eq(episodes.athleteMentionsProcessed, false),
+							),
 						),
 					)
-					.orderBy(desc(episodes.updatedAt))
+					// Order by pubDate
+					.orderBy(desc(episodes.pubDate))
 					.limit(batchSize);
-
-				console.log("[Athlete Detection] Found episodes:", {
-					total: totalCount.count,
-					processing: recentEpisodes.length,
-				});
 
 				const results = {
 					processed: 0,
@@ -401,9 +377,6 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				// Process each episode
 				for (const episode of recentEpisodes) {
 					try {
-						console.log(
-							`[Athlete Detection] Processing episode: ${episode.title} (${episode.id})`,
-						);
 						const matches = await processEpisodeAthletes(episode.id);
 
 						results.processed++;
@@ -411,12 +384,6 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 						results.athleteMatches.content += matches.contentMatches;
 						results.athleteMatches.total +=
 							matches.titleMatches + matches.contentMatches;
-
-						console.log("[Athlete Detection] Episode processed:", {
-							id: episode.id,
-							titleMatches: matches.titleMatches,
-							contentMatches: matches.contentMatches,
-						});
 					} catch (error) {
 						console.error(
 							`[Athlete Detection] Error processing episode ${episode.id}:`,
@@ -434,13 +401,6 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 				const successRate = results.processed
 					? ((results.processed - results.errors) / results.processed) * 100
 					: 0;
-
-				console.log("[Athlete Detection] Processing complete:", {
-					processed: results.processed,
-					errors: results.errors,
-					successRate: `${successRate.toFixed(1)}%`,
-					athleteMatches: results.athleteMatches,
-				});
 
 				return NextResponse.json({
 					message: "Athlete detection completed successfully",
@@ -473,26 +433,11 @@ async function handleUpdate(request: NextRequest, type: ContentType) {
 					10,
 				);
 
-				console.log(
-					"[Video Mention Detection] Starting detection with params:",
-					{
-						maxAgeHours,
-						batchSize,
-					},
-				);
-
-				// Use the shared content processing function instead of duplicating code
+				// Use the shared content processing function
 				const results = await processContentBatch({
 					contentType: "video",
 					limit: batchSize,
-					minHoursSinceUpdate: maxAgeHours, // Keep the parameter name for backward compatibility
-				});
-
-				console.log("[Video Mention Detection] Processing complete:", {
-					processed: results.processed,
-					errors: results.errors,
-					successRate: results.successRate,
-					athleteMatches: results.athleteMatches,
+					maxAgeHours: maxAgeHours, // Pass maxAgeHours
 				});
 
 				return NextResponse.json({

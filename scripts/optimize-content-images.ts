@@ -1,62 +1,13 @@
 import { db } from "../src/db/client";
 import { podcasts, episodes } from "@/db/schema";
 import { sql } from "drizzle-orm";
-import { supabaseAdmin } from "@/lib/supabase-admin";
-import sharp from "sharp";
-import { nanoid } from "nanoid";
+import { optimizeImage } from "../src/lib/server/image-processing";
 
 interface ProcessResult {
 	success: boolean;
 	message: string;
 	processedCount: number;
 	failedCount: number;
-}
-
-async function optimizeImage(
-	imageUrl: string,
-	targetSize: number,
-	prefix: string,
-): Promise<string | null> {
-	try {
-		// Fetch the image
-		const response = await fetch(imageUrl);
-		const arrayBuffer = await response.arrayBuffer();
-		const buffer = Buffer.from(arrayBuffer);
-
-		// Process the image with sharp
-		const processedImage = await sharp(buffer)
-			.resize(targetSize, targetSize, {
-				fit: "contain",
-				background: { r: 255, g: 255, b: 255, alpha: 0 },
-			})
-			.webp({ quality: 85 })
-			.toBuffer();
-
-		// Upload to Supabase Storage
-		const fileName = `${prefix}/${nanoid()}.webp`;
-
-		const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-			.from("content-images")
-			.upload(fileName, processedImage, {
-				contentType: "image/webp",
-				upsert: true,
-			});
-
-		if (uploadError) {
-			console.error("Error uploading to Supabase:", uploadError);
-			return null;
-		}
-
-		// Get the public URL
-		const {
-			data: { publicUrl },
-		} = supabaseAdmin.storage.from("content-images").getPublicUrl(fileName);
-
-		return publicUrl;
-	} catch (error) {
-		console.error("Error processing image:", error);
-		return null;
-	}
 }
 
 async function processPodcastImages(batchSize = 10000): Promise<ProcessResult> {

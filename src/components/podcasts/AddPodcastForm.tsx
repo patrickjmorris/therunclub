@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
 import { addPodcast } from "@/app/actions/podcasts";
 import type { AddPodcastState } from "@/app/actions/types";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { useFormStatus } from "react-dom";
 
 const initialState: AddPodcastState = {
 	errors: {},
@@ -32,7 +33,7 @@ function SubmitButton() {
 }
 
 export default function AddPodcastForm() {
-	const [state, formAction] = useFormState<AddPodcastState, FormData>(
+	const [state, formAction] = useActionState<AddPodcastState, FormData>(
 		addPodcast,
 		initialState,
 	);

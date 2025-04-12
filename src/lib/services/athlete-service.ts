@@ -1147,13 +1147,19 @@ export async function processContentAthletes(
 	if (contentType === "podcast") {
 		await db
 			.update(episodes)
-			.set({ athleteMentionsProcessed: true })
+			.set({
+				athleteMentionsProcessed: true,
+				updatedAt: sql`CURRENT_TIMESTAMP`, // Also update timestamp for processed episode
+			})
 			.where(eq(episodes.id, contentId));
 	} else {
-		// Update the athleteMentionsProcessed field for videos
+		// Update the athleteMentionsProcessed field and updatedAt for videos
 		await db
 			.update(videos)
-			.set({ athleteMentionsProcessed: true })
+			.set({
+				athleteMentionsProcessed: true,
+				updatedAt: sql`CURRENT_TIMESTAMP`, // Also update timestamp for processed video
+			})
 			.where(eq(videos.id, contentId));
 	}
 
@@ -1170,28 +1176,30 @@ export async function processContentAthletes(
 export async function processContentBatch({
 	contentType,
 	limit = 100,
-	minHoursSinceUpdate = 24,
-	maxAgeHours,
+	maxAgeHours = 24, // Default to 24 hours
 	debug = false,
 }: {
 	contentType: "podcast" | "video";
 	limit?: number;
-	minHoursSinceUpdate?: number;
+	minHoursSinceUpdate?: number; // Legacy parameter
 	maxAgeHours?: number;
 	debug?: boolean;
 }) {
-	// Use maxAgeHours if provided, otherwise fall back to minHoursSinceUpdate
-	const timeConstraint = maxAgeHours || minHoursSinceUpdate;
+	// Use maxAgeHours as the primary time constraint
+	const timeConstraint = maxAgeHours;
 
 	console.log(
 		`[Athlete Detection] Starting batch processing for ${contentType}s...`,
+	);
+	console.log(
+		`[Athlete Detection] Using time constraint: ${timeConstraint} hours`,
 	);
 
 	// Get content items that need processing
 	let contentItems: { id: string; title: string }[] = [];
 
 	if (contentType === "podcast") {
-		// For podcasts, we use the athleteMentionsProcessed field and time constraint
+		// For podcasts (episodes), filter by pubDate and check athleteMentionsProcessed
 		contentItems = await db
 			.select({
 				id: episodes.id,
@@ -1200,15 +1208,20 @@ export async function processContentBatch({
 			.from(episodes)
 			.where(
 				and(
-					sql`${episodes.updatedAt} >= NOW() - (${timeConstraint} * INTERVAL '1 hour')`,
-					not(eq(episodes.athleteMentionsProcessed, true)),
+					// Filter by pubDate using timeConstraint
+					sql`${episodes.pubDate} >= NOW() - (${timeConstraint} * INTERVAL '1 hour')`,
+					// Ensure not already processed
+					or(
+						isNull(episodes.athleteMentionsProcessed),
+						eq(episodes.athleteMentionsProcessed, false),
+					),
 				),
 			)
-			.orderBy(desc(episodes.updatedAt))
+			// Order by publication date (most recent first)
+			.orderBy(desc(episodes.pubDate))
 			.limit(limit);
-	} else {
-		// For videos, use only the athleteMentionsProcessed field without time constraint
-		// and order by creation date instead of update date
+	} else if (contentType === "video") {
+		// For videos, filter by createdAt and check athleteMentionsProcessed
 		contentItems = await db
 			.select({
 				id: videos.id,
@@ -1216,11 +1229,17 @@ export async function processContentBatch({
 			})
 			.from(videos)
 			.where(
-				or(
-					isNull(videos.athleteMentionsProcessed),
-					eq(videos.athleteMentionsProcessed, false),
+				and(
+					// Filter by createdAt using timeConstraint
+					sql`${videos.createdAt} >= NOW() - (${timeConstraint} * INTERVAL '1 hour')`,
+					// Ensure not already processed
+					or(
+						isNull(videos.athleteMentionsProcessed),
+						eq(videos.athleteMentionsProcessed, false),
+					),
 				),
 			)
+			// Order by creation date (most recent first)
 			.orderBy(desc(videos.createdAt))
 			.limit(limit);
 

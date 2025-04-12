@@ -9,7 +9,8 @@ import { updatePodcastColors } from "@/lib/server/update-podcast-colors";
 import { revalidatePodcastsAndEpisodes } from "@/db/queries";
 import { db } from "@/db/client";
 import { podcasts } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
+import { optimizeImage } from "@/lib/server/image-processing";
 
 export const addPodcast = requireRole(["admin", "editor"])(
 	async (
@@ -39,13 +40,54 @@ export const addPodcast = requireRole(["admin", "editor"])(
 				};
 			}
 
+			const addedPodcast = result.podcast;
+
 			// Extract vibrant color if we have an image
-			if (result.podcast.image) {
-				await updatePodcastColors(result.podcast.id, result.podcast.image);
+			if (addedPodcast.image) {
+				// Don't await this, let it run in the background
+				updatePodcastColors(addedPodcast.id, addedPodcast.image);
+			}
+
+			// Optimize and update the podcast image
+			if (addedPodcast.image) {
+				console.log(
+					`Optimizing image for podcast ${addedPodcast.id}: ${addedPodcast.image}`,
+				);
+				try {
+					const optimizedUrl = await optimizeImage(
+						addedPodcast.image,
+						1400,
+						"podcasts",
+					);
+
+					if (optimizedUrl) {
+						console.log(
+							`Updating podcast ${addedPodcast.id} with optimized image: ${optimizedUrl}`,
+						);
+						await db
+							.update(podcasts)
+							.set({
+								podcastImage: optimizedUrl,
+								updatedAt: sql`CURRENT_TIMESTAMP`, // Update timestamp as well
+							})
+							.where(eq(podcasts.id, addedPodcast.id));
+						addedPodcast.podcastImage = optimizedUrl; // Update the object for success message
+					} else {
+						console.warn(
+							`Failed to optimize image for podcast ${addedPodcast.id}`,
+						);
+					}
+				} catch (optError) {
+					console.error(
+						`Error during image optimization for podcast ${addedPodcast.id}:`,
+						optError,
+					);
+					// Continue even if optimization fails
+				}
 			}
 
 			// Make sure we have a valid slug before redirecting
-			if (!result.podcast.podcastSlug) {
+			if (!addedPodcast.podcastSlug) {
 				return {
 					errors: {
 						_form: ["Invalid podcast slug"],
@@ -67,8 +109,8 @@ export const addPodcast = requireRole(["admin", "editor"])(
 			// Return success state before redirecting
 			const successState: AddPodcastState = {
 				message: "Podcast added successfully!",
-				data: result.podcast,
-				redirect: `/podcasts/${result.podcast.podcastSlug}`,
+				data: addedPodcast, // Use the updated podcast object
+				redirect: `/podcasts/${addedPodcast.podcastSlug}`,
 			};
 
 			return successState;

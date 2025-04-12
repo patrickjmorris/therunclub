@@ -463,9 +463,10 @@ async function getContentItems(
 	const results: ContentItem[] = [];
 
 	if (contentType === "all" || contentType === "video") {
-		// Build the query conditions for videos
+		// Build the query conditions for videos - Filter by createdAt
 		const videoConditions = [
-			gte(videos.updatedAt, sql`${formattedDate}::timestamp`),
+			// Use createdAt instead of updatedAt
+			gte(videos.createdAt, sql`${formattedDate}::timestamp`),
 		];
 
 		// Create a base query for videos
@@ -474,6 +475,8 @@ async function getContentItems(
 				id: videos.id,
 				title: videos.title,
 				description: videos.description,
+				// Select createdAt for ordering
+				createdAt: videos.createdAt,
 			})
 			.from(videos);
 
@@ -491,7 +494,8 @@ async function getContentItems(
 			// Add conditions and execute
 			const finalVideoQuery = videoQueryWithJoin
 				.where(and(...videoConditions))
-				.orderBy(desc(videos.updatedAt))
+				// Order by createdAt
+				.orderBy(desc(videos.createdAt))
 				.limit(batchSize);
 
 			const videoResults = await finalVideoQuery;
@@ -509,7 +513,8 @@ async function getContentItems(
 			// Add conditions and execute without join
 			const finalVideoQuery = videoQuery
 				.where(and(...videoConditions))
-				.orderBy(desc(videos.updatedAt))
+				// Order by createdAt
+				.orderBy(desc(videos.createdAt))
 				.limit(batchSize);
 
 			const videoResults = await finalVideoQuery;
@@ -527,7 +532,7 @@ async function getContentItems(
 	}
 
 	if (contentType === "all" || contentType === "podcast") {
-		// Build the query conditions for podcasts
+		// Build the query conditions for podcasts - Keep using updatedAt
 		const podcastConditions = [
 			gte(podcasts.updatedAt, sql`${formattedDate}::timestamp`),
 		];
@@ -538,6 +543,8 @@ async function getContentItems(
 				id: podcasts.id,
 				title: podcasts.title,
 				description: podcasts.description,
+				// Select updatedAt for ordering
+				updatedAt: podcasts.updatedAt,
 			})
 			.from(podcasts);
 
@@ -555,6 +562,7 @@ async function getContentItems(
 			// Add conditions and execute
 			const finalPodcastQuery = podcastQueryWithJoin
 				.where(and(...podcastConditions))
+				// Order by updatedAt
 				.orderBy(desc(podcasts.updatedAt))
 				.limit(batchSize);
 
@@ -573,6 +581,7 @@ async function getContentItems(
 			// Add conditions and execute without join
 			const finalPodcastQuery = podcastQuery
 				.where(and(...podcastConditions))
+				// Order by updatedAt
 				.orderBy(desc(podcasts.updatedAt))
 				.limit(batchSize);
 
@@ -591,9 +600,10 @@ async function getContentItems(
 	}
 
 	if (contentType === "all" || contentType === "episode") {
-		// Build the query conditions for episodes
+		// Build the query conditions for episodes - Filter by pubDate
 		const episodeConditions = [
-			gte(episodes.updatedAt, sql`${formattedDate}::timestamp`),
+			// Use pubDate instead of updatedAt
+			gte(episodes.pubDate, sql`${formattedDate}::timestamp`),
 		];
 
 		// Create a base query for episodes
@@ -602,6 +612,8 @@ async function getContentItems(
 				id: episodes.id,
 				title: episodes.title,
 				content: episodes.content,
+				// Select pubDate for ordering
+				pubDate: episodes.pubDate,
 			})
 			.from(episodes);
 
@@ -619,7 +631,8 @@ async function getContentItems(
 			// Add conditions and execute
 			const finalEpisodeQuery = episodeQueryWithJoin
 				.where(and(...episodeConditions))
-				.orderBy(desc(episodes.updatedAt))
+				// Order by pubDate
+				.orderBy(desc(episodes.pubDate))
 				.limit(batchSize);
 
 			const episodeResults = await finalEpisodeQuery;
@@ -637,7 +650,8 @@ async function getContentItems(
 			// Add conditions and execute without join
 			const finalEpisodeQuery = episodeQuery
 				.where(and(...episodeConditions))
-				.orderBy(desc(episodes.updatedAt))
+				// Order by pubDate
+				.orderBy(desc(episodes.pubDate))
 				.limit(batchSize);
 
 			const episodeResults = await finalEpisodeQuery;

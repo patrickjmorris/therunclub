@@ -14,9 +14,13 @@ import { Headphones } from "lucide-react";
 
 interface EpisodeEntryProps {
 	episode: BasicEpisode;
+	showContentBadge?: boolean;
 }
 
-export default function EpisodeEntry({ episode }: EpisodeEntryProps) {
+export default function EpisodeEntry({
+	episode,
+	showContentBadge = true,
+}: EpisodeEntryProps) {
 	if (!episode) return null;
 	const date = episode.pubDate ? new Date(episode.pubDate) : null;
 	const duration = episode.duration ? formatDuration(episode.duration) : null;
@@ -38,15 +42,17 @@ export default function EpisodeEntry({ episode }: EpisodeEntryProps) {
 							height={180}
 							className="rounded-lg object-cover w-32 h-32 lg:w-[180px] lg:h-[180px]"
 						/>
-						<div className="absolute top-2 left-2">
-							<Badge
-								variant="secondary"
-								className="flex items-center gap-1 bg-black/70 text-white"
-							>
-								<Headphones className="h-3 w-3" />
-								<span className="text-xs">Podcast</span>
-							</Badge>
-						</div>
+						{showContentBadge && (
+							<div className="absolute top-2 left-2">
+								<Badge
+									variant="secondary"
+									className="flex items-center gap-1 bg-black/70 text-white"
+								>
+									<Headphones className="h-3 w-3" />
+									<span className="text-xs">Podcast</span>
+								</Badge>
+							</div>
+						)}
 					</div>
 					<div className="flex flex-col">
 						<h2 className="text-lg font-bold line-clamp-2">

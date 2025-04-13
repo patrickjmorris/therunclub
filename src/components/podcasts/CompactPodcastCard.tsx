@@ -28,7 +28,7 @@ export function CompactPodcastCard({
 								className="object-cover transition-transform group-hover:scale-105"
 								width={180}
 								height={180}
-								src={podcast.imageUrl || "/placeholder-image.svg"} // Add placeholder
+								src={podcast.imageUrl || "/podcast-placeholder.png"} // Add placeholder
 							/>
 						</div>
 						<div className="space-y-1 flex-1 mt-auto">

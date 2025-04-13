@@ -109,7 +109,7 @@ export default async function PodcastList({ searchParams }: PageProps) {
 			{/* Top Ranked Podcasts Section */}
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
-					<h2 className="text-2xl font-bold">ExploreTop Ranked Podcasts</h2>
+					<h2 className="text-2xl font-bold">Explore Top Ranked Podcasts</h2>
 				</div>
 				<Suspense fallback={<TopRankedPodcastsSkeleton />}>
 					<TopRankedPodcastsRow />

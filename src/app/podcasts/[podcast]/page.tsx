@@ -11,7 +11,7 @@ import { and, isNotNull, like } from "drizzle-orm";
 import { fetchMore } from "./actions";
 import { Suspense } from "react";
 import { BasicEpisode } from "@/types/shared";
-import { createWeeklyCache } from "@/lib/utils/cache";
+import { createDailyCache } from "@/lib/utils/cache";
 import dynamicImport from "next/dynamic";
 import { nanoid } from "nanoid";
 
@@ -35,12 +35,12 @@ const DynamicEpisodeList = dynamicImport(
 	},
 );
 
-// Increase revalidation time to 1 week (604800 seconds)
+// Route segment config
 export const dynamic = "force-static";
-export const revalidate = 604800;
+export const revalidate = 86400; // 1 day
 
 // Create a cached function for fetching podcast page data
-const getPodcastDetailData = createWeeklyCache(
+const getPodcastDetailData = createDailyCache(
 	async (podcastSlug: string) => {
 		const podcast = await getPodcastBySlug(podcastSlug);
 		if (!podcast) return null;

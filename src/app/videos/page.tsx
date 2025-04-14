@@ -14,7 +14,7 @@ import {
 } from "@/lib/services/video-service";
 import { parseAsString } from "nuqs/server";
 import { FeaturedChannelsRow } from "@/components/videos/FeaturedChannelsRow";
-import { createDailyCache } from "@/lib/utils/cache";
+import { createStandardCache } from "@/lib/utils/cache";
 import { cache } from "react";
 
 export const metadata: Metadata = {
@@ -36,12 +36,12 @@ interface PageProps {
 	searchParams: Promise<{ q?: string; category?: string }>;
 }
 
-// Increase revalidation time to 24 hours
+// Route segment config
 export const dynamic = "force-static";
-export const revalidate = 86400; // 24 hours
+export const revalidate = 3600; // 1 hour
 
 // Create cached data fetching function for video page data
-const getVideoPageData = createDailyCache(
+const getVideoPageData = createStandardCache(
 	async (query: string | undefined, tag: string | undefined) => {
 		// Get all base data in parallel (featured channels, tags)
 		const [featuredChannels, topTags] = await Promise.all([

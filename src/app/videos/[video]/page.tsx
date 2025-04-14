@@ -72,9 +72,9 @@ const DynamicMoreContent = (await import("next/dynamic")).default(
 	{ ssr: false },
 );
 
-// Increase revalidation time to 1 week (604800 seconds)
+// Route segment config
 export const dynamic = "force-static";
-export const revalidate = 604800;
+export const revalidate = 604800; // 1 week
 
 // Convert URLs to links in text content
 function convertUrlsToLinks(text: string): string {

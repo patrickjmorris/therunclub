@@ -27,7 +27,7 @@ import {
 
 // Route segment config
 export const dynamic = "force-static";
-export const revalidate = 86400; // 24 hours (up from 30 minutes)
+export const revalidate = 3600; // 1 hour (down from 24 hours)
 
 // Add dynamic metadata
 export const metadata = {

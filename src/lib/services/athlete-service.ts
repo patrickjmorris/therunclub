@@ -308,20 +308,14 @@ export type AthleteMention = {
 	publishedDate?: Date | null;
 };
 
-export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
-	// Get the highest confidence mention IDs for each content (episode or video)
-	const mentionIds = await db.execute<{ id: string }>(sql`
-		SELECT DISTINCT ON (content_id) id
-		FROM athlete_mentions
-		WHERE athlete_id = ${athleteId}
-		ORDER BY content_id, confidence DESC
-		LIMIT ${limit}
-	`);
-
-	// First fetch podcast mentions
-	const podcastMentions = await db
+export async function getAthleteRecentMentions(
+	athleteId: string,
+	limit = 15,
+): Promise<AthleteMention[]> {
+	// Fetch podcast mentions
+	const podcastMentionsData = await db
 		.select({
-			// Top-level mention fields
+			// Common fields
 			id: athleteMentions.id,
 			athleteId: athleteMentions.athleteId,
 			contentId: athleteMentions.contentId,
@@ -330,51 +324,44 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 			confidence: athleteMentions.confidence,
 			context: athleteMentions.context,
 			createdAt: athleteMentions.createdAt,
+			publishedDate: episodes.pubDate, // Sort key
 
-			// Episode and Podcast fields
-			episode: {
-				id: episodes.id,
-				title: episodes.title,
-				episodeSlug: episodes.episodeSlug,
-				content: episodes.content,
-				pubDate: episodes.pubDate,
-				episodeImage: episodes.episodeImage,
-				duration: episodes.duration,
-				podcastSlug: podcasts.podcastSlug,
-				podcastTitle: podcasts.title,
-				podcastImage: podcasts.podcastImage,
-				podcastId: episodes.podcastId,
-				podcastAuthor: podcasts.author,
-				enclosureUrl: episodes.enclosureUrl,
-				explicit: episodes.explicit,
-				link: episodes.link,
-			},
-			podcast: {
-				id: podcasts.id,
-				title: podcasts.title,
-				image: podcasts.image,
-				podcastSlug: podcasts.podcastSlug,
-			},
+			// Episode fields
+			episode_id: episodes.id,
+			episode_title: episodes.title,
+			episode_slug: episodes.episodeSlug,
+			episode_content: episodes.content,
+			episode_image: episodes.episodeImage,
+			episode_duration: episodes.duration,
+			enclosure_url: episodes.enclosureUrl,
+			episode_explicit: episodes.explicit,
+			episode_link: episodes.link,
+
+			// Podcast fields
+			podcast_id: podcasts.id,
+			podcast_title: podcasts.title,
+			podcast_image: podcasts.podcastImage,
+			podcast_slug: podcasts.podcastSlug,
+			podcast_author: podcasts.author,
 		})
 		.from(athleteMentions)
 		.innerJoin(episodes, eq(athleteMentions.contentId, episodes.id))
 		.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
 		.where(
 			and(
-				inArray(
-					athleteMentions.id,
-					mentionIds.map((m) => m.id),
-				),
+				eq(athleteMentions.athleteId, athleteId),
 				eq(athleteMentions.contentType, "podcast"),
 				like(podcasts.language, "en%"),
+				isNotNull(episodes.pubDate), // Ensure we can sort
 			),
 		)
-		.orderBy(desc(episodes.pubDate));
+		.orderBy(desc(episodes.pubDate))
+		.limit(limit); // Limit individually initially
 
-	// Then fetch video mentions
-	const videoMentions = await db
+	// Fetch video mentions
+	const videoMentionsData = await db
 		.select({
-			// Top-level mention fields
+			// Common fields
 			id: athleteMentions.id,
 			athleteId: athleteMentions.athleteId,
 			contentId: athleteMentions.contentId,
@@ -383,57 +370,104 @@ export async function getAthleteRecentMentions(athleteId: string, limit = 15) {
 			confidence: athleteMentions.confidence,
 			context: athleteMentions.context,
 			createdAt: athleteMentions.createdAt,
+			publishedDate: videos.publishedAt, // Sort key
 
 			// Video fields
-			video: {
-				id: videos.id,
-				title: videos.title,
-				thumbnailUrl: videos.thumbnailUrl,
-				channelTitle: videos.channelTitle,
-				publishedAt: videos.publishedAt,
-				description: videos.description,
-				youtubeVideoId: videos.youtubeVideoId,
-				duration: videos.duration,
-				viewCount: videos.viewCount,
-				likeCount: videos.likeCount,
-			},
+			video_id: videos.id,
+			video_title: videos.title,
+			video_thumbnailUrl: videos.thumbnailUrl,
+			video_channelTitle: videos.channelTitle,
+			video_description: videos.description,
+			video_youtubeVideoId: videos.youtubeVideoId,
+			video_duration: videos.duration,
+			video_viewCount: videos.viewCount,
+			video_likeCount: videos.likeCount,
 		})
 		.from(athleteMentions)
 		.innerJoin(videos, eq(athleteMentions.contentId, videos.id))
 		.where(
 			and(
-				inArray(
-					athleteMentions.id,
-					mentionIds.map((m) => m.id),
-				),
+				eq(athleteMentions.athleteId, athleteId),
 				eq(athleteMentions.contentType, "video"),
+				isNotNull(videos.publishedAt), // Ensure we can sort
 			),
 		)
-		.orderBy(desc(videos.publishedAt));
+		.orderBy(desc(videos.publishedAt))
+		.limit(limit); // Limit individually initially
 
-	// Combine the results and sort by date, with most recent first
-	const combinedMentions = [
-		...podcastMentions.map((mention) => ({
-			...mention,
-			video: undefined,
-			publishedDate: mention.episode.pubDate,
-			// Ensure createdAt is always a valid Date
-			createdAt: mention.createdAt || new Date(),
-		})),
-		...videoMentions.map((mention) => ({
-			...mention,
-			episode: undefined,
-			podcast: undefined,
-			publishedDate: mention.video.publishedAt,
-			// Ensure createdAt is always a valid Date
-			createdAt: mention.createdAt || new Date(),
-		})),
-	].sort((a, b) => {
-		if (!a.publishedDate) return 1;
-		if (!b.publishedDate) return -1;
-		return b.publishedDate.getTime() - a.publishedDate.getTime();
+	// Combine and map results in TypeScript
+	const combinedMentions: AthleteMention[] = [
+		...podcastMentionsData.map(
+			(row): AthleteMention => ({
+				id: row.id,
+				athleteId: row.athleteId,
+				contentId: row.contentId,
+				contentType: "podcast",
+				source: row.source,
+				confidence: row.confidence,
+				context: row.context,
+				createdAt: row.createdAt ?? new Date(),
+				publishedDate: row.publishedDate,
+				episode: {
+					id: row.episode_id,
+					title: row.episode_title,
+					episodeSlug: row.episode_slug,
+					content: row.episode_content,
+					pubDate: row.publishedDate,
+					episodeImage: row.episode_image,
+					duration: row.episode_duration,
+					podcastSlug: row.podcast_slug,
+					podcastTitle: row.podcast_title,
+					podcastImage: row.podcast_image,
+					podcastId: row.podcast_id,
+					podcastAuthor: row.podcast_author,
+					enclosureUrl: row.enclosure_url,
+					explicit: row.episode_explicit,
+					link: row.episode_link,
+				},
+				podcast: {
+					id: row.podcast_id,
+					title: row.podcast_title,
+					image: row.podcast_image,
+					podcastSlug: row.podcast_slug,
+				},
+			}),
+		),
+		...videoMentionsData.map(
+			(row): AthleteMention => ({
+				id: row.id,
+				athleteId: row.athleteId,
+				contentId: row.contentId,
+				contentType: "video",
+				source: row.source,
+				confidence: row.confidence,
+				context: row.context,
+				createdAt: row.createdAt ?? new Date(),
+				publishedDate: row.publishedDate,
+				video: {
+					id: row.video_id,
+					title: row.video_title,
+					thumbnailUrl: row.video_thumbnailUrl,
+					channelTitle: row.video_channelTitle,
+					publishedAt: row.publishedDate,
+					description: row.video_description,
+					youtubeVideoId: row.video_youtubeVideoId,
+					duration: row.video_duration,
+					viewCount: row.video_viewCount,
+					likeCount: row.video_likeCount,
+				},
+			}),
+		),
+	];
+
+	// Sort the combined array by publishedDate (descending, handling nulls)
+	combinedMentions.sort((a, b) => {
+		const dateA = a.publishedDate?.getTime() ?? 0;
+		const dateB = b.publishedDate?.getTime() ?? 0;
+		return dateB - dateA;
 	});
 
+	// Return the top 'limit' results
 	return combinedMentions.slice(0, limit);
 }
 

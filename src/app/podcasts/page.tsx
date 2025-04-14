@@ -17,7 +17,7 @@ import { FeaturedPodcastsRow } from "@/components/podcasts/FeaturedPodcastsRow";
 import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
 import { PodcastGrid } from "@/components/podcasts/PodcastGrid";
 import { PodcastGridSkeleton } from "@/components/podcasts/PodcastGridSkeleton";
-import { createDailyCache } from "@/lib/utils/cache";
+import { createStandardCache } from "@/lib/utils/cache";
 import {
 	TopRankedPodcastsRow,
 	TopRankedPodcastsSkeleton,
@@ -42,12 +42,12 @@ interface PageProps {
 	searchParams: Promise<{ q?: string; category?: string }>;
 }
 
-// Increase revalidation time to 24 hours
+// Route segment config
 export const dynamic = "force-static";
-export const revalidate = 86400; // 24 hours
+export const revalidate = 3600; // 1 hour
 
 // Create cached data fetching function for podcast page data
-const getPodcastPageData = createDailyCache(
+const getPodcastPageData = createStandardCache(
 	async (categoryFilter: string | undefined) => {
 		// Get all base data in parallel
 		const [podcastTags, featuredPodcasts, latestEpisodes, allPodcasts] =

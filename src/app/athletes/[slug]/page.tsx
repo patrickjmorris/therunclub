@@ -14,6 +14,10 @@ import { canManageContent } from "@/lib/auth-utils";
 import { Suspense } from "react";
 import { MentionLoading } from "@/components/common/mention-loading";
 
+// Route segment config
+export const dynamic = "force-static";
+export const revalidate = 86400; // 1 day
+
 export async function generateStaticParams() {
 	console.log("[Build] Starting generateStaticParams for athletes");
 

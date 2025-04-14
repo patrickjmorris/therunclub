@@ -5,7 +5,7 @@ import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
 import { CompactEpisodeCard } from "@/components/podcasts/CompactEpisodeCard";
 import { LoadingCardSkeleton } from "@/components/videos/loading-ui";
 import { getNewEpisodes } from "@/lib/services/podcast-service";
-import { createDailyCache } from "@/lib/utils/cache";
+import { createStandardCache } from "@/lib/utils/cache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { nanoid } from "nanoid";
 
@@ -34,7 +34,7 @@ export function PodcastSectionSkeleton() {
 }
 
 // Cache podcast data
-const getPodcastsData = createDailyCache(
+const getPodcastsData = createStandardCache(
 	async () => {
 		const podcasts = await getNewEpisodes(16);
 		return podcasts;

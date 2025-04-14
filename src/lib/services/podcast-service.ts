@@ -100,7 +100,7 @@ export const getNewEpisodes = unstable_cache(
 			.limit(limit);
 	},
 	["new-episodes"],
-	{ tags: ["episodes"], revalidate: 10800 }, // 3 hours in seconds
+	{ tags: ["episodes"], revalidate: 3600 }, // 1 hour in seconds
 );
 
 // Get last ten episodes

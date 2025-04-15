@@ -12,7 +12,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteHeader } from "@/components/common/site-header";
 import { AudioPlayer } from "@/components/podcasts/player/AudioPlayer";
 import { AudioProvider } from "@/components/podcasts/audio-provider";
-
+import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
 	metadataBase: new URL(siteConfig.url),
 	title: {
@@ -117,6 +117,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 							<div className="fixed inset-x-0 bottom-0 z-50 lg:right-0 lg:left-auto lg:w-3/4">
 								<AudioPlayer />
 							</div>
+							<Toaster />
 							<TailwindIndicator />
 							<Analytics />
 							<SpeedInsights />

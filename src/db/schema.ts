@@ -14,6 +14,7 @@ import {
 	numeric,
 	index,
 	serial,
+	pgEnum,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";

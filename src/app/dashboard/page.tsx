@@ -81,6 +81,15 @@ export default async function DashboardPage() {
 						Manage YouTube channels and videos
 					</p>
 				</Link>
+				<Link
+					href="/dashboard/tags"
+					className="p-4 border rounded-lg hover:bg-accent transition-colors"
+				>
+					<h2 className="text-xl font-semibold mb-2">Tags</h2>
+					<p className="text-muted-foreground">
+						Manage tags and consolidate variants
+					</p>
+				</Link>
 			</div>
 
 			<div className="hidden">

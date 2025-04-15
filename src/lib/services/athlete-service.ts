@@ -266,10 +266,6 @@ export type AthleteMention = {
 	athleteId: string;
 	contentId: string;
 	contentType: "podcast" | "video";
-	source: "title" | "description";
-	confidence: string;
-	context: string;
-	createdAt: Date;
 	episode?: {
 		id: string;
 		title: string;
@@ -320,10 +316,6 @@ export async function getAthleteRecentMentions(
 			athleteId: athleteMentions.athleteId,
 			contentId: athleteMentions.contentId,
 			contentType: athleteMentions.contentType,
-			source: athleteMentions.source,
-			confidence: athleteMentions.confidence,
-			context: athleteMentions.context,
-			createdAt: athleteMentions.createdAt,
 			publishedDate: episodes.pubDate, // Sort key
 
 			// Episode fields
@@ -403,10 +395,6 @@ export async function getAthleteRecentMentions(
 				athleteId: row.athleteId,
 				contentId: row.contentId,
 				contentType: "podcast",
-				source: row.source,
-				confidence: row.confidence,
-				context: row.context,
-				createdAt: row.createdAt ?? new Date(),
 				publishedDate: row.publishedDate,
 				episode: {
 					id: row.episode_id,
@@ -439,10 +427,6 @@ export async function getAthleteRecentMentions(
 				athleteId: row.athleteId,
 				contentId: row.contentId,
 				contentType: "video",
-				source: row.source,
-				confidence: row.confidence,
-				context: row.context,
-				createdAt: row.createdAt ?? new Date(),
 				publishedDate: row.publishedDate,
 				video: {
 					id: row.video_id,

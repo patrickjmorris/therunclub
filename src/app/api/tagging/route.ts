@@ -199,6 +199,61 @@ function extractTags(completion: string): string[] {
 	);
 }
 
+// --- START NEW HEURISTIC FUNCTION ---
+// Apply specific formatting heuristics
+function applyTagHeuristics(tags: string[]): string[] {
+	const processedTags: string[] = [];
+
+	for (const tag of tags) {
+		let currentTag = tag;
+
+		// 1. Kilometer normalization: [number] k/km/kilometers/000 meters -> [number]k
+		currentTag = currentTag.replace(
+			/^(\d+)\s?(?:k|km|kilometers?|000\s?meters?)\b/i,
+			"$1k",
+		);
+
+		// 2. Miles normalization: [number] miles? -> [number] miles (lowercase, consistent plural)
+		currentTag = currentTag.replace(/^(\d+)\s+miles?\b/i, "$1 miles");
+
+		// 3. Event Splitting: YYYY Location EventType -> [YYYY, Location, EventType]
+		// Regex aims for YYYY, captures multi-word location/name, then a common event type
+		const eventRegex =
+			/^(\d{4})\s+([a-z\d\s\-]+?)\s+(olympics|marathon|championships?|games|classic|invitational|meet|open|world athletics)\b/i;
+		const eventMatch = currentTag.match(eventRegex);
+
+		if (eventMatch) {
+			const year = eventMatch[1];
+			const locationName = eventMatch[2].trim().replace(/-/g, " "); // Clean up location
+			const eventType = eventMatch[3].toLowerCase(); // Keep event type consistent
+
+			// Add the split tags instead of the original
+			processedTags.push(year);
+			if (locationName) {
+				processedTags.push(locationName);
+			}
+			// Standardize championship(s)
+			processedTags.push(eventType.replace(/s$/, ""));
+			continue; // Skip adding the original combined tag
+		}
+
+		processedTags.push(currentTag);
+	}
+
+	// Re-normalize after splitting/modification (lowercase, trim, remove special chars again)
+	// This ensures split components are also clean
+	return processedTags
+		.map((t) =>
+			t
+				.toLowerCase()
+				.trim()
+				.replace(/[^\w\s-]/g, "")
+				.replace(/\s+/g, " "),
+		)
+		.filter((t) => t.length > 0); // Also filter empty strings potentially created
+}
+// --- END NEW HEURISTIC FUNCTION ---
+
 // Normalize tags to ensure quality and consistency
 function normalizeTags(tags: string[]): string[] {
 	// Step 1: Basic normalization (lowercase, trim, remove special characters)
@@ -239,6 +294,9 @@ function normalizeTags(tags: string[]): string[] {
 		return tag;
 	});
 
+	// Step 3.5: Apply specific formatting heuristics (km, miles, event splitting)
+	normalizedTags = applyTagHeuristics(normalizedTags);
+
 	// Step 4: Fuzzy matching to standardize similar tags
 	normalizedTags = normalizedTags.map((tag) => {
 		// Find the closest match in common tags if similarity is high
@@ -249,53 +307,12 @@ function normalizeTags(tags: string[]): string[] {
 	// Step 5: Remove duplicates
 	normalizedTags = Array.from(new Set(normalizedTags));
 
-	// Step 6: Score and prioritize tags
-	const scoredTags = normalizedTags.map((tag) => {
-		let score = 0;
+	// Step 6: Limit number of tags (e.g., to top 5-7 high-quality tags)
+	// Prioritize tags based on length, commonality, etc. - simple limit for now
+	const MAX_TAGS = 5;
+	normalizedTags = normalizedTags.slice(0, MAX_TAGS);
 
-		// Prioritize common tags
-		if (COMMON_TAGS.includes(tag)) {
-			score += 2;
-		}
-
-		// Prioritize specific categories
-		if (tag.includes("marathon") || tag.includes("5k") || tag.includes("10k")) {
-			score += 2; // Distance-specific tags are valuable
-		}
-
-		if (tag.includes("championship") || tag.includes("olympics")) {
-			score += 2; // Competition tags are valuable
-		}
-
-		if (
-			tag.includes("u18") ||
-			tag.includes("elite") ||
-			tag.includes("masters")
-		) {
-			score += 1; // Athlete category tags are somewhat valuable
-		}
-
-		// Penalize very generic tags
-		if (tag === "running" || tag === "runner" || tag === "athletics") {
-			score -= 2;
-		}
-
-		return { tag, score };
-	});
-
-	// Sort by score (descending)
-	scoredTags.sort((a, b) => b.score - a.score);
-
-	// Step 7: Limit to 3-5 tags
-	// If we have more than 5 tags, take the top 5
-	// If we have less than 3 tags, we'll just return what we have
-	const minTags = 3;
-	const maxTags = 5;
-
-	const finalTags = scoredTags.slice(0, maxTags).map((item) => item.tag);
-
-	// If we have less than minTags, we'll just return what we have
-	return finalTags.length >= minTags ? finalTags : finalTags;
+	return normalizedTags;
 }
 
 // Find the closest match for a tag using Levenshtein distance

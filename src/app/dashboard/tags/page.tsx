@@ -14,9 +14,9 @@ import Link from "next/link";
 
 // Define the props for the page, accepting searchParams
 interface AdminTagManagementPageProps {
-	searchParams?: {
+	searchParams?: Promise<{
 		page?: string;
-	};
+	}>;
 }
 
 export default async function AdminTagManagementPage({

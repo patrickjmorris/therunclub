@@ -124,13 +124,13 @@ export function AthleteMentions({
 				<div className="space-y-6">
 					{hasPodcasts &&
 						podcastMentions.map((mention) => (
-							<div key={`podcast-${mention.id}`}>
+							<div key={`podcast-${mention.episode?.id}`}>
 								<EpisodeEntry episode={toBasicEpisode(mention.episode)} />
 							</div>
 						))}
 					{hasVideos &&
 						videoMentions.map((mention) => (
-							<div key={`video-${mention.id}`}>
+							<div key={`video-${mention.video?.id}`}>
 								<VideoCardMention video={toBasicVideo(mention.video)} />
 							</div>
 						))}
@@ -154,14 +154,14 @@ export function AthleteMentions({
 						{mentions.map((mention) => {
 							if (mention.contentType === "podcast" && mention.episode) {
 								return (
-									<div key={`podcast-${mention.id}`}>
+									<div key={`podcast-${mention.episode?.id}`}>
 										<EpisodeEntry episode={toBasicEpisode(mention.episode)} />
 									</div>
 								);
 							}
 							if (mention.contentType === "video" && mention.video) {
 								return (
-									<div key={`video-${mention.id}`}>
+									<div key={`video-${mention.video?.id}`}>
 										<VideoCardMention video={toBasicVideo(mention.video)} />
 									</div>
 								);
@@ -173,7 +173,7 @@ export function AthleteMentions({
 				<TabsContent value="podcasts" className="mt-6">
 					<div className="space-y-6">
 						{podcastMentions.map((mention) => (
-							<div key={`podcast-${mention.id}`}>
+							<div key={`podcast-${mention.episode?.id}`}>
 								<EpisodeEntry episode={toBasicEpisode(mention.episode)} />
 							</div>
 						))}
@@ -182,7 +182,7 @@ export function AthleteMentions({
 				<TabsContent value="videos" className="mt-6">
 					<div className="space-y-6">
 						{videoMentions.map((mention) => (
-							<div key={`video-${mention.id}`}>
+							<div key={`video-${mention.video?.id}`}>
 								<VideoCardMention video={toBasicVideo(mention.video)} />
 							</div>
 						))}

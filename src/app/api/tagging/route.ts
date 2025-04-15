@@ -309,7 +309,7 @@ function normalizeTags(tags: string[]): string[] {
 
 	// Step 6: Limit number of tags (e.g., to top 5-7 high-quality tags)
 	// Prioritize tags based on length, commonality, etc. - simple limit for now
-	const MAX_TAGS = 7;
+	const MAX_TAGS = 5;
 	normalizedTags = normalizedTags.slice(0, MAX_TAGS);
 
 	return normalizedTags;

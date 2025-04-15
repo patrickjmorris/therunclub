@@ -262,7 +262,6 @@ function parseBirthDate(dateStr: string | undefined | null): string | null {
 
 // Define the exact type structure we're returning from the query
 export type AthleteMention = {
-	id: string;
 	athleteId: string;
 	contentId: string;
 	contentType: "podcast" | "video";
@@ -312,7 +311,6 @@ export async function getAthleteRecentMentions(
 	const podcastMentionsData = await db
 		.select({
 			// Common fields
-			id: athleteMentions.id,
 			athleteId: athleteMentions.athleteId,
 			contentId: athleteMentions.contentId,
 			contentType: athleteMentions.contentType,
@@ -343,9 +341,28 @@ export async function getAthleteRecentMentions(
 			and(
 				eq(athleteMentions.athleteId, athleteId),
 				eq(athleteMentions.contentType, "podcast"),
-				like(podcasts.language, "en%"),
 				isNotNull(episodes.pubDate), // Ensure we can sort
 			),
+		)
+		.groupBy(
+			athleteMentions.athleteId,
+			athleteMentions.contentId,
+			athleteMentions.contentType,
+			episodes.pubDate,
+			episodes.id,
+			episodes.title,
+			episodes.episodeSlug,
+			episodes.content,
+			episodes.episodeImage,
+			episodes.duration,
+			episodes.enclosureUrl,
+			episodes.explicit,
+			episodes.link,
+			podcasts.id,
+			podcasts.title,
+			podcasts.podcastImage,
+			podcasts.podcastSlug,
+			podcasts.author,
 		)
 		.orderBy(desc(episodes.pubDate))
 		.limit(limit); // Limit individually initially
@@ -354,14 +371,9 @@ export async function getAthleteRecentMentions(
 	const videoMentionsData = await db
 		.select({
 			// Common fields
-			id: athleteMentions.id,
 			athleteId: athleteMentions.athleteId,
 			contentId: athleteMentions.contentId,
 			contentType: athleteMentions.contentType,
-			source: athleteMentions.source,
-			confidence: athleteMentions.confidence,
-			context: athleteMentions.context,
-			createdAt: athleteMentions.createdAt,
 			publishedDate: videos.publishedAt, // Sort key
 
 			// Video fields
@@ -384,14 +396,27 @@ export async function getAthleteRecentMentions(
 				isNotNull(videos.publishedAt), // Ensure we can sort
 			),
 		)
-		.orderBy(desc(videos.publishedAt))
+		.groupBy(
+			athleteMentions.athleteId,
+			athleteMentions.contentId,
+			athleteMentions.contentType,
+			videos.publishedAt,
+			videos.id,
+			videos.title,
+			videos.thumbnailUrl,
+			videos.channelTitle,
+			videos.description,
+			videos.youtubeVideoId,
+			videos.duration,
+			videos.viewCount,
+			videos.likeCount,
+		)
 		.limit(limit); // Limit individually initially
 
 	// Combine and map results in TypeScript
 	const combinedMentions: AthleteMention[] = [
 		...podcastMentionsData.map(
 			(row): AthleteMention => ({
-				id: row.id,
 				athleteId: row.athleteId,
 				contentId: row.contentId,
 				contentType: "podcast",
@@ -423,7 +448,6 @@ export async function getAthleteRecentMentions(
 		),
 		...videoMentionsData.map(
 			(row): AthleteMention => ({
-				id: row.id,
 				athleteId: row.athleteId,
 				contentId: row.contentId,
 				contentType: "video",

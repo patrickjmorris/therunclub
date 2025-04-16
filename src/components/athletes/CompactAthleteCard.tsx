@@ -15,9 +15,12 @@ export function CompactAthleteCard({ athlete }: CompactAthleteCardProps) {
 	}
 
 	return (
-		<Link href={`/athletes/${athlete.slug}`} className="block w-[150px]">
-			<Card className="overflow-hidden transition-transform hover:scale-105">
-				<CardContent className="p-0 flex flex-col items-center text-center">
+		<Link
+			href={`/athletes/${athlete.slug}`}
+			className="block w-[150px] flex-shrink-0"
+		>
+			<Card className="w-[150px] overflow-hidden transition-transform hover:scale-105">
+				<CardContent className="p-0 flex flex-col items-center">
 					<div className="aspect-square w-full relative mb-2">
 						<Image
 							src={athlete.imageUrl || "/placeholder-athlete.svg"} // Use a placeholder if no image
@@ -27,8 +30,11 @@ export function CompactAthleteCard({ athlete }: CompactAthleteCardProps) {
 							priority // Prioritize loading images in the initial viewport
 						/>
 					</div>
-					<div className="p-2 pt-0">
-						<h3 className="text-sm font-semibold truncate" title={athlete.name}>
+					<div className="h-10 w-full flex items-center justify-center px-2 text-center">
+						<h3
+							className="text-sm font-semibold leading-tight truncate"
+							title={athlete.name}
+						>
 							{athlete.name}
 						</h3>
 					</div>

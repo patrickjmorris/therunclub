@@ -22,6 +22,7 @@ interface ProfileData {
 		instagram?: string;
 		facebook?: string;
 		website?: string;
+		strava?: string;
 	};
 	verified?: boolean;
 	imageUrl?: string;

@@ -154,7 +154,7 @@ export function ProfileSection({
 						<div className="flex gap-4">
 							{socialMedia.twitter && (
 								<a
-									href={`https://x.com/${socialMedia.twitter}`}
+									href={`${socialMedia.twitter}`}
 									target="_blank"
 									rel="noopener noreferrer"
 									className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center gap-1"
@@ -166,7 +166,7 @@ export function ProfileSection({
 							)}
 							{socialMedia.instagram && (
 								<a
-									href={`https://instagram.com/${socialMedia.instagram}`}
+									href={`${socialMedia.instagram}`}
 									target="_blank"
 									rel="noopener noreferrer"
 									className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center gap-1"

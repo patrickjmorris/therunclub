@@ -2,10 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { canManageContent } from "@/lib/auth-utils";
 import { getAthleteData } from "@/lib/services/athlete-service";
 import { updateProfile } from "../actions";
-import { AthleteEditForm } from "./components/athlete-edit-form"; // We'll create this component next
-import { db } from "@/db/client";
-import { athletes } from "@/db/schema";
-import { eq, isNotNull } from "drizzle-orm";
+import { AthleteEditForm } from "./components/athlete-edit-form";
 
 // Revalidate this page frequently or on demand, as it's dynamic
 export const revalidate = 0;

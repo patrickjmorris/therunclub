@@ -28,6 +28,7 @@ import { gqlClient } from "@/lib/world-athletics";
 import { countryCodeMap } from "@/lib/utils/country-codes";
 import { slugify } from "@/lib/utils";
 import { createFuzzyMatcher } from "@/lib/fuzzy-matcher";
+import { unstable_cache } from "next/cache";
 
 // Types for World Athletics API responses
 interface AthleteData {
@@ -142,11 +143,15 @@ async function getAthleteFromWorldAthletics(
 }
 
 // Get athlete from database by ID
-export async function getAthleteById(athleteId: string) {
-	return await db.query.athletes.findFirst({
-		where: eq(athletes.worldAthleticsId, athleteId),
-	});
-}
+export const getAthleteById = unstable_cache(
+	async (athleteId: string) => {
+		return db.query.athletes.findFirst({
+			where: eq(athletes.worldAthleticsId, athleteId),
+		});
+	},
+	["athlete-by-id"],
+	{ tags: ["athletes"], revalidate: 3600 }, // 1 hour
+);
 
 // Helper functions from import-athletes.ts
 async function getAthleteIds(): Promise<string[]> {
@@ -303,273 +308,297 @@ export type AthleteMention = {
 	publishedDate?: Date | null;
 };
 
-export async function getAthleteRecentMentions(
-	athleteId: string,
-	limit = 15,
-): Promise<AthleteMention[]> {
-	// Fetch podcast mentions
-	const podcastMentionsData = await db
-		.select({
-			// Common fields
-			athleteId: athleteMentions.athleteId,
-			contentId: athleteMentions.contentId,
-			contentType: athleteMentions.contentType,
-			publishedDate: episodes.pubDate, // Sort key
+export const getAthleteRecentMentions = unstable_cache(
+	async (athleteId: string, limit = 15): Promise<AthleteMention[]> => {
+		// Fetch podcast mentions
+		const podcastMentionsData = await db
+			.select({
+				// Common fields
+				athleteId: athleteMentions.athleteId,
+				contentId: athleteMentions.contentId,
+				contentType: athleteMentions.contentType,
+				publishedDate: episodes.pubDate, // Sort key
 
-			// Episode fields
-			episode_id: episodes.id,
-			episode_title: episodes.title,
-			episode_slug: episodes.episodeSlug,
-			episode_content: episodes.content,
-			episode_image: episodes.episodeImage,
-			episode_duration: episodes.duration,
-			enclosure_url: episodes.enclosureUrl,
-			episode_explicit: episodes.explicit,
-			episode_link: episodes.link,
+				// Episode fields
+				episode_id: episodes.id,
+				episode_title: episodes.title,
+				episode_slug: episodes.episodeSlug,
+				episode_content: episodes.content,
+				episode_image: episodes.episodeImage,
+				episode_duration: episodes.duration,
+				enclosure_url: episodes.enclosureUrl,
+				episode_explicit: episodes.explicit,
+				episode_link: episodes.link,
 
-			// Podcast fields
-			podcast_id: podcasts.id,
-			podcast_title: podcasts.title,
-			podcast_image: podcasts.podcastImage,
-			podcast_slug: podcasts.podcastSlug,
-			podcast_author: podcasts.author,
-		})
-		.from(athleteMentions)
-		.innerJoin(episodes, eq(athleteMentions.contentId, episodes.id))
-		.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-		.where(
-			and(
-				eq(athleteMentions.athleteId, athleteId),
-				eq(athleteMentions.contentType, "podcast"),
-				isNotNull(episodes.pubDate), // Ensure we can sort
+				// Podcast fields
+				podcast_id: podcasts.id,
+				podcast_title: podcasts.title,
+				podcast_image: podcasts.podcastImage,
+				podcast_slug: podcasts.podcastSlug,
+				podcast_author: podcasts.author,
+			})
+			.from(athleteMentions)
+			.innerJoin(episodes, eq(athleteMentions.contentId, episodes.id))
+			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
+			.where(
+				and(
+					eq(athleteMentions.athleteId, athleteId),
+					eq(athleteMentions.contentType, "podcast"),
+					isNotNull(episodes.pubDate), // Ensure we can sort
+				),
+			)
+			.groupBy(
+				athleteMentions.athleteId,
+				athleteMentions.contentId,
+				athleteMentions.contentType,
+				episodes.pubDate,
+				episodes.id,
+				episodes.title,
+				episodes.episodeSlug,
+				episodes.content,
+				episodes.episodeImage,
+				episodes.duration,
+				episodes.enclosureUrl,
+				episodes.explicit,
+				episodes.link,
+				podcasts.id,
+				podcasts.title,
+				podcasts.podcastImage,
+				podcasts.podcastSlug,
+				podcasts.author,
+			)
+			.orderBy(desc(episodes.pubDate))
+			.limit(limit); // Limit individually initially
+
+		// Fetch video mentions
+		const videoMentionsData = await db
+			.select({
+				// Common fields
+				athleteId: athleteMentions.athleteId,
+				contentId: athleteMentions.contentId,
+				contentType: athleteMentions.contentType,
+				publishedDate: videos.publishedAt, // Sort key
+
+				// Video fields
+				video_id: videos.id,
+				video_title: videos.title,
+				video_thumbnailUrl: videos.thumbnailUrl,
+				video_channelTitle: videos.channelTitle,
+				video_description: videos.description,
+				video_youtubeVideoId: videos.youtubeVideoId,
+				video_duration: videos.duration,
+				video_viewCount: videos.viewCount,
+				video_likeCount: videos.likeCount,
+			})
+			.from(athleteMentions)
+			.innerJoin(videos, eq(athleteMentions.contentId, videos.id))
+			.where(
+				and(
+					eq(athleteMentions.athleteId, athleteId),
+					eq(athleteMentions.contentType, "video"),
+					isNotNull(videos.publishedAt), // Ensure we can sort
+				),
+			)
+			.groupBy(
+				athleteMentions.athleteId,
+				athleteMentions.contentId,
+				athleteMentions.contentType,
+				videos.publishedAt,
+				videos.id,
+				videos.title,
+				videos.thumbnailUrl,
+				videos.channelTitle,
+				videos.description,
+				videos.youtubeVideoId,
+				videos.duration,
+				videos.viewCount,
+				videos.likeCount,
+			)
+			.limit(limit); // Limit individually initially
+
+		// Combine and map results in TypeScript
+		const combinedMentions: AthleteMention[] = [
+			...podcastMentionsData.map(
+				(row): AthleteMention => ({
+					athleteId: row.athleteId,
+					contentId: row.contentId,
+					contentType: "podcast",
+					publishedDate: row.publishedDate,
+					episode: {
+						id: row.episode_id,
+						title: row.episode_title,
+						episodeSlug: row.episode_slug,
+						content: row.episode_content,
+						pubDate: row.publishedDate,
+						episodeImage: row.episode_image,
+						duration: row.episode_duration,
+						podcastSlug: row.podcast_slug,
+						podcastTitle: row.podcast_title,
+						podcastImage: row.podcast_image,
+						podcastId: row.podcast_id,
+						podcastAuthor: row.podcast_author,
+						enclosureUrl: row.enclosure_url,
+						explicit: row.episode_explicit,
+						link: row.episode_link,
+					},
+					podcast: {
+						id: row.podcast_id,
+						title: row.podcast_title,
+						image: row.podcast_image,
+						podcastSlug: row.podcast_slug,
+					},
+				}),
 			),
-		)
-		.groupBy(
-			athleteMentions.athleteId,
-			athleteMentions.contentId,
-			athleteMentions.contentType,
-			episodes.pubDate,
-			episodes.id,
-			episodes.title,
-			episodes.episodeSlug,
-			episodes.content,
-			episodes.episodeImage,
-			episodes.duration,
-			episodes.enclosureUrl,
-			episodes.explicit,
-			episodes.link,
-			podcasts.id,
-			podcasts.title,
-			podcasts.podcastImage,
-			podcasts.podcastSlug,
-			podcasts.author,
-		)
-		.orderBy(desc(episodes.pubDate))
-		.limit(limit); // Limit individually initially
-
-	// Fetch video mentions
-	const videoMentionsData = await db
-		.select({
-			// Common fields
-			athleteId: athleteMentions.athleteId,
-			contentId: athleteMentions.contentId,
-			contentType: athleteMentions.contentType,
-			publishedDate: videos.publishedAt, // Sort key
-
-			// Video fields
-			video_id: videos.id,
-			video_title: videos.title,
-			video_thumbnailUrl: videos.thumbnailUrl,
-			video_channelTitle: videos.channelTitle,
-			video_description: videos.description,
-			video_youtubeVideoId: videos.youtubeVideoId,
-			video_duration: videos.duration,
-			video_viewCount: videos.viewCount,
-			video_likeCount: videos.likeCount,
-		})
-		.from(athleteMentions)
-		.innerJoin(videos, eq(athleteMentions.contentId, videos.id))
-		.where(
-			and(
-				eq(athleteMentions.athleteId, athleteId),
-				eq(athleteMentions.contentType, "video"),
-				isNotNull(videos.publishedAt), // Ensure we can sort
+			...videoMentionsData.map(
+				(row): AthleteMention => ({
+					athleteId: row.athleteId,
+					contentId: row.contentId,
+					contentType: "video",
+					publishedDate: row.publishedDate,
+					video: {
+						id: row.video_id,
+						title: row.video_title,
+						thumbnailUrl: row.video_thumbnailUrl,
+						channelTitle: row.video_channelTitle,
+						publishedAt: row.publishedDate,
+						description: row.video_description,
+						youtubeVideoId: row.video_youtubeVideoId,
+						duration: row.video_duration,
+						viewCount: row.video_viewCount,
+						likeCount: row.video_likeCount,
+					},
+				}),
 			),
-		)
-		.groupBy(
-			athleteMentions.athleteId,
-			athleteMentions.contentId,
-			athleteMentions.contentType,
-			videos.publishedAt,
-			videos.id,
-			videos.title,
-			videos.thumbnailUrl,
-			videos.channelTitle,
-			videos.description,
-			videos.youtubeVideoId,
-			videos.duration,
-			videos.viewCount,
-			videos.likeCount,
-		)
-		.limit(limit); // Limit individually initially
+		];
 
-	// Combine and map results in TypeScript
-	const combinedMentions: AthleteMention[] = [
-		...podcastMentionsData.map(
-			(row): AthleteMention => ({
-				athleteId: row.athleteId,
-				contentId: row.contentId,
-				contentType: "podcast",
-				publishedDate: row.publishedDate,
-				episode: {
-					id: row.episode_id,
-					title: row.episode_title,
-					episodeSlug: row.episode_slug,
-					content: row.episode_content,
-					pubDate: row.publishedDate,
-					episodeImage: row.episode_image,
-					duration: row.episode_duration,
-					podcastSlug: row.podcast_slug,
-					podcastTitle: row.podcast_title,
-					podcastImage: row.podcast_image,
-					podcastId: row.podcast_id,
-					podcastAuthor: row.podcast_author,
-					enclosureUrl: row.enclosure_url,
-					explicit: row.episode_explicit,
-					link: row.episode_link,
-				},
-				podcast: {
-					id: row.podcast_id,
-					title: row.podcast_title,
-					image: row.podcast_image,
-					podcastSlug: row.podcast_slug,
-				},
-			}),
-		),
-		...videoMentionsData.map(
-			(row): AthleteMention => ({
-				athleteId: row.athleteId,
-				contentId: row.contentId,
-				contentType: "video",
-				publishedDate: row.publishedDate,
-				video: {
-					id: row.video_id,
-					title: row.video_title,
-					thumbnailUrl: row.video_thumbnailUrl,
-					channelTitle: row.video_channelTitle,
-					publishedAt: row.publishedDate,
-					description: row.video_description,
-					youtubeVideoId: row.video_youtubeVideoId,
-					duration: row.video_duration,
-					viewCount: row.video_viewCount,
-					likeCount: row.video_likeCount,
-				},
-			}),
-		),
-	];
+		// Sort the combined array by publishedDate (descending, handling nulls)
+		combinedMentions.sort((a, b) => {
+			const dateA = a.publishedDate?.getTime() ?? 0;
+			const dateB = b.publishedDate?.getTime() ?? 0;
+			return dateB - dateA;
+		});
 
-	// Sort the combined array by publishedDate (descending, handling nulls)
-	combinedMentions.sort((a, b) => {
-		const dateA = a.publishedDate?.getTime() ?? 0;
-		const dateB = b.publishedDate?.getTime() ?? 0;
-		return dateB - dateA;
-	});
+		// Return the top 'limit' results
+		return combinedMentions.slice(0, limit);
+	},
+	["athlete-recent-mentions"],
+	{
+		tags: ["athletes", "mentions", "episodes", "podcasts", "videos"],
+		revalidate: 3600,
+	}, // 1 hour
+);
 
-	// Return the top 'limit' results
-	return combinedMentions.slice(0, limit);
-}
+export const getEpisodeAthleteReferences = unstable_cache(
+	async (episodeId: string, limit = 5) => {
+		// Get the highest confidence mention IDs for each athlete
+		const mentionIds = await db.execute<{ id: string }>(sql`
+			SELECT DISTINCT ON (athlete_id) id
+			FROM athlete_mentions
+			WHERE contentId = ${episodeId} AND contentType = 'podcast' 
+			ORDER BY athlete_id, confidence DESC
+			LIMIT ${limit}
+		`);
 
-export async function getEpisodeAthleteReferences(
-	episodeId: string,
-	limit = 5,
-) {
-	// Get the highest confidence mention IDs for each athlete
-	const mentionIds = await db.execute<{ id: string }>(sql`
-		SELECT DISTINCT ON (athlete_id) id
-		FROM athlete_mentions
-		WHERE episode_id = ${episodeId}
-		ORDER BY athlete_id, confidence DESC
-		LIMIT ${limit}
-	`);
-
-	// Fetch the full details for these mentions
-	return await db.query.athleteMentions.findMany({
-		where: inArray(
-			athleteMentions.id,
-			mentionIds.map((m) => m.id),
-		),
-		with: {
-			athlete: {
-				columns: {
-					id: true,
-					worldAthleticsId: true,
-					name: true,
-					imageUrl: true,
-					slug: true,
-					bio: true,
+		// Fetch the full details for these mentions
+		return db.query.athleteMentions.findMany({
+			where: inArray(
+				athleteMentions.id,
+				mentionIds.map((m) => m.id),
+			),
+			with: {
+				athlete: {
+					columns: {
+						id: true,
+						worldAthleticsId: true,
+						name: true,
+						imageUrl: true,
+						slug: true,
+						bio: true,
+					},
 				},
 			},
-		},
-		orderBy: [desc(athleteMentions.confidence)],
-	});
-}
+			orderBy: [desc(athleteMentions.confidence)],
+		});
+	},
+	["episode-athlete-references"],
+	{ tags: ["mentions", "athletes"], revalidate: 3600 }, // 1 hour
+);
 
-export async function getAthleteBySlug(slug: string) {
-	return await db.query.athletes.findFirst({
-		where: eq(athletes.slug, slug),
-		columns: {
-			id: true,
-			worldAthleticsId: true,
-			name: true,
-			slug: true,
-			imageUrl: true,
-			bio: true,
-			countryName: true,
-			countryCode: true,
-		},
-	});
-}
+export const getAthleteBySlug = unstable_cache(
+	async (slug: string) => {
+		return db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+			columns: {
+				id: true,
+				worldAthleticsId: true,
+				name: true,
+				slug: true,
+				imageUrl: true,
+				bio: true,
+				countryName: true,
+				countryCode: true,
+			},
+		});
+	},
+	["athlete-by-slug"],
+	{ tags: ["athletes"], revalidate: 3600 }, // 1 hour
+);
 
-export async function getAthleteData(slug: string) {
-	const athlete = await db.query.athletes.findFirst({
-		where: eq(athletes.slug, slug),
-		with: {
-			honors: true,
-			results: true,
-			sponsors: true,
-			gear: true,
-			events: true,
-		},
-	});
+export const getAthleteData = unstable_cache(
+	async (slug: string) => {
+		const athlete = await db.query.athletes.findFirst({
+			where: eq(athletes.slug, slug),
+			with: {
+				honors: true,
+				results: true,
+				sponsors: true,
+				gear: true,
+				events: true,
+			},
+		});
 
-	if (!athlete) return null;
-	return athlete;
-}
+		if (!athlete) return null;
+		return athlete;
+	},
+	["athlete-data"],
+	{
+		tags: ["athletes", "honors", "results", "sponsors", "gear", "events"],
+		revalidate: 3600,
+	}, // 1 hour
+);
 
-export async function getAllAthletes() {
-	return await db
-		.select({ slug: athletes.slug })
-		.from(athletes)
-		.where(isNotNull(athletes.slug));
-}
+export const getAllAthletes = unstable_cache(
+	async () => {
+		return db
+			.select({ slug: athletes.slug })
+			.from(athletes)
+			.where(isNotNull(athletes.slug));
+	},
+	["all-athletes"],
+	{ tags: ["athletes"], revalidate: 86400 }, // 24 hours
+);
 
-export async function getOlympicGoldMedalists() {
-	return await db
-		.select({
-			id: athletes.worldAthleticsId,
-		})
-		.from(athletes)
-		.innerJoin(
-			athleteHonors,
-			and(
-				eq(athletes.worldAthleticsId, athleteHonors.athleteId),
-				ilike(athleteHonors.categoryName, "%olympic%"),
-				sql`${athleteHonors.categoryName} NOT ILIKE '%youth%'`,
-				eq(athleteHonors.place, "1."),
-			),
-		)
-		.orderBy(desc(athletes.name));
-}
+export const getOlympicGoldMedalists = unstable_cache(
+	async () => {
+		return db
+			.select({
+				id: athletes.worldAthleticsId,
+			})
+			.from(athletes)
+			.innerJoin(
+				athleteHonors,
+				and(
+					eq(athletes.worldAthleticsId, athleteHonors.athleteId),
+					ilike(athleteHonors.categoryName, "%olympic%"),
+					sql`${athleteHonors.categoryName} NOT ILIKE '%youth%'`,
+					eq(athleteHonors.place, "1."),
+				),
+			)
+			.orderBy(desc(athletes.name));
+	},
+	["olympic-gold-medalists"],
+	{ tags: ["athletes", "honors"], revalidate: 86400 }, // 24 hours
+);
 
 interface GetAthletesQueryParams {
 	fromDate: string;
@@ -578,116 +607,128 @@ interface GetAthletesQueryParams {
 	goldMedalistIds: string[];
 }
 
-export async function getAllAthletesWithDisciplines({
-	fromDate,
-	limit,
-	offset,
-	goldMedalistIds,
-}: GetAthletesQueryParams) {
-	const query = db
-		.select({
-			athlete: athletes,
-			disciplines: sql<
-				string[]
-			>`array_agg(DISTINCT ${athleteResults.discipline})`,
-		})
-		.from(athletes)
-		.leftJoin(
-			athleteResults,
-			and(
-				eq(athletes.worldAthleticsId, athleteResults.athleteId),
-				gte(athleteResults.date, fromDate),
-			),
-		)
-		.where(
-			or(
+export const getAllAthletesWithDisciplines = unstable_cache(
+	async ({
+		fromDate,
+		limit,
+		offset,
+		goldMedalistIds,
+	}: GetAthletesQueryParams) => {
+		const query = db
+			.select({
+				athlete: athletes,
+				disciplines: sql<
+					string[]
+				>`array_agg(DISTINCT ${athleteResults.discipline})`,
+			})
+			.from(athletes)
+			.leftJoin(
+				athleteResults,
 				and(
-					isNotNull(athletes.worldAthleticsId),
-					inArray(athletes.worldAthleticsId, goldMedalistIds),
+					eq(athletes.worldAthleticsId, athleteResults.athleteId),
+					gte(athleteResults.date, fromDate),
 				),
-				and(
-					isNotNull(athletes.worldAthleticsId),
-					notInArray(athletes.worldAthleticsId, goldMedalistIds),
+			)
+			.where(
+				or(
+					and(
+						isNotNull(athletes.worldAthleticsId),
+						inArray(athletes.worldAthleticsId, goldMedalistIds),
+					),
+					and(
+						isNotNull(athletes.worldAthleticsId),
+						notInArray(athletes.worldAthleticsId, goldMedalistIds),
+					),
 				),
-			),
-		)
-		.groupBy(athletes.id)
-		.orderBy(desc(athletes.name))
-		.limit(limit)
-		.offset(offset);
+			)
+			.groupBy(athletes.id)
+			.orderBy(desc(athletes.name))
+			.limit(limit)
+			.offset(offset);
 
-	return await query;
-}
+		return query; // Removed await here as unstable_cache handles the promise
+	},
+	["all-athletes-with-disciplines"],
+	{ tags: ["athletes", "results"], revalidate: 3600 }, // 1 hour
+);
 
-export async function getAthleteCount() {
-	const result = await db
-		.select({ count: sql<number>`count(*)` })
-		.from(athletes)
-		.where(isNotNull(athletes.worldAthleticsId));
-	return result[0].count;
-}
+export const getAthleteCount = unstable_cache(
+	async () => {
+		const result = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(athletes)
+			.where(isNotNull(athletes.worldAthleticsId));
+		return result[0].count;
+	},
+	["athlete-count"],
+	{ tags: ["athletes"], revalidate: 3600 }, // 1 hour
+);
 
 // Search athletes with improved scoring
-export async function searchAthletes(query: string, limit = 10) {
-	const formattedQuery = query
-		.trim()
-		.split(/\s+/)
-		.map((term) => `${term}:*`)
-		.join(" & ");
+export const searchAthletes = unstable_cache(
+	async (query: string, limit = 10) => {
+		const formattedQuery = query
+			.trim()
+			.split(/\s+/)
+			.map((term) => `${term}:*`)
+			.join(" & ");
 
-	return db
-		.select({
-			athlete: {
-				id: athletes.worldAthleticsId,
-				name: athletes.name,
-				imageUrl: athletes.imageUrl,
-				slug: athletes.slug,
-				bio: athletes.bio,
-			},
-			mentionCount: sql<number>`COUNT(DISTINCT ${athleteMentions.id})`,
-			resultCount: sql<number>`COUNT(DISTINCT ${athleteResults.id})`,
-			honorCount: sql<number>`COUNT(DISTINCT ${athleteHonors.id})`,
-			searchRank: sql<number>`ts_rank(
+		return db
+			.select({
+				athlete: {
+					id: athletes.worldAthleticsId,
+					name: athletes.name,
+					imageUrl: athletes.imageUrl,
+					slug: athletes.slug,
+					bio: athletes.bio,
+				},
+				mentionCount: sql<number>`COUNT(DISTINCT ${athleteMentions.id})`,
+				resultCount: sql<number>`COUNT(DISTINCT ${athleteResults.id})`,
+				honorCount: sql<number>`COUNT(DISTINCT ${athleteHonors.id})`,
+				searchRank: sql<number>`ts_rank(
 				to_tsvector('english', 
 					${athletes.name} || ' ' || 
 					coalesce(${athletes.bio}, '')
 				),
 				to_tsquery('english', ${formattedQuery})
 			)`,
-		})
-		.from(athletes)
-		.leftJoin(
-			athleteMentions,
-			eq(athletes.worldAthleticsId, athleteMentions.athleteId),
-		)
-		.leftJoin(
-			athleteResults,
-			eq(athletes.worldAthleticsId, athleteResults.athleteId),
-		)
-		.leftJoin(
-			athleteHonors,
-			eq(athletes.worldAthleticsId, athleteHonors.athleteId),
-		)
-		.where(
-			sql`to_tsvector('english', 
+			})
+			.from(athletes)
+			.leftJoin(
+				athleteMentions,
+				eq(athletes.worldAthleticsId, athleteMentions.athleteId),
+			)
+			.leftJoin(
+				athleteResults,
+				eq(athletes.worldAthleticsId, athleteResults.athleteId),
+			)
+			.leftJoin(
+				athleteHonors,
+				eq(athletes.worldAthleticsId, athleteHonors.athleteId),
+			)
+			.where(
+				sql`to_tsvector('english', 
 				${athletes.name} || ' ' || 
 				coalesce(${athletes.bio}, '')
 			) @@ to_tsquery('english', ${formattedQuery})`,
-		)
-		.groupBy(athletes.id)
-		.orderBy(
-			desc(
-				sql`
+			)
+			.groupBy(athletes.id)
+			.orderBy(
+				desc(
+					sql`
 					(${sql.raw("searchRank")} * 0.4) + 
 					(log(COUNT(DISTINCT ${athleteMentions.id}) + 1) * 0.3) +
 					(log(COUNT(DISTINCT ${athleteResults.id}) + COUNT(DISTINCT ${
 						athleteHonors.id
 					}) + 1) * 0.3)
 				`,
-			),
-		)
-		.limit(limit);
-}
+				),
+			)
+			.limit(limit);
+	},
+	["search-athletes"],
+	{ tags: ["athletes", "mentions", "results", "honors"], revalidate: 600 }, // 10 minutes
+);
 
 // Import the athlete data from World Athletics API
 export async function importAthleteData(limit?: number) {
@@ -1384,22 +1425,26 @@ export async function processVideoAthletes(videoId: string) {
 	return processContentAthletes(videoId, "video");
 }
 
-export async function getAllCategories() {
-	try {
-		const result = await db
-			.select({
-				id: athleteCategories.id,
-				name: athleteCategories.name,
-				description: athleteCategories.description,
-			})
-			.from(athleteCategories)
-			.orderBy(athleteCategories.name);
-		return result;
-	} catch (error) {
-		console.error("Error fetching categories:", error);
-		throw new Error("Failed to fetch categories");
-	}
-}
+export const getAllCategories = unstable_cache(
+	async () => {
+		try {
+			const result = await db
+				.select({
+					id: athleteCategories.id,
+					name: athleteCategories.name,
+					description: athleteCategories.description,
+				})
+				.from(athleteCategories)
+				.orderBy(athleteCategories.name);
+			return result;
+		} catch (error) {
+			console.error("Error fetching categories:", error);
+			throw new Error("Failed to fetch categories");
+		}
+	},
+	["all-athlete-categories"],
+	{ tags: ["athleteCategories"], revalidate: 86400 }, // 24 hours
+);
 
 /**
  * Update existing athletes in the database

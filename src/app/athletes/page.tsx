@@ -10,6 +10,10 @@ import {
 	getAllCategories,
 } from "@/lib/services/athlete-service";
 import { canManageContent } from "@/lib/auth-utils";
+import {
+	AthleteMentionsSection,
+	AthleteMentionsSectionSkeleton,
+} from "@/components/athletes/AthleteMentionsSection";
 
 const ATHLETES_PER_PAGE = 24;
 
@@ -150,13 +154,21 @@ export default async function AthletesPage({
 				<h1 className="text-3xl font-bold">Athletes</h1>
 			</div>
 
-			<Suspense fallback={<div>Loading athletes...</div>}>
-				<AthletesList
-					athletes={athletes.athletes}
-					hasMore={athletes.hasMore}
-					page={page}
-				/>
+			{/* Recently Mentioned Athletes Section */}
+			<Suspense fallback={<AthleteMentionsSectionSkeleton />}>
+				<AthleteMentionsSection showViewAllLink={false} />
 			</Suspense>
+
+			{/* Existing Athlete List */}
+			<div className="mt-12">
+				<Suspense fallback={<div>Loading athletes...</div>}>
+					<AthletesList
+						athletes={athletes.athletes}
+						hasMore={athletes.hasMore}
+						page={page}
+					/>
+				</Suspense>
+			</div>
 		</div>
 	);
 }

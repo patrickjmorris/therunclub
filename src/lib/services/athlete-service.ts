@@ -1595,3 +1595,68 @@ export async function updateExistingAthletes(limit?: number) {
 	console.log("[Athlete Update] Update complete:", results);
 	return results;
 }
+
+export type RecentlyMentionedAthlete = Pick<
+	typeof athletes.$inferSelect,
+	"slug" | "name" | "imageUrl"
+>;
+
+export const getRecentlyMentionedAthletes = unstable_cache(
+	async ({
+		contentType,
+		limit = 10,
+	}: {
+		contentType?: "podcast" | "video";
+		limit?: number;
+	}): Promise<RecentlyMentionedAthlete[]> => {
+		const sevenDaysAgo = new Date();
+		sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+		// Base conditions for the subquery (mentions within timeframe)
+		const mentionConditions = [gte(athleteMentions.createdAt, sevenDaysAgo)];
+
+		if (contentType) {
+			mentionConditions.push(eq(athleteMentions.contentType, contentType));
+		}
+
+		// Subquery to find the latest mention timestamp for each athlete within the conditions
+		const latestMentionsSubquery = db
+			.select({
+				athleteId: athleteMentions.athleteId,
+				// Add .as() alias for the raw SQL field
+				latestMentionDate: sql<Date>`MAX(${athleteMentions.createdAt})`.as(
+					"latestMentionDate",
+				),
+			})
+			.from(athleteMentions)
+			.where(and(...mentionConditions)) // Use conditions specific to mentions
+			.groupBy(athleteMentions.athleteId)
+			.as("latest_mentions");
+
+		// Main query to select distinct athletes ordered by their latest mention date
+		const results = await db
+			.selectDistinct({
+				slug: athletes.slug,
+				name: athletes.name,
+				imageUrl: athletes.imageUrl,
+				// Include latestMentionDate in SELECT list for ORDER BY
+				latestMentionDate: latestMentionsSubquery.latestMentionDate,
+			})
+			.from(athletes)
+			.innerJoin(
+				latestMentionsSubquery,
+				eq(athletes.worldAthleticsId, latestMentionsSubquery.athleteId),
+			)
+			.where(isNotNull(athletes.slug)) // Apply athlete-specific filter here
+			.orderBy(desc(latestMentionsSubquery.latestMentionDate)) // Order by the subquery result
+			.limit(limit);
+
+		// Explicitly cast the result type
+		return results as RecentlyMentionedAthlete[];
+	},
+	["recently-mentioned-athletes"], // Cache key base
+	{
+		tags: ["athletes", "mentions"],
+		revalidate: 3600, // Revalidate every hour
+	},
+);

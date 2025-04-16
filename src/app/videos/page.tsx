@@ -16,6 +16,10 @@ import { parseAsString } from "nuqs/server";
 import { FeaturedChannelsRow } from "@/components/videos/FeaturedChannelsRow";
 import { createStandardCache } from "@/lib/utils/cache";
 import { cache } from "react";
+import {
+	AthleteMentionsSection,
+	AthleteMentionsSectionSkeleton,
+} from "@/components/athletes/AthleteMentionsSection";
 
 export const metadata: Metadata = {
 	title: "Running Videos | The Run Club",
@@ -103,6 +107,15 @@ export default async function VideosPage({ searchParams }: PageProps) {
 				</div>
 				<FeaturedChannelsRow channels={featuredChannels} />
 			</div>
+
+			{/* Recently Mentioned Athletes Section (Videos) */}
+			<Suspense fallback={<AthleteMentionsSectionSkeleton />}>
+				<AthleteMentionsSection
+					contentType="video"
+					title="Recently Mentioned in Videos"
+					showViewAllLink={false} // Don't show view all athletes link here
+				/>
+			</Suspense>
 
 			{/* Videos Section */}
 			<div>

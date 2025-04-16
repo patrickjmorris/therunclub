@@ -95,7 +95,7 @@
 		"jotai": "^2.12.2",
 		"link-preview-js": "^3.0.14",
 		"lite-youtube-embed": "^0.3.3",
-		"lucide-react": "^0.378.0",
+		"lucide-react": "^0.488.0",
 		"motion": "^12.5.0",
 		"nanoid": "^5.1.5",
 		"next": "^15.3.0-canary.15",

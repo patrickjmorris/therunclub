@@ -1,11 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import Link from "next/link";
-import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
-import { CompactEpisodeCard } from "@/components/podcasts/CompactEpisodeCard";
 import { LoadingCardSkeleton } from "@/components/videos/loading-ui";
-import { getNewEpisodes } from "@/lib/services/podcast-service";
-import { createDailyCache } from "@/lib/utils/cache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { nanoid } from "nanoid";
 import { TopRankedPodcastsRow } from "@/components/podcasts/TopRankedPodcastsRow";

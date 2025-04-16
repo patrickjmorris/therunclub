@@ -22,6 +22,10 @@ import {
 	TopRankedPodcastsRow,
 	TopRankedPodcastsSkeleton,
 } from "@/components/podcasts/TopRankedPodcastsRow";
+import {
+	AthleteMentionsSection,
+	AthleteMentionsSectionSkeleton,
+} from "@/components/athletes/AthleteMentionsSection";
 
 export const metadata: Metadata = {
 	title: "Running Podcasts | The Run Club",
@@ -115,6 +119,15 @@ export default async function PodcastList({ searchParams }: PageProps) {
 					<TopRankedPodcastsRow />
 				</Suspense>
 			</div>
+
+			{/* Recently Mentioned Athletes Section (Podcasts) */}
+			<Suspense fallback={<AthleteMentionsSectionSkeleton />}>
+				<AthleteMentionsSection
+					contentType="podcast"
+					title="Recently Mentioned in Podcasts"
+					showViewAllLink={false} // Don't show view all athletes link here
+				/>
+			</Suspense>
 
 			{/* Featured Podcasts Section */}
 			<div className="mb-12">

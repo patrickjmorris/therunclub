@@ -23,6 +23,10 @@ import {
 	TopRankedPodcastsSection,
 	TopRankedPodcastsSkeleton,
 } from "@/components/common/homepage/TopRankedPodcastsSection";
+import {
+	AthleteMentionsSection,
+	AthleteMentionsSectionSkeleton,
+} from "@/components/athletes/AthleteMentionsSection";
 // import { TopRankedPodcastsSkeleton } from "@/components/podcasts/TopRankedPodcastsRow";
 
 // Route segment config
@@ -52,6 +56,11 @@ export default function HomePage() {
 			{/* Top Ranked Podcasts Section */}
 			<Suspense fallback={<TopRankedPodcastsSkeleton />}>
 				<TopRankedPodcastsSection />
+			</Suspense>
+
+			{/* Recently Mentioned Athletes Section */}
+			<Suspense fallback={<AthleteMentionsSectionSkeleton />}>
+				<AthleteMentionsSection />
 			</Suspense>
 
 			{/* Videos Section with Suspense */}

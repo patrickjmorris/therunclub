@@ -6,7 +6,7 @@ import { subDays, format } from "date-fns";
 // Get the top tags from the past X days
 export async function getTopTags(
 	contentType: "video" | "episode" | "podcast",
-	daysAgo = 14,
+	daysAgo = 5,
 	limit = 5,
 ) {
 	const cutoffDate = subDays(new Date(), daysAgo);

@@ -5,7 +5,7 @@ import { HorizontalScroll } from "@/components/ui/horizontal-scroll";
 import { CompactVideoCard } from "@/components/videos/CompactVideoCard";
 import { LoadingCardSkeleton } from "@/components/videos/loading-ui";
 import { getHomeLatestVideos } from "@/lib/services/video-service";
-import { createDailyCache } from "@/lib/utils/cache";
+import { createStandardCache } from "@/lib/utils/cache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { nanoid } from "nanoid";
 
@@ -34,7 +34,7 @@ export function VideoSectionSkeleton() {
 }
 
 // Cache video data
-const getVideosData = createDailyCache(
+const getVideosData = createStandardCache(
 	async () => {
 		const videos = await getHomeLatestVideos(16);
 		return videos;

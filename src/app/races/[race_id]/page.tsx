@@ -14,8 +14,11 @@ function ErrorFallback({ error }: { error: Error }) {
 }
 
 export default async function RaceDetailPage({
-	params,
-}: { params: { race_id: string } }) {
+	params: paramsPromise,
+}: {
+	params: Promise<{ race_id: string }>;
+}) {
+	const params = await paramsPromise;
 	const { race_id } = params;
 
 	let raceData: RunSignupRace | null = null;

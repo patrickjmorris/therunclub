@@ -98,6 +98,14 @@ export default async function RacesPage({
 	const totalRaces = raceData?.total_results ?? 0;
 	const totalPages = Math.ceil(totalRaces / resultsPerPage);
 
+	// Log pagination values
+	console.log("[Pagination Debug]", {
+		totalRaces,
+		resultsPerPage,
+		totalPages,
+		currentPage,
+	});
+
 	// UI: ZIP input, radius dropdown, table, pagination
 	return (
 		<main className="max-w-5xl mx-auto px-4 py-8">

@@ -1,0 +1,141 @@
+{
+	"race_id": 38121,
+	"name": "13th Annual Happy Jack 5K",
+	"last_date": "10/19/2024",
+	"last_end_date": "10/19/2024",
+	"next_date": "10/18/2025",
+	"next_end_date": "10/18/2025",
+	"is_draft_race": "F",
+	"is_private_race": "F",
+	"is_registration_open": "T",
+	"created": "8/16/2016 20:32",
+	"last_modified": "3/29/2025 21:47",
+	"description": "<p>The Happy Jack 5k is an annual, family friendly 5k walk/run that honors the life of our son, John Thomas &#34;Happy Jack&#34; Doyle. All proceeds go to The Happy Jack Fund which provides annual scholarships to HS students who have lost a sister/brother as well as provide families with support who are suffering through the loss of a child. The race is held in West Nyack, NY and is an officially timed out and back style race beginning and ending in Germonds Park. Traffic is controlled by the Clarkstown Police Department. Additionally, we also offer a kid's fun run for all ages prior to the 5k.</p>\n<p>Registration is currently open and we encourage everyone to sign up ASAP. Shirts will be provided to the first 200 registered runners in the main race (kids race participants will not receive t-shirt). All participants will receive a participation medal in both the kids race as well as the main event. We also encourage participants to start teams. The top five teams with the most registrations will be awarded Trophy&#39;s. If you need help in setting up a team please contact us at <a href=\"mailto:racecommittee&#64;happyjackfund.org\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">racecommittee&#64;happyjackfund.org </a>.</p>\n<p>We are excited to be back for the 12th Annual Race and appreciate everyone&#39;s support over the years. Should you have any questions and/or concerns, please contact us at <a href=\"mailto:racecommittee&#64;happyjackfund.org\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">racecommittee&#64;happyjackfund.org </a>.Thank you again and we can&#39;t wait to see you at the finish line!!!</p>\n<p> </p>\n<p>Sincerely,</p>\n<p>The Happy Jack Race Committee</p>\n<p> </p>\n<p><u><b>Description</b></u></p>\n<p>Join The Happy Jack Fund at our 13th Annual Happy Jack 5K on October 18, 2025, at Germonds Park West Nyack, NY</p>\n<p><u><b>The Course</b></u></p>\n<p>This is an out and back style race starting in the parking lot of Germonds Park in West Nyack, NY, exit left out of the park and follow Germonds road to the end making another left hand turn until you make a right turn onto Lyncrest Avenue. Follow Lyncrest to the end making a right onto Shetland Drive, taking that to the end and make a right onto Teakwood Lane (turns into Stratford Place). Take that to the end and make a right onto Jolen Drive and then a left onto Whitewood Drive. This will take you back out to Germonds Road where you turn left and then a quick right and follow it back to the park where the finish line is located. </p>\n<p>Walkers will follow the same route (behind the runners) and once on Lyncrest you make a right onto Jolen Drive and then a right onto Whitewood Drive. </p>\n<p>The race course is clearly marked with signs and will also have our volunteers there to direct and support you.</p>\n<p><u><b>Event Shirts</b></u></p>\n<p>Event shirts will be given out to the first 200 participants who register. Sizes are not guaranteed and will be given out as supplies last. Race bib and shirt pick up will be held on Friday October 17, 2025, at District 96 in New City and will also be available on race day stating at 7:30am. </p>\n<p><u><b>Results and Awards</b></u></p>\n<p>Awards will be given to the top Female &amp; Male overall winners as well as the top 5 Teams with the best with the most registered runner/walkers in main race. </p>\n<p>Age group awards in the race will be awarded to the top 3 female and male in each of the following age groups; 9-14, 15-19, 20-29, 30-39, 40-49, 50-59 and 60&#43;.</p>\n<p><u><b>Parking and Bathrooms</b></u></p>\n<p>All participants and spectators can park in the lower parking lot of Germonds Park. Do not park in the coned area and/or near the stage. Bathrooms are located on the West side of the parking lot. </p>\n<p><u><b>Covid Safety</b></u></p>\n<p>All participants are required to sign the waiver upon signing up. You may not attend the event if you have experienced symptoms of COVID-19 or tested positive in the fourteen (14) days prior to the event. Should you test positive in the fourteen (14) days after the event you must notify The Happy Jack Fund at racecommittee&#64;happyjackfund.org so that we may notify staff and participants as necessary. </p>\n<p><u><b>Race Contact Info</b></u></p>\n<p>If you have any questions about this event, please contact us at racecommittee&#64;happyjackfund.org</p>\n<p><u><b>Race Proceeds</b></u></p>\n<p>All proceeds from this event will be used towards The Happy Jack Annual Scholarships as well as supporting Families within our community who need the support of The Happy Jack Fund. </p>\n<p> </p>\n<p>&#34;Thank you for helping us share Jack&#39;s smile with someone who really needs it&#34;</p>",
+	"url": "https://runsignup.com/Race/NY/WestNyack/HJ5K",
+	"external_race_url": "https://www.facebook.com/happyjackfundinc/",
+	"external_results_url": null,
+	"fb_page_id": "happyjack5k",
+	"fb_event_id": 1220146751350111,
+	"address": {
+		"street": "Germonds Park",
+		"street2": "Germonds Road",
+		"city": "West Nyack",
+		"state": "NY",
+		"zipcode": "10994",
+		"country_code": "US"
+	},
+	"timezone": "America/New_York",
+	"real_time_notifications_enabled": "T",
+	"events": [
+		{
+			"event_id": 984947,
+			"race_event_days_id": 347477,
+			"name": "13th Annual Happy Jack 5k",
+			"details": "The Happy Jack 5K is held in honor John Thomas \"Happy Jack\" Doyle and is held on or around what would have been his birthday. All proceeds go to The Happy Jack Fund which supports families who have suffered the loss of a child by awarding siblings merit based academic scholarships for their higher education. The race is held in West Nyack, NY and is an officially timed out and back style race beginning and ending in Germonds Park. Traffic is controlled by the Clarkstown Police Department.",
+			"start_time": "10/18/2025 09:00",
+			"end_time": "10/18/2025 10:00",
+			"age_calc_base_date": null,
+			"registration_opens": "2/4/2025 00:00",
+			"event_type": "running_race",
+			"distance": "5K",
+			"volunteer": "F",
+			"require_dob": "T",
+			"require_phone": "T",
+			"registration_periods": [
+				{
+					"registration_opens": "2/4/2025 00:00",
+					"registration_closes": "9/1/2025 23:59",
+					"race_fee": "$25.00",
+					"processing_fee": "$0.00"
+				},
+				{
+					"registration_opens": "9/2/2025 00:00",
+					"registration_closes": "9/30/2025 23:59",
+					"race_fee": "$30.00",
+					"processing_fee": "$0.00"
+				},
+				{
+					"registration_opens": "10/1/2025 00:00",
+					"registration_closes": "10/16/2025 23:59",
+					"race_fee": "$35.00",
+					"processing_fee": "$0.00"
+				},
+				{
+					"registration_opens": "10/17/2025 00:00",
+					"registration_closes": "10/18/2025 08:50",
+					"race_fee": "$40.00",
+					"processing_fee": "$0.00"
+				}
+			],
+			"giveaway": "T-Shirt",
+			"participant_cap": 500
+		},
+		{
+			"event_id": 984948,
+			"race_event_days_id": 347477,
+			"name": "13th Annual Happy Jack 5k Virtual Race",
+			"details": "Can't make the race LIVE then join us for a virtual race. We'll make sure to get your shirt to you so you can share your race day with us via social media. Please note, shirts are only guaranteed to the first 200 registered participants. \r\n\r\nThe Happy Jack 5K is held in honor John Thomas \"Happy Jack\" Doyle and is held on or around what would have been his birthday. All proceeds go to The Happy Jack Fund which supports families who have suffered the loss of a child by awarding siblings merit based academic scholarships for their higher education. The race is held in West Nyack, NY and is an officially timed out and back style race beginning and ending in Germonds Park. Traffic is controlled by the Clarkstown Police Department.",
+			"start_time": "10/18/2025 09:00",
+			"end_time": "10/18/2025 10:00",
+			"age_calc_base_date": null,
+			"registration_opens": "2/4/2025 00:00",
+			"event_type": "running_race",
+			"distance": "5K",
+			"volunteer": "F",
+			"require_dob": "T",
+			"require_phone": "T",
+			"registration_periods": [
+				{
+					"registration_opens": "2/4/2025 00:00",
+					"registration_closes": "9/1/2025 23:59",
+					"race_fee": "$25.00",
+					"processing_fee": "$0.00"
+				},
+				{
+					"registration_opens": "9/2/2025 00:00",
+					"registration_closes": "9/30/2025 23:59",
+					"race_fee": "$30.00",
+					"processing_fee": "$0.00"
+				},
+				{
+					"registration_opens": "10/1/2025 00:00",
+					"registration_closes": "10/16/2025 23:59",
+					"race_fee": "$35.00",
+					"processing_fee": "$0.00"
+				},
+				{
+					"registration_opens": "10/17/2025 00:00",
+					"registration_closes": "10/18/2025 08:50",
+					"race_fee": "$40.00",
+					"processing_fee": "$0.00"
+				}
+			],
+			"giveaway": "T-Shirt",
+			"participant_cap": 500
+		},
+		{
+			"event_id": 984949,
+			"race_event_days_id": 347477,
+			"name": "Happy Jack Kids Fun Run",
+			"details": "The Happy Jack Kids Fun Run is a quarter mile non timed race for kids of all ages. All participants will receive a participation medal. This is event is held immediately prior to the official 5K/Family Fun Run/Walk. ",
+			"start_time": "10/18/2025 08:30",
+			"end_time": "10/18/2025 08:50",
+			"age_calc_base_date": null,
+			"registration_opens": "2/4/2025 08:00",
+			"event_type": "running_race",
+			"distance": "450 Yards",
+			"volunteer": "T",
+			"require_dob": "T",
+			"require_phone": "T",
+			"registration_periods": [
+				{
+					"registration_opens": "2/4/2025 08:00",
+					"registration_closes": "10/18/2025 08:00",
+					"race_fee": "$0.00",
+					"processing_fee": "$0.00"
+				}
+			],
+			"participant_cap": 150
+		}
+	]
+}

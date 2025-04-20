@@ -44,14 +44,14 @@ export default function HomePage() {
 	return (
 		<div className="flex flex-col min-h-screen">
 			{/* Hero Section */}
-			<PageHeader />
+			{/* <PageHeader /> */}
 
 			{/* Global Search Section */}
-			<section className="w-full py-12 bg-background">
+			{/* <section className="w-full py-12 bg-background">
 				<div className="container px-4 md:px-6">
 					<GlobalSearch />
 				</div>
-			</section>
+			</section> */}
 
 			{/* Top Ranked Podcasts Section */}
 			<Suspense fallback={<TopRankedPodcastsSkeleton />}>

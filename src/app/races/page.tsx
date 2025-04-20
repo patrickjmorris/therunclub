@@ -11,7 +11,7 @@ import type { Headers } from "node-fetch";
 async function getZipCode(): Promise<string | null> {
 	try {
 		const baseUrl =
-			process.env.NEXT_PUBLIC_APP_URL ||
+			process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ||
 			process.env.VERCEL_URL ||
 			"http://localhost:3000";
 		const fetchUrl = `${baseUrl}/api/geolocation`;

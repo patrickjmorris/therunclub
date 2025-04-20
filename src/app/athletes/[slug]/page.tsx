@@ -214,7 +214,7 @@ export default async function AthletePage({
 							{/* Right column - Sponsors, Gear, Events */}
 							<div className="mt-8 lg:mt-0 lg:col-span-8">
 								{/* Sponsors Section */}
-								<SponsorsSection
+								{/* <SponsorsSection
 									athleteSlug={athlete.slug}
 									sponsors={athlete.sponsors.map((sponsor) => ({
 										id: sponsor.id,
@@ -226,10 +226,10 @@ export default async function AthletePage({
 										isPrimary: sponsor.isPrimary,
 									}))}
 									isAdmin={isAdmin}
-								/>
+								/> */}
 
 								{/* Gear Section */}
-								<div className="mt-8">
+								{/* <div className="mt-8">
 									<GearSection
 										athleteSlug={athlete.slug}
 										gear={athlete.gear.map((item) => ({
@@ -245,10 +245,10 @@ export default async function AthletePage({
 										}))}
 										isAdmin={isAdmin}
 									/>
-								</div>
+								</div> */}
 
 								{/* Events Section */}
-								<div className="mt-8">
+								{/* <div className="mt-8">
 									<EventsSection
 										athleteSlug={athlete.slug}
 										events={athlete.events.map((event) => ({
@@ -270,7 +270,7 @@ export default async function AthletePage({
 										}))}
 										isAdmin={isAdmin}
 									/>
-								</div>
+								</div> */}
 
 								{/* Recent Mentions Section */}
 								<div className="mt-8">

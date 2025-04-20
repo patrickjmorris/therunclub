@@ -166,7 +166,7 @@ curl -X GET "http://localhost:3000/api/content?type=athlete-detection&maxAgeHour
 
 **Example (Production):**
 ```bash
-curl -X GET "https://www.therunclub.xyz/api/content?type=athlete-detection&maxAgeHours=6&batchSize=5" \
+curl -X GET "https://www.therunclub.xyz/api/content?type=athlete-detection&maxAgeHours=24&batchSize=5" \
   -H "x-api-key:  $UPDATE_API_KEY"
 ```
 

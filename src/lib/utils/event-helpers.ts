@@ -203,3 +203,68 @@ export function getGiveawayInfo(
 	// Returning the 'giveaway' field if it exists.
 	return event?.giveaway || null;
 }
+
+// --- Distance Parsing ---
+
+const MILES_PER_KM = 0.621371;
+
+/**
+ * Attempts to parse a distance string (e.g., "5K", "13.1 Miles", "Marathon")
+ * into a numerical value in miles.
+ * Returns null if parsing fails.
+ */
+export function parseDistanceToMiles(
+	distanceStr: string | null | undefined,
+): number | null {
+	if (!distanceStr) return null;
+
+	const lowerStr = distanceStr.toLowerCase().trim();
+
+	// Handle standard names first
+	if (lowerStr.includes("marathon")) {
+		if (lowerStr.includes("half")) {
+			return 13.1094; // Standard half marathon
+		}
+		return 26.2188; // Standard marathon
+	}
+	if (lowerStr.includes("ultra")) {
+		// Ultras vary greatly, try to extract number if present, otherwise return null
+		const numMatch = lowerStr.match(/[\d.]+/);
+		if (numMatch) {
+			const num = parseFloat(numMatch[0]);
+			if (!Number.isNaN(num)) {
+				// Assume miles for ultras unless explicitly K
+				if (lowerStr.includes("k")) {
+					return num * MILES_PER_KM;
+				}
+				return num;
+			}
+		}
+		return null; // Cannot determine specific ultra distance
+	}
+
+	// Handle numerical values with units
+	const match = lowerStr.match(
+		/^([\d.]+)\s*(k|km|kilometer|kilometers|m|mile|miles)?$/,
+	);
+
+	if (match) {
+		const value = parseFloat(match[1]);
+		const unit = match[2] || "";
+
+		if (Number.isNaN(value)) return null;
+
+		if (unit.startsWith("k")) {
+			return value * MILES_PER_KM;
+		}
+		// No need for else if, assume miles if not K
+		if (unit.startsWith("m") || unit === "") {
+			return value;
+		}
+		// If unit is something else we don't handle (e.g., yards), it will fall through to null
+	}
+
+	// Could add more specific checks (e.g., "10 Miler")
+
+	return null; // Failed to parse
+}

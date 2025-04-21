@@ -48,7 +48,7 @@ const nextConfig = {
 			bodySizeLimit: "3mb",
 		},
 		reactCompiler: true,
-		ppr: "incremental",
+		// ppr: "incremental",
 	},
 	serverExternalPackages: ["whatwg-url"],
 };

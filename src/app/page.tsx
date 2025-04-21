@@ -27,6 +27,7 @@ import {
 	AthleteMentionsSection,
 	AthleteMentionsSectionSkeleton,
 } from "@/components/athletes/AthleteMentionsSection";
+import { UpcomingRacesWidget } from "@/components/common/homepage/UpcomingRacesWidget";
 // import { TopRankedPodcastsSkeleton } from "@/components/podcasts/TopRankedPodcastsRow";
 
 // Route segment config
@@ -87,6 +88,7 @@ export default function HomePage() {
 			<Suspense fallback={<FeaturedPodcastsSkeleton />}>
 				<FeaturedPodcastsSection />
 			</Suspense>
+			<UpcomingRacesWidget />
 		</div>
 	);
 }

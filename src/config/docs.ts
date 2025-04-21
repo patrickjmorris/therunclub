@@ -27,8 +27,8 @@ export const docsConfig: DocsConfig = {
 			href: "/athletes",
 		},
 		{
-			title: "Training Plans",
-			href: "/training-plans",
+			title: "Races",
+			href: "/races",
 		},
 		{
 			title: "Calculators",

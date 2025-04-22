@@ -11,7 +11,7 @@ import { and, isNotNull, like } from "drizzle-orm";
 import { fetchMore } from "./actions";
 import { Suspense } from "react";
 import { BasicEpisode } from "@/types/shared";
-import { createDailyCache } from "@/lib/utils/cache";
+import { createStandardCache } from "@/lib/utils/cache";
 import dynamicImport from "next/dynamic";
 import { nanoid } from "nanoid";
 
@@ -40,7 +40,7 @@ export const dynamic = "force-static";
 export const revalidate = 86400; // 1 day
 
 // Create a cached function for fetching podcast page data
-const getPodcastDetailData = createDailyCache(
+const getPodcastDetailData = createStandardCache(
 	async (podcastSlug: string) => {
 		const podcast = await getPodcastBySlug(podcastSlug);
 		if (!podcast) return null;

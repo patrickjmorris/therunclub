@@ -115,7 +115,7 @@ curl -X GET "http://localhost:3000/api/content?type=podcasts&limit=20&minHoursSi
 
 **Example (Production):**
 ```bash
-curl -X GET "https://www.therunclub.xyz/api/content?type=podcasts&limit=20&minHoursSinceUpdate=12" \
+curl -X GET "https://www.therunclub.xyz/api/content?type=podcasts&minHoursSinceUpdate=12&limit=25&randomSample=true" \
   -H "x-api-key:  $UPDATE_API_KEY"
 ```
 

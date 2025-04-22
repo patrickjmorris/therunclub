@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { RunSignupRace, EventDetails } from "@/types/runsignup";
+import type { RunSignupRace } from "@/types/runsignup";
 import {
 	formatDate,
 	formatTime,
@@ -33,6 +33,23 @@ import { sanitizeHtml } from "@/lib/sanitize";
 
 interface RaceDetailsViewProps {
 	raceData: RunSignupRace;
+}
+
+// Helper to append the RunSignup affiliate token to external URLs
+function appendAffiliateToken(url: string | null | undefined): string | null {
+	if (!url) return null;
+	const token = process.env.RUNSIGNUP_AFFILIATE_TOKEN;
+	if (!token) return url; // Fail‑safe: return original URL if token missing
+
+	try {
+		const u = new URL(url);
+		u.searchParams.set("aflt_token", token);
+		return u.toString();
+	} catch {
+		// Fallback for invalid URLs that can't be parsed by URL()
+		const separator = url.includes("?") ? "&" : "?";
+		return `${url}${separator}aflt_token=${encodeURIComponent(token)}`;
+	}
 }
 
 export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
@@ -53,6 +70,12 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 		raceData.events?.[0]?.event_id.toString() || "no-events";
 
 	const safeDescriptionHtml = sanitizeHtml(raceData.description || "");
+
+	// Append affiliate token once so that JSX remains clean
+	const externalRaceUrlWithToken = appendAffiliateToken(
+		raceData.external_race_url,
+	);
+	const registerUrlWithToken = appendAffiliateToken(raceData.url);
 
 	return (
 		<div className="max-w-4xl mx-auto p-4">
@@ -113,9 +136,9 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 
 							<div className="mt-4 bg-teal-50 rounded-lg p-4 border border-slate-200">
 								<h3 className="font-bold text-slate-800 mb-3">Description</h3>
-								<p
+								<div
 									className="text-slate-600 mb-3 text-sm prose lg:prose-xl"
-									// biome-ignore lint/security/noDangerouslySetInnerHtml: Save from this source
+									// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized before use
 									dangerouslySetInnerHTML={{
 										__html: safeDescriptionHtml,
 									}}
@@ -162,13 +185,14 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 										</span>
 									</div>
 								) : null}
-								{raceData.is_registration_open === "T" && raceData.url ? (
+								{raceData.is_registration_open === "T" &&
+								registerUrlWithToken ? (
 									<Button
 										asChild
 										className="w-full bg-rose-500 hover:bg-rose-600 text-white mt-2"
 									>
 										<a
-											href={raceData.url}
+											href={registerUrlWithToken}
 											target="_blank"
 											rel="noopener noreferrer"
 										>
@@ -180,10 +204,10 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 										Registration Closed
 									</Button>
 								)}
-								{raceData.external_race_url && (
+								{externalRaceUrlWithToken && (
 									<div className="mt-3 text-center">
 										<a
-											href={raceData.external_race_url}
+											href={externalRaceUrlWithToken}
 											target="_blank"
 											rel="noopener noreferrer"
 											className="text-sm text-rose-500 hover:text-rose-600 flex items-center justify-center"

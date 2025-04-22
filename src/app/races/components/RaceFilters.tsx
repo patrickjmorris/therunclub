@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button"; // Still used for styling the submit button
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/select";
 import { DateRangePickerServer } from "./DateRangePickerServer";
 import { AppliedFilters } from "../page";
-import Link from "next/link"; // For Clear button
+import Link from "next/link";
+import { FilterToggleWrapper } from "./FilterToggleWrapper"; // Import the wrapper
 
 // Define options based on RunSignup API docs / common usage
 const RADIUS_OPTIONS = [10, 25, 50, 100, 200];
@@ -93,20 +94,15 @@ export function RaceFilters({ initialFilters }: RaceFiltersProps) {
 		initialFilters.startDate !== undefined ||
 		initialFilters.endDate !== undefined;
 
-	// For Distance Select, we need to translate the key back to min/max for form submission
-	// We'll use hidden inputs for minDistance and maxDistance controlled by the Select
-	// This part still needs client-side interaction to update hidden fields.
-	// OR simplify: Have the Select directly use name="distanceKey" and handle server-side.
-	// Let's try the simpler server-side handling first.
-
 	return (
-		<div className="mb-6 p-4 border rounded-lg bg-card text-card-foreground shadow-sm">
+		<FilterToggleWrapper>
 			{/* Use a standard form */}
 			<form action="/races" method="GET">
 				{/* Hidden input for page reset */}
 				<input type="hidden" name="page" value="1" />
 
-				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 items-end">
+				{/* Responsive Grid: 1 col (default), 2 (sm), 3 (md), 4 (lg) */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
 					{/* ZIP Code */}
 					<div className="space-y-1">
 						<Label htmlFor="zip">ZIP Code</Label>
@@ -138,8 +134,8 @@ export function RaceFilters({ initialFilters }: RaceFiltersProps) {
 						</Select>
 					</div>
 
-					{/* Date Range Picker - Requires a separate client component wrapper */}
-					<div className="space-y-1 md:col-span-2 lg:col-span-1">
+					{/* Date Range Picker - Spans 2 cols on medium+ screens */}
+					<div className="space-y-1 sm:col-span-2 md:col-span-1 lg:col-span-2">
 						<Label>Date Range</Label>
 						<DateRangePickerServer
 							initialStartDate={initialFilters.startDate}
@@ -198,20 +194,20 @@ export function RaceFilters({ initialFilters }: RaceFiltersProps) {
 						</Select>
 					</div>
 
-					{/* Apply Button - Standard submit */}
-					<Button type="submit" className="w-full lg:col-span-1">
+					{/* Apply Button - Full width on small, then 1 col */}
+					<Button type="submit" className="w-full sm:col-span-1">
 						Apply Filters
 					</Button>
 
-					{/* Clear Filters Button - Link to reset */}
+					{/* Clear Filters Button - Full width on small, then 1 col */}
 					{areFiltersActive && (
-						<Button asChild variant="ghost" className="w-full lg:col-span-1">
+						<Button asChild variant="ghost" className="w-full sm:col-span-1">
 							<Link href="/races">Clear Filters</Link>
 						</Button>
 					)}
 				</div>
 			</form>
-		</div>
+		</FilterToggleWrapper>
 	);
 }
 

@@ -210,7 +210,7 @@ export default function EventListView({
 				)}
 			</div>
 			<div className="rounded-md border">
-				<Table>
+				<Table className="w-full table-fixed">
 					<TableHeader>
 						<TableRow>
 							<TableHead className="w-[300px]">
@@ -225,60 +225,75 @@ export default function EventListView({
 									<ArrowUpDown className="ml-2 h-4 w-4" />
 								</Button>
 							</TableHead>
-							<TableHead>
+							<TableHead className="hidden md:table-cell">
 								<Button variant="ghost" onClick={() => handleSort("location")}>
 									Location
 									<ArrowUpDown className="ml-2 h-4 w-4" />
 								</Button>
 							</TableHead>
-							<TableHead className="text-right">Links</TableHead>
+							<TableHead className="hidden md:table-cell text-right">
+								Links
+							</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{filteredRaces.length > 0 ? (
-							filteredRaces.map((race) => (
-								<TableRow key={race.race_id}>
-									<TableCell className="font-medium">{race.name}</TableCell>
-									<TableCell>
-										<div className="flex items-center">
-											<Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-											{race.next_date ? formatDate(race.next_date) : "TBD"}
-										</div>
-										<div className="text-sm text-muted-foreground">
-											{race.next_date ? formatTime(race.next_date) : ""}
-										</div>
-									</TableCell>
-									<TableCell>
-										<div className="flex items-center">
-											<MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-											{getFormattedAddress(
-												race.address?.street,
-												race.address?.street2,
-												race.address?.city,
-												race.address?.state,
-											)}
-										</div>
-									</TableCell>
-									<TableCell className="text-right">
-										<div className="flex gap-2 justify-end">
-											{race.url && race.is_registration_open === "T" && (
-												<Button asChild size="sm">
-													<a
-														href={race.url}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														Register
-													</a>
+							filteredRaces.map((race) => {
+								// Use next_date if available, otherwise fallback to first event's start time
+								const displayDateTime =
+									race.next_date ?? race.events?.[0]?.start_time ?? null;
+
+								return (
+									<TableRow key={race.race_id}>
+										<TableCell className="font-medium">
+											<Link
+												href={`/races/${race.race_id}`}
+												className="hover:underline"
+											>
+												{race.name}
+											</Link>
+										</TableCell>
+										<TableCell>
+											<div className="flex items-center">
+												<Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+												{displayDateTime ? formatDate(displayDateTime) : "TBD"}
+											</div>
+											<div className="text-sm text-muted-foreground">
+												{displayDateTime ? formatTime(displayDateTime) : ""}
+											</div>
+										</TableCell>
+										<TableCell className="hidden md:table-cell">
+											<div className="flex items-center">
+												<MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+												{getFormattedAddress(
+													race.address?.street,
+													race.address?.street2,
+													race.address?.city,
+													race.address?.state,
+												)}
+											</div>
+										</TableCell>
+										<TableCell className="hidden md:table-cell text-right">
+											<div className="flex gap-2 justify-end">
+												{race.url && race.is_registration_open === "T" && (
+													<Button asChild size="sm">
+														<a
+															href={race.url}
+															target="_blank"
+															rel="noopener noreferrer"
+														>
+															Register
+														</a>
+													</Button>
+												)}
+												<Button asChild size="sm" variant="outline">
+													<Link href={`/races/${race.race_id}`}>Details</Link>
 												</Button>
-											)}
-											<Button asChild size="sm" variant="outline">
-												<Link href={`/races/${race.race_id}`}>Details</Link>
-											</Button>
-										</div>
-									</TableCell>
-								</TableRow>
-							))
+											</div>
+										</TableCell>
+									</TableRow>
+								);
+							})
 						) : (
 							<TableRow>
 								<TableCell colSpan={4} className="h-24 text-center">

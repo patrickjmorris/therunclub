@@ -7,6 +7,14 @@ import type { RunSignupRacesResponse, RunSignupRace } from "@/types/runsignup";
 import { getUserZipFromHeaders } from "@/lib/geolocation";
 import { headers } from "next/headers"; // Import headers for fallback zip
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
+import {
+	Table,
+	TableHeader,
+	TableBody,
+	TableHead,
+	TableRow,
+	TableCell,
+} from "@/components/ui/table";
 
 // Helper function to get zip from headers (simpler than API call for this page)
 async function getZipFromHeaders(): Promise<string | null> {
@@ -61,7 +69,7 @@ async function RaceDataFetcher({
 			? searchParams.distanceKey
 			: "all";
 	const queryPage = Number(searchParams?.page || "1");
-	const queryPageSize = Number(searchParams?.pageSize || "250");
+	const queryPageSize = Number(searchParams?.pageSize || "50");
 	// --- Read params for fetching --- END
 
 	// --- Handle parameter specific logic --- START
@@ -112,18 +120,6 @@ async function RaceDataFetcher({
 
 	let raceData: RunSignupRacesResponse | null = null;
 	let fetchError: Error | null = null;
-
-	console.log("[FindRaces] Fetching races", {
-		zip,
-		radius: radiusNum,
-		page: queryPage,
-		perPage: queryPageSize,
-		startDate: queryStartDate,
-		endDate: queryEndDate,
-		eventType: apiEventType,
-		minDistance: validMinDistance,
-		maxDistance: validMaxDistance,
-	});
 
 	try {
 		raceData = await fetchRaces(
@@ -187,13 +183,58 @@ async function RaceDataFetcher({
 // Loading Skeleton for the table
 function TableSkeleton() {
 	return (
-		<div className="space-y-4">
-			<Skeleton className="h-10 w-full" />
-			<Skeleton className="h-10 w-full" />
-			<Skeleton className="h-10 w-full" />
-			<Skeleton className="h-10 w-full" />
-			<Skeleton className="h-10 w-full" />
-		</div>
+		<>
+			{/* Skeleton for the filter input and page count */}
+			<div className="flex justify-between items-center mb-4">
+				<Skeleton className="h-10 w-64 max-w-sm" />
+				<Skeleton className="h-5 w-48" />
+			</div>
+			{/* Skeleton mimicking the Table structure */}
+			<div className="rounded-md border">
+				<Table className="w-full table-fixed">
+					<TableHeader>
+						<TableRow>
+							<TableHead className="w-[300px]">
+								<Skeleton className="h-5 w-24" />
+							</TableHead>
+							<TableHead>
+								<Skeleton className="h-5 w-16" />
+							</TableHead>
+							<TableHead className="hidden md:table-cell">
+								<Skeleton className="h-5 w-20" />
+							</TableHead>
+							<TableHead className="hidden md:table-cell text-right">
+								<Skeleton className="h-5 w-12" />
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{[...Array(5)].map((_, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: Skeleton table
+							<TableRow key={i}>
+								<TableCell className="font-medium">
+									<Skeleton className="h-5 w-full" />
+								</TableCell>
+								<TableCell>
+									<Skeleton className="h-5 w-full" />
+								</TableCell>
+								<TableCell className="hidden md:table-cell">
+									<Skeleton className="h-5 w-full" />
+								</TableCell>
+								<TableCell className="hidden md:table-cell text-right">
+									<Skeleton className="h-5 w-full" />
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+			{/* Skeleton for pagination controls */}
+			<div className="flex items-center justify-end space-x-2 py-4">
+				<Skeleton className="h-9 w-24" />
+				<Skeleton className="h-9 w-24" />
+			</div>
+		</>
 	);
 }
 

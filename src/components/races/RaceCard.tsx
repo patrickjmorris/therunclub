@@ -24,7 +24,7 @@ interface RaceCardProps {
 	className?: string;
 }
 
-const FALLBACK_IMAGE_URL = "/images/race-placeholder.png";
+const FALLBACK_IMAGE_URL = "/race-placeholder.png";
 
 export function RaceCard({
 	title,

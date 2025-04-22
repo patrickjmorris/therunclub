@@ -27,16 +27,14 @@ This feature will be featured on the homepage as a content section and will be a
 
 ## In Progress Tasks
 
-- [ ] Build the reusable `<RaceCard>` component with specified props (title, imageUrl, location, date, isOpen, onClick) and basic styling.
-- [ ] Implement the homepage widget `<UpcomingRacesWidget>` to display the top 5 races using `<RaceCard>`.
+- [x] Build the reusable `<RaceCard>` component with specified props (title, imageUrl, location, date, isOpen, onClick) and basic styling.
+- [x] Implement the homepage widget `<UpcomingRacesWidget>` to display the top 5 races using `<RaceCard>`.
 - [ ] Implement advanced table filtering (date range, distance, type, status).
-- [ ] Implement ZIP code input and Radius dropdown on `/races` page for custom searches.
+- [x] Implement ZIP code input and Radius dropdown on `/races` page for custom searches.
 - [ ] Add caching strategy for RunSignUp API responses (e.g., 5-minute cache per ZIP).
-- [ ] Implement fallback image strategy for `<RaceCard>` when `imageUrl` is missing.
+- [x] Implement fallback image strategy for `<RaceCard>` when `imageUrl` is missing.
 - [ ] Refine styling and responsiveness for all components (mobile down to 320px).
-- [ ] Perform accessibility audit (keyboard navigation, screen reader compatibility).
-- [ ] Add analytics tracking for success metrics (views, clicks, interactions).
-- [ ] Implement "saved races" or persistence features.
+
 
 ## Future Tasks
 
@@ -45,9 +43,6 @@ This feature will be featured on the homepage as a content section and will be a
 - [ ] Add caching strategy for RunSignUp API responses (e.g., 5-minute cache per ZIP).
 - [ ] Implement fallback image strategy for `<RaceCard>` when `imageUrl` is missing.
 - [ ] Refine styling and responsiveness for all components (mobile down to 320px).
-- [ ] Perform accessibility audit (keyboard navigation, screen reader compatibility).
-- [ ] Add analytics tracking for success metrics (views, clicks, interactions).
-- [ ] Implement "saved races" or persistence features.
 
 ## Implementation Plan
 
@@ -66,10 +61,10 @@ This feature will be featured on the homepage as a content section and will be a
 - `src/app/races/components/race-list-view.tsx` - Component for the race list table. ✅
 - `src/app/races/[race_id]/page.tsx` - Dynamic route for single race details. ✅
 - `src/app/races/[race_id]/components/RaceDetailsView.tsx` - Component to display single race details. ✅
-- `components/races/RaceCard.tsx` - Reusable component for displaying individual race details. (In Progress)
+- `src/components/races/RaceCard.tsx` - Reusable component for displaying individual race details. ✅
 - `components/races/RaceFilters.tsx` - Component(s) for table filtering controls (Future Task).
-- `components/home/UpcomingRacesWidget.tsx` - Component for the homepage race preview widget. (In Progress)
-- `lib/runsignup-api.ts` - Utility functions for interacting with the RunSignUp API. ✅
-- `lib/geolocation.ts` - Utility function(s) for handling Vercel geolocation. ✅ (Assumed)
-- `lib/utils/event-helpers.ts` - Utility functions for formatting event data. ✅
-- `types/runsignup.ts` - TypeScript types for the RunSignUp API response structure. ✅ 
+- `src/components/home/UpcomingRacesWidget.tsx` - Component for the homepage race preview widget. ✅
+- `src/lib/runsignup-api.ts` - Utility functions for interacting with the RunSignUp API. ✅
+- `src/lib/geolocation.ts` - Utility function(s) for handling Vercel geolocation. ✅
+- `src/lib/utils/event-helpers.ts` - Utility functions for formatting event data. ✅
+- `src/types/runsignup.ts` - TypeScript types for the RunSignUp API response structure. ✅ 

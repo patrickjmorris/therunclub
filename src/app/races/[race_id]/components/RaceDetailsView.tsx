@@ -1,6 +1,3 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import {
 	Calendar,
 	Clock,
@@ -21,38 +18,42 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { RunSignupRace, EventDetails } from "@/types/runsignup";
+import type { RunSignupRace } from "@/types/runsignup";
 import {
 	formatDate,
 	formatTime,
 	getFormattedAddress,
 	getCurrentRegistrationPeriod,
-	calculateTimeLeft,
 	getMainEvent,
-	extractShortDescription,
 	getGiveawayInfo,
 } from "@/lib/utils/event-helpers";
+import { RaceCountdown } from "./RaceCountdown";
+import { EventTabs } from "./EventTabs";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface RaceDetailsViewProps {
 	raceData: RunSignupRace;
 }
 
+// Helper to append the RunSignup affiliate token to external URLs
+function appendAffiliateToken(url: string | null | undefined): string | null {
+	if (!url) return null;
+	const token = process.env.RUNSIGNUP_AFFILIATE_TOKEN;
+	if (!token) return url; // Fail‑safe: return original URL if token missing
+
+	try {
+		const u = new URL(url);
+		u.searchParams.set("aflt_token", token);
+		return u.toString();
+	} catch {
+		// Fallback for invalid URLs that can't be parsed by URL()
+		const separator = url.includes("?") ? "&" : "?";
+		return `${url}${separator}aflt_token=${encodeURIComponent(token)}`;
+	}
+}
+
 export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 	const mainEvent = getMainEvent(raceData);
-	const [timeLeft, setTimeLeft] = useState(
-		calculateTimeLeft(mainEvent?.start_time),
-	);
-
-	useEffect(() => {
-		if (!mainEvent?.start_time) return;
-
-		const timer = setInterval(() => {
-			setTimeLeft(calculateTimeLeft(mainEvent.start_time));
-		}, 1000);
-
-		return () => clearInterval(timer);
-	}, [mainEvent?.start_time]);
 
 	const currentRegistration = mainEvent
 		? getCurrentRegistrationPeriod(mainEvent.registration_periods)
@@ -67,6 +68,14 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 
 	const defaultTabValue =
 		raceData.events?.[0]?.event_id.toString() || "no-events";
+
+	const safeDescriptionHtml = sanitizeHtml(raceData.description || "");
+
+	// Append affiliate token once so that JSX remains clean
+	const externalRaceUrlWithToken = appendAffiliateToken(
+		raceData.external_race_url,
+	);
+	const registerUrlWithToken = appendAffiliateToken(raceData.url);
 
 	return (
 		<div className="max-w-4xl mx-auto p-4">
@@ -119,112 +128,26 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 				<CardContent className="pt-6">
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						<div className="lg:col-span-2">
-							{raceData.events && raceData.events.length > 0 ? (
-								<Tabs defaultValue={defaultTabValue} className="w-full">
-									<TabsList
-										className="grid w-full grid-cols-dynamic mb-4"
-										style={{
-											gridTemplateColumns: `repeat(${raceData.events.length}, minmax(0, 1fr))`,
-										}}
-									>
-										{raceData.events.map((event) => (
-											<TabsTrigger
-												key={event.event_id}
-												value={event.event_id.toString()}
-											>
-												{event.name.includes("Virtual")
-													? "Virtual"
-													: event.name.includes("Kids")
-													  ? "Kids Fun Run"
-													  : event.distance || event.name}
-											</TabsTrigger>
-										))}
-									</TabsList>
-									{raceData.events.map((event) => (
-										<TabsContent
-											key={event.event_id}
-											value={event.event_id.toString()}
-											className="space-y-4"
-										>
-											<div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-												<h3 className="font-bold text-lg text-slate-800 mb-2">
-													{event.name}
-												</h3>
-												<p className="text-slate-600 mb-3 text-sm">
-													{extractShortDescription(
-														event.details || raceData.description,
-													)}
-												</p>
-												<div className="flex flex-wrap gap-3 mt-4">
-													{event.start_time && (
-														<div className="bg-white rounded-md px-3 py-2 border border-slate-200 flex items-center gap-2">
-															<Clock className="h-4 w-4 text-amber-500" />
-															<span className="text-sm">
-																{formatTime(event.start_time)}
-															</span>
-														</div>
-													)}
-													<div className="bg-white rounded-md px-3 py-2 border border-slate-200 flex items-center gap-2">
-														<Award className="h-4 w-4 text-amber-500" />
-														<span className="text-sm">
-															{event.distance || "Distance TBD"}
-														</span>
-													</div>
-													{event.participant_cap > 0 && (
-														<div className="bg-white rounded-md px-3 py-2 border border-slate-200 flex items-center gap-2">
-															<Users className="h-4 w-4 text-amber-500" />
-															<span className="text-sm">
-																Cap: {event.participant_cap}
-															</span>
-														</div>
-													)}
-												</div>
-											</div>
-										</TabsContent>
-									))}
-								</Tabs>
-							) : (
-								<p className="text-slate-500">Event details not available.</p>
-							)}
+							<EventTabs
+								events={raceData.events || []}
+								defaultTabValue={defaultTabValue}
+								raceDescription={raceData.description}
+							/>
+
 							<div className="mt-4 bg-teal-50 rounded-lg p-4 border border-slate-200">
 								<h3 className="font-bold text-slate-800 mb-3">Description</h3>
-								<p
+								<div
 									className="text-slate-600 mb-3 text-sm prose lg:prose-xl"
-									// biome-ignore lint/security/noDangerouslySetInnerHtml: Save from this source
-									dangerouslySetInnerHTML={{ __html: raceData.description }}
+									// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized before use
+									dangerouslySetInnerHTML={{
+										__html: safeDescriptionHtml,
+									}}
 								/>
 							</div>
 						</div>
 						<div className="lg:col-span-1 space-y-4">
-							{mainEvent?.start_time &&
-								(timeLeft.days > 0 ||
-									timeLeft.hours > 0 ||
-									timeLeft.minutes > 0 ||
-									timeLeft.seconds > 0) && (
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-										<h3 className="font-bold text-slate-800 mb-3">
-											Race Day Countdown
-										</h3>
-										<div className="grid grid-cols-4 gap-2 mb-2">
-											{[
-												{ label: "Days", value: timeLeft.days },
-												{ label: "Hours", value: timeLeft.hours },
-												{ label: "Mins", value: timeLeft.minutes },
-												{ label: "Secs", value: timeLeft.seconds },
-											].map(({ label, value }) => (
-												<div
-													key={label}
-													className="bg-white rounded-lg p-2 text-center border border-slate-200"
-												>
-													<div className="text-2xl font-bold text-rose-500">
-														{value}
-													</div>
-													<div className="text-xs text-slate-500">{label}</div>
-												</div>
-											))}
-										</div>
-									</div>
-								)}
+							<RaceCountdown startTime={mainEvent?.start_time} />
+
 							<div className="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
 								{currentRegistration ? (
 									<div className="flex justify-between items-center">
@@ -261,19 +184,15 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 											{getGiveawayInfo(mainEvent)}
 										</span>
 									</div>
-								) : (
-									<div className="flex justify-between items-center">
-										<span className="text-sm text-slate-600">Giveaway:</span>
-										<span className="text-sm text-slate-500">No Data</span>
-									</div>
-								)}
-								{raceData.is_registration_open === "T" && raceData.url ? (
+								) : null}
+								{raceData.is_registration_open === "T" &&
+								registerUrlWithToken ? (
 									<Button
 										asChild
 										className="w-full bg-rose-500 hover:bg-rose-600 text-white mt-2"
 									>
 										<a
-											href={raceData.url}
+											href={registerUrlWithToken}
 											target="_blank"
 											rel="noopener noreferrer"
 										>
@@ -285,10 +204,10 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 										Registration Closed
 									</Button>
 								)}
-								{raceData.external_race_url && (
+								{externalRaceUrlWithToken && (
 									<div className="mt-3 text-center">
 										<a
-											href={raceData.external_race_url}
+											href={externalRaceUrlWithToken}
 											target="_blank"
 											rel="noopener noreferrer"
 											className="text-sm text-rose-500 hover:text-rose-600 flex items-center justify-center"

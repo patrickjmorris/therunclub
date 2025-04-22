@@ -29,6 +29,7 @@ import { countryCodeMap } from "@/lib/utils/country-codes";
 import { slugify } from "@/lib/utils";
 import { createFuzzyMatcher } from "@/lib/fuzzy-matcher";
 import { unstable_cache } from "next/cache";
+import type { AthleteRowItem } from "@/components/athletes/AthleteRow";
 
 // Types for World Athletics API responses
 interface AthleteData {
@@ -579,25 +580,100 @@ export const getAllAthletes = unstable_cache(
 );
 
 export const getOlympicGoldMedalists = unstable_cache(
-	async () => {
-		return db
-			.select({
-				id: athletes.worldAthleticsId,
-			})
-			.from(athletes)
-			.innerJoin(
-				athleteHonors,
+	async (limit = 10): Promise<AthleteRowItem[]> => {
+		// Subquery to get distinct athlete IDs matching the criteria
+		const subquery = db
+			.selectDistinct({ athleteId: athleteHonors.athleteId })
+			.from(athleteHonors)
+			.where(
 				and(
-					eq(athletes.worldAthleticsId, athleteHonors.athleteId),
-					ilike(athleteHonors.categoryName, "%olympic%"),
-					sql`${athleteHonors.categoryName} NOT ILIKE '%youth%'`,
 					eq(athleteHonors.place, "1."),
+					ilike(athleteHonors.competition, "%Olympic Games%"),
+					not(ilike(athleteHonors.competition, "%Youth%")),
+					isNotNull(athleteHonors.athleteId), // Ensure athleteId is not null
 				),
 			)
-			.orderBy(desc(athletes.name));
+			.as("gold_medalists");
+
+		// Main query to fetch athlete details, ordered randomly
+		const results = await db
+			.select({
+				id: athletes.id,
+				name: athletes.name,
+				slug: athletes.slug,
+				imageUrl: athletes.imageUrl,
+				countryCode: athletes.countryCode,
+			})
+			.from(athletes)
+			.innerJoin(subquery, eq(athletes.worldAthleticsId, subquery.athleteId))
+			.orderBy(sql`random()`)
+			.limit(limit);
+
+		return results;
 	},
 	["olympic-gold-medalists"],
-	{ tags: ["athletes", "honors"], revalidate: 86400 }, // 24 hours
+	{ tags: ["athletes", "honors"], revalidate: 3600 * 24 * 30 }, // 30 days
+);
+
+// Get World Champions (Gold, Silver, Bronze)
+export const getWorldChampions = unstable_cache(
+	async (limit = 10): Promise<AthleteRowItem[]> => {
+		// Subquery to get distinct athlete IDs matching the criteria
+		const subquery = db
+			.selectDistinct({ athleteId: athleteHonors.athleteId })
+			.from(athleteHonors)
+			.where(
+				and(
+					inArray(athleteHonors.place, ["1.", "2.", "3."]),
+					ilike(athleteHonors.categoryName, "%World Championships%"),
+					// Optionally exclude indoor/U20 if needed
+					// not(ilike(athleteHonors.competition, "%Indoor%")),
+					// not(ilike(athleteHonors.competition, "%U20%")),
+					isNotNull(athleteHonors.athleteId), // Ensure athleteId is not null
+				),
+			)
+			.as("world_champions");
+
+		// Main query to fetch athlete details, ordered randomly
+		const results = await db
+			.select({
+				id: athletes.id,
+				name: athletes.name,
+				slug: athletes.slug,
+				imageUrl: athletes.imageUrl,
+				countryCode: athletes.countryCode,
+			})
+			.from(athletes)
+			.innerJoin(subquery, eq(athletes.worldAthleticsId, subquery.athleteId))
+			.orderBy(sql`random()`)
+			.limit(limit);
+
+		return results;
+	},
+	["world-champions"],
+	{ tags: ["athletes", "honors"], revalidate: 3600 * 24 * 30 }, // 30 days
+);
+
+// Get Athletes by Country Code
+export const getAthletesByCountry = unstable_cache(
+	async (countryCode: string, limit = 10): Promise<AthleteRowItem[]> => {
+		const results = await db
+			.select({
+				id: athletes.id,
+				name: athletes.name,
+				slug: athletes.slug,
+				imageUrl: athletes.imageUrl,
+				countryCode: athletes.countryCode,
+			})
+			.from(athletes)
+			.where(eq(athletes.countryCode, countryCode))
+			.orderBy(sql`random()`)
+			.limit(limit);
+
+		return results;
+	},
+	["athletes-by-country"],
+	{ tags: ["athletes"], revalidate: 3600 * 24 * 30 }, // 30 days
 );
 
 interface GetAthletesQueryParams {
@@ -655,13 +731,14 @@ export const getAllAthletesWithDisciplines = unstable_cache(
 export const getAthleteCount = unstable_cache(
 	async () => {
 		const result = await db
-			.select({ count: sql<number>`count(*)` })
-			.from(athletes)
-			.where(isNotNull(athletes.worldAthleticsId));
-		return result[0].count;
+			.select({
+				count: sql<number>`count(*)`.mapWith(Number),
+			})
+			.from(athletes);
+		return result[0]?.count ?? 0;
 	},
 	["athlete-count"],
-	{ tags: ["athletes"], revalidate: 3600 }, // 1 hour
+	{ tags: ["athletes"] },
 );
 
 // Search athletes with improved scoring

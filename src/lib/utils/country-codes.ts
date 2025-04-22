@@ -214,3 +214,13 @@ export function convertToAlpha2(code: string): string {
 	// If it's neither, return the original code
 	return code;
 }
+
+export function getCountryFlag(countryCode: string | null) {
+	if (!countryCode) return null;
+	const alpha2Code = convertToAlpha2(countryCode);
+	const codePoints = alpha2Code
+		.toUpperCase()
+		.split("")
+		.map((char) => 127397 + char.charCodeAt(0));
+	return String.fromCodePoint(...codePoints);
+}

@@ -46,8 +46,8 @@ const getTaggedContentData = createDailyCache(
 	async () => {
 		// Get top tags for video and podcasts in parallel
 		const [topVideoTag, topEpisodeTag] = await Promise.all([
-			getTopTags("video", 14, 1).then((tags) => tags[0] || null),
-			getTopTags("episode", 14, 1).then((tags) => tags[0] || null),
+			getTopTags("video", 7, 1).then((tags) => tags[0] || null),
+			getTopTags("episode", 7, 1).then((tags) => tags[0] || null),
 		]);
 
 		// Fetch tagged content in parallel if tags exist

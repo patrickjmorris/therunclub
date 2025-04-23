@@ -1,5 +1,8 @@
 import { CalculatorModeProvider } from "./components/calculator-mode-provider";
 
+// Enforce static rendering for this page
+export const dynamic = "force-static";
+
 export default function CalculatorsPage() {
 	return (
 		<div className="container mx-auto py-8 space-y-8">

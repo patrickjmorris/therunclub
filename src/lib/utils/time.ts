@@ -1,14 +1,35 @@
-// Convert time string (mm:ss or hh:mm:ss) to total seconds
+// Convert time string (mm:ss, hh:mm:ss, mm:ss.d, hh:mm:ss.d) to total seconds
 export function timeStringToSeconds(timeStr: string): number {
-	const parts = timeStr.split(":").map(Number);
+	if (!timeStr) return 0;
 
-	// If format is mm:ss
-	if (parts.length === 2) {
-		return parts[0] * 60 + parts[1]; // minutes and seconds
+	// Allow for optional decimal in seconds
+	const parts = timeStr.split(":");
+	// Declare variables separately
+	let hours = 0;
+	let minutes = 0;
+	let seconds = 0;
+
+	if (parts.length === 3) {
+		// hh:mm:ss.d format
+		hours = Number.parseFloat(parts[0]);
+		minutes = Number.parseFloat(parts[1]);
+		seconds = Number.parseFloat(parts[2]);
+	} else if (parts.length === 2) {
+		// mm:ss.d format
+		minutes = Number.parseFloat(parts[0]);
+		seconds = Number.parseFloat(parts[1]);
+	} else {
+		// Invalid format or only seconds?
+		// Try parsing as just seconds.d for flexibility, though unlikely for pace/time
+		seconds = Number.parseFloat(timeStr);
 	}
 
-	// If format is hh:mm:ss
-	return parts[0] * 3600 + parts[1] * 60 + parts[2];
+	// Check for NaN results from parseFloat
+	if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) {
+		return 0; // Or throw an error? Return 0 for now.
+	}
+
+	return hours * 3600 + minutes * 60 + seconds;
 }
 
 // Format seconds to mm:ss or hh:mm:ss (only use hh if over 60 minutes)

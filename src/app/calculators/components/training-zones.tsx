@@ -7,11 +7,17 @@ interface TrainingZonesProps {
 	useMetric: boolean;
 }
 
-// Move formatPaceTime outside the component
+// Format seconds per unit distance (mile/km) into mm:ss pace
 function formatPaceTime(seconds: number): string {
+	if (Number.isNaN(seconds) || seconds <= 0) return "00:00";
 	const m = Math.floor(seconds / 60);
-	const s = Math.floor(seconds % 60);
-	return `${m}:${s.toString().padStart(2, "0")}`;
+	const s = Math.round(seconds % 60); // Round seconds for display
+	// Handle rounding up to 60 seconds
+	const adjustedSeconds = s === 60 ? 0 : s;
+	const adjustedMinutes = s === 60 ? m + 1 : m;
+	return `${String(adjustedMinutes).padStart(2, "0")}:${String(
+		adjustedSeconds,
+	).padStart(2, "0")}`;
 }
 
 export function TrainingZones({
@@ -19,56 +25,79 @@ export function TrainingZones({
 	raceDistance,
 	useMetric,
 }: TrainingZonesProps) {
-	// Calculate training zones based on race pace
 	const zones = useMemo(() => {
-		// Calculate base race pace in seconds per unit distance
 		const totalSeconds = timeStringToSeconds(recentRaceTime);
 		const distanceInUnits = useMetric
 			? raceDistance / 1000
 			: raceDistance / 1609.34;
+
+		if (
+			Number.isNaN(totalSeconds) ||
+			totalSeconds <= 0 ||
+			Number.isNaN(distanceInUnits) ||
+			distanceInUnits <= 0
+		) {
+			return []; // Return empty if input is invalid
+		}
+
 		const basePacePerUnit = totalSeconds / distanceInUnits;
 
-		// Define zone ranges as multipliers of race pace
+		// Revised zone ranges based on percentage of input race pace
+		// Note: Multipliers > 1 mean SLOWER pace, < 1 mean FASTER pace.
+		// minMultiplier = Slower end of zone, maxMultiplier = Faster end of zone
 		const zoneRanges = [
 			{
-				name: "Recovery",
-				minMultiplier: 1.5, // 50% slower than race pace
-				maxMultiplier: 1.4, // 40% slower than race pace
-				description: "Active Recovery & Easy Runs",
-			},
-			{
-				name: "Endurance",
+				name: "Easy/Recovery",
 				minMultiplier: 1.4, // 40% slower
-				maxMultiplier: 1.3, // 30% slower
-				description: "Long Runs & Base Building",
+				maxMultiplier: 1.2, // 20% slower
+				description: "Easy runs, recovery, warm-up/cool-down",
 			},
 			{
-				name: "Aerobic",
-				minMultiplier: 1.3, // 30% slower
-				maxMultiplier: 1.2, // 20% slower
-				description: "Marathon Pace & Steady Runs",
+				name: "Endurance/Aerobic",
+				minMultiplier: 1.2, // 20% slower
+				maxMultiplier: 1.05, // 5% slower
+				description: "Long runs, steady pace, builds aerobic base",
+			},
+			{
+				name: "Marathon Pace",
+				minMultiplier: 1.05, // 5% slower
+				maxMultiplier: 1.0, // Equal to race pace
+				description: "Approximates Marathon Pace (relative to input)",
 			},
 			{
 				name: "Threshold",
-				minMultiplier: 1.15, // 15% slower
-				maxMultiplier: 1.05, // 5% slower
-				description: "Lactate Threshold & Tempo",
+				minMultiplier: 1.0, // Equal to race pace
+				maxMultiplier: 0.95, // 5% faster
+				description: "Tempo runs, cruise intervals (~HM to 10k pace)",
 			},
 			{
-				name: "VO2 Max",
-				minMultiplier: 1.05, // 5% slower
-				maxMultiplier: 0.95, // 5% faster
-				description: "High Intensity Intervals",
+				name: "VO2 Max/Interval",
+				minMultiplier: 0.95, // 5% faster
+				maxMultiplier: 0.9, // 10% faster
+				description: "Intervals (~5k to 3k pace)",
 			},
 		];
 
-		return zoneRanges.map((zone) => ({
-			name: zone.name,
-			min: formatPaceTime(basePacePerUnit * zone.minMultiplier),
-			max: formatPaceTime(basePacePerUnit * zone.maxMultiplier),
-			description: zone.description,
-		}));
+		return zoneRanges.map((zone) => {
+			const minPaceSeconds = basePacePerUnit * zone.minMultiplier;
+			const maxPaceSeconds = basePacePerUnit * zone.maxMultiplier;
+			return {
+				name: zone.name,
+				// Store min/max pace (fastest/slowest)
+				minPaceFormatted: formatPaceTime(maxPaceSeconds), // Fastest pace
+				maxPaceFormatted: formatPaceTime(minPaceSeconds), // Slowest pace
+				description: zone.description,
+			};
+		});
 	}, [recentRaceTime, raceDistance, useMetric]);
+
+	if (zones.length === 0) {
+		return (
+			<p className="text-sm text-muted-foreground">
+				Enter a valid race time and distance to see training zones.
+			</p>
+		);
+	}
 
 	return (
 		<div className="grid gap-3">
@@ -80,7 +109,9 @@ export function TrainingZones({
 					<div>
 						<div className="font-medium">{zone.name}</div>
 						<div className="text-sm text-muted-foreground">
-							{zone.max} - {zone.min} per {useMetric ? "km" : "mile"}
+							{/* Display pace range as Fastest - Slowest */}
+							{zone.minPaceFormatted} - {zone.maxPaceFormatted} per{" "}
+							{useMetric ? "km" : "mile"}
 						</div>
 						<div className="text-xs text-muted-foreground mt-1">
 							{zone.description}

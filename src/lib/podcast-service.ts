@@ -10,6 +10,7 @@ import { decode } from "html-entities";
 import { slugify } from "@/lib/utils";
 import { parseDate, safeDateParse } from "@/lib/date-utils";
 import { optimizeImage } from "@/lib/image-utils";
+import { revalidatePath } from "next/cache";
 
 const BATCH_SIZE = 5;
 // Set to true to temporarily disable image processing if there are issues
@@ -417,7 +418,7 @@ async function processPodcast(
 
 		// Update podcast metadata with what we have
 		console.log(`[DEBUG] Updating podcast metadata for ${podcast.title}`);
-		const [updatedPodcast] = await db
+		const [updatedPodcastResult] = await db
 			.insert(podcasts)
 			.values({
 				title: decode(data.title || podcast.title),
@@ -446,13 +447,12 @@ async function processPodcast(
 				),
 				itunesSummary: decode(data.itunes?.summary || podcast.itunesSummary),
 				itunesExplicit: data.itunes?.explicit === "yes" ? "yes" : "no",
-				// Only update these fields if we have new data, otherwise keep existing values
 				episodeCount: healthCheck?.episodeCount || podcast.episodeCount,
 				isDead: healthCheck?.isDead || podcast.isDead,
 				hasParseErrors: healthCheck?.hasParseErrors || podcast.hasParseErrors,
 				iTunesId:
 					itunesData?.collectionId?.toString() || podcast.iTunesId || "",
-			} satisfies Partial<Podcast>)
+			})
 			.onConflictDoUpdate({
 				target: podcasts.feedUrl,
 				set: {
@@ -482,8 +482,24 @@ async function processPodcast(
 			})
 			.returning();
 
+		// --- Add Revalidation Here ---
+		if (updatedPodcastResult?.podcastSlug) {
+			try {
+				revalidatePath(`/podcasts/${updatedPodcastResult.podcastSlug}`);
+				console.log(
+					`[DEBUG] Revalidated path for podcast: /podcasts/${updatedPodcastResult.podcastSlug}`,
+				);
+			} catch (revalError) {
+				console.error(
+					`[ERROR] Failed to revalidate path for podcast ${updatedPodcastResult.podcastSlug}:`,
+					revalError,
+				);
+			}
+		}
+		// --- End Revalidation ---
+
 		// Process episodes if podcast was updated successfully
-		if (updatedPodcast) {
+		if (updatedPodcastResult) {
 			console.log(
 				`[DEBUG] Successfully updated podcast metadata for ${podcast.title}`,
 			);
@@ -674,6 +690,35 @@ async function processPodcast(
 					console.log(
 						`[DEBUG] Successfully upserted ${deduplicatedEpisodes.length} episodes for ${podcast.title}`,
 					);
+
+					// --- Add Episode Revalidation Here ---
+					if (deduplicatedEpisodes.length > 0 && podcast.podcastSlug) {
+						console.log(
+							`[DEBUG] Revalidating paths for ${deduplicatedEpisodes.length} episodes...`,
+						);
+						for (const episode of deduplicatedEpisodes) {
+							if (episode.episodeSlug) {
+								try {
+									revalidatePath(
+										`/podcasts/${podcast.podcastSlug}/${episode.episodeSlug}`,
+									);
+								} catch (revalError) {
+									console.error(
+										`[ERROR] Failed to revalidate path for episode ${episode.episodeSlug}:`,
+										revalError,
+									);
+								}
+							} else {
+								console.warn(
+									`[WARN] Missing episode slug for revalidation: podcast=${podcast.podcastSlug}, title=${episode.title}`,
+								);
+							}
+						}
+						console.log(
+							`[DEBUG] Path revalidation complete for ${podcast.title}`,
+						);
+					}
+					// --- End Episode Revalidation ---
 				} catch (upsertError) {
 					console.error("[ERROR] Episode upsert error details:", {
 						podcastId: podcast.id,

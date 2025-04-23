@@ -25,7 +25,10 @@ export function ShareBar({ url, title, hashtags = [] }: ShareBarProps) {
 
 	// Check for navigator.share availability on mount using useEffect
 	useEffect(() => {
-		if (typeof navigator !== "undefined" && navigator.share) {
+		if (
+			typeof navigator !== "undefined" &&
+			typeof navigator.share === "function"
+		) {
 			setShowNativeShare(true);
 		}
 	}, []); // Empty dependency array runs only once on mount

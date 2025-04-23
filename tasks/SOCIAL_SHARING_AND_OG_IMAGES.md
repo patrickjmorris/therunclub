@@ -23,10 +23,10 @@ This feature adds friction-free social-sharing (Twitter/X, Facebook, LinkedIn, T
 | # | Task                                                                                             | Content Type(s) | Status       |
 |---|--------------------------------------------------------------------------------------------------|-----------------|--------------|
 | 2 | Add share bar to `PodcastPage`, `EpisodePage`, `VideoPage`, `AthletePage` (wrap in `<Suspense>`) | all             | ⬜ (Paused)  |
-| 8 | Cache OG images for 24 h with `revalidatePath` and proper headers; purge when content updates      | all             | ⬜           |
-| 9 | QA with Facebook, X (Twitter) & LinkedIn debuggers; adjust text overflow rules                   | all             | ⬜           |
-| 10| Add Jest/vitest unit tests for `getContent` + screenshot regression tests for OG templates         | all             | ⬜           |
-| 11| Update README & deployment docs with required env vars                                           | docs            | ⬜           |
+| 8 | ~~Cache OG images for 24 h with `revalidatePath` and proper headers; purge when content updates~~ | all             | ✅           |
+| 9 | QA with Facebook, X (Twitter) & LinkedIn debuggers; adjust text overflow rules                   | all             | ⬜ (Postponed) |
+| 10| Add Jest/vitest unit tests for `getContent` + screenshot regression tests for OG templates         | all             | 🟡 (In Progress) |
+| 11| ~~Update README & deployment docs with required env vars~~                                           | docs            | ✅           |
 
 ---
 
@@ -57,4 +57,9 @@ This feature adds friction-free social-sharing (Twitter/X, Facebook, LinkedIn, T
 - `src/app/athletes/[slug]/page.tsx` - ✅ (Task #7) Updated `generateMetadata`
 - `src/components/share-bar/ShareBar.tsx` - ✅ (Task #1) Client entry point for share bar
 - `src/lib/getContent.ts` - ✅ (Task #5) DRY content fetcher
+- `src/lib/podcast-service.ts` - ✅ Added revalidatePath
 - `scripts/metadata-audit.ts` - ⬜ One-off audit script (Not Run)
+- `src/lib/getContent.test.ts` - ✅ (Task #10) Unit tests created
+- `src/components/og/OgImageTemplate.test.ts` - 🟡 (Task #10) Placeholder snapshot test created
+- `src/app/opengraph-image.test.ts` - 🟡 (Task #10) Placeholder snapshot test created
+- `src/app/twitter-image.test.ts` - 🟡 (Task #10) Placeholder snapshot test created

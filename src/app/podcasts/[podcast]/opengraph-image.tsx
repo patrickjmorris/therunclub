@@ -3,7 +3,7 @@ import { getContent } from "@/lib/getContent";
 import { OgImageTemplate } from "@/components/og/OgImageTemplate";
 
 // Route segment config
-export const runtime = "edge"; // Recommended for OG image generation
+// export const runtime = "edge"; // Removed to run on Node.js runtime
 export const revalidate = 86400; // 1 day - Match the page's revalidate
 
 export const size = { width: 1200, height: 630 };

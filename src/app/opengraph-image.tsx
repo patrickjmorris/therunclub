@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 // Route segment config
-export const runtime = "edge";
+// export const runtime = "edge"; // Removed to run on Node.js runtime
 export const revalidate = 86400; // Revalidate daily or as needed
 
 export const size = { width: 1200, height: 630 };

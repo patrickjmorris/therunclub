@@ -151,7 +151,7 @@ describe("getContent Helper", () => {
 			(getEpisode as ReturnType<typeof vi.fn>).mockResolvedValue(
 				mockEpisodeData,
 			);
-			// biome-ignore lint/suspicious/noConsoleLog: We expect a warning here
+
 			const consoleWarnSpy = vi
 				.spyOn(console, "warn")
 				.mockImplementation(() => {}); // Suppress console.warn
@@ -238,7 +238,7 @@ describe("getContent Helper", () => {
 		it("should return null and log error if a service function throws", async () => {
 			const error = new Error("Database connection failed");
 			(getPodcastBySlug as ReturnType<typeof vi.fn>).mockRejectedValue(error);
-			// biome-ignore lint/suspicious/noConsoleLog: Testing error log
+
 			const consoleErrorSpy = vi
 				.spyOn(console, "error")
 				.mockImplementation(() => {}); // Suppress console.error

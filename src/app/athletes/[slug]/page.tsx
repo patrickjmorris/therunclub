@@ -110,7 +110,6 @@ export async function generateMetadata({
 		`Profile page for ${athlete.name}${
 			athlete.countryName ? ` from ${athlete.countryName}` : ""
 		}`;
-	const imageUrl = athlete.imageUrl || "";
 
 	return {
 		title: athlete.name,
@@ -120,22 +119,20 @@ export async function generateMetadata({
 			title: athlete.name,
 			description: description,
 			siteName: "The Run Club",
-			images: athlete.imageUrl
-				? [
-						{
-							url: imageUrl,
-							width: 350,
-							height: 350,
-							alt: athlete.name,
-						},
-				  ]
-				: [],
+			images: [
+				{
+					url: "./opengraph-image",
+					width: 1200,
+					height: 630,
+					alt: athlete.name,
+				},
+			],
 		},
 		twitter: {
 			card: "summary_large_image",
 			title: athlete.name,
 			description: description,
-			images: athlete.imageUrl ? [imageUrl] : [],
+			images: ["./opengraph-image"],
 		},
 		alternates: {
 			canonical: `/athletes/${athlete.slug}`,

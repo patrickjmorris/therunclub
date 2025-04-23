@@ -28,6 +28,7 @@ import { LinkPreviewErrorBoundary } from "@/components/common/link-preview/link-
 import { MoreContent } from "@/components/common/content/more-content";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { LinkPreviewClientWrapper } from "@/components/common/link-preview/link-preview-client-wrapper";
+import { ShareBar } from "@/components/share-bar/ShareBar";
 
 export const dynamic = "force-static";
 export const revalidate = 604800;
@@ -167,7 +168,7 @@ export async function generateMetadata({
 		};
 	}
 
-	const { episode, imageUrl } = data;
+	const { episode } = data;
 	const title = `${episode.title} | ${episode.podcastTitle}`;
 	const description = episode.content
 		? `${episode.content.substring(0, 155).replace(/<[^>]*>/g, "")}...`
@@ -182,9 +183,9 @@ export async function generateMetadata({
 			type: "article",
 			images: [
 				{
-					url: imageUrl,
-					width: 350,
-					height: 350,
+					url: "./opengraph-image",
+					width: 1200,
+					height: 630,
 					alt: episode.title,
 				},
 			],
@@ -201,7 +202,7 @@ export async function generateMetadata({
 			card: "summary_large_image",
 			title,
 			description,
-			images: imageUrl ? [imageUrl] : undefined,
+			images: ["./opengraph-image"],
 		},
 		alternates: {
 			canonical: `/podcasts/${podcastSlug}/${episodeSlug}`,
@@ -229,6 +230,11 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
+
+	// Construct the canonical URL for the share bar
+	const canonicalUrl = `${
+		process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+	}/podcasts/${podcastSlug}/${episodeSlug}`;
 
 	const jsonLd = {
 		"@context": "https://schema.org",
@@ -303,6 +309,13 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 						/>
 					</div>
 					<Separator />
+
+					{/* <ShareBar
+						url={canonicalUrl}
+						title={episode.title}
+						hashtags={["running", "podcast", episode.podcastTitle]}
+					/> */}
+
 					<div className="mt-8">
 						<Suspense fallback={<MentionLoading title="Athletes Mentioned" />}>
 							<AthleteReferences

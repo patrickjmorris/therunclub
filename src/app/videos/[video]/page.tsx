@@ -165,11 +165,25 @@ export async function generateMetadata({
 			title: videoData.title,
 			description: videoData.description ?? undefined,
 			type: "video.other",
+			images: [
+				{
+					url: "./opengraph-image",
+					width: 1200,
+					height: 630,
+					alt: videoData.title,
+				},
+			],
 			videos: [
 				{
 					url: `https://youtube.com/watch?v=${videoData.youtubeVideoId}`,
 				},
 			],
+		},
+		twitter: {
+			card: "summary_large_image",
+			title: videoData.title,
+			description: videoData.description ?? undefined,
+			images: ["./opengraph-image"],
 		},
 	};
 }

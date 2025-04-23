@@ -64,7 +64,8 @@ export async function generateMetadata({
 	if (!data || !data.podcast) return {};
 
 	const podcast = data.podcast;
-	const imageUrl = podcast.image || podcast.itunesImage || "";
+	// No longer need this specific image URL here
+	// const imageUrl = podcast.image || podcast.itunesImage || "";
 	const description =
 		podcast.description?.substring(0, 155) ||
 		`Listen to ${podcast.title} on The Run Club`;
@@ -77,12 +78,13 @@ export async function generateMetadata({
 			title: podcast.title,
 			description: description,
 			siteName: "The Run Club",
+			// Point to the dynamic OG image route
 			images: [
 				{
-					url: imageUrl,
+					url: "./opengraph-image",
 					width: 1200,
 					height: 630,
-					alt: podcast.title,
+					alt: podcast.title, // Keep alt text
 				},
 			],
 			locale: "en_US",
@@ -91,7 +93,8 @@ export async function generateMetadata({
 			card: "summary_large_image",
 			title: podcast.title,
 			description: description,
-			images: [imageUrl],
+			// Point twitter image to the dynamic OG route as well
+			images: ["./opengraph-image"],
 		},
 		alternates: {
 			canonical: `/podcasts/${resolvedParams.podcast}`,

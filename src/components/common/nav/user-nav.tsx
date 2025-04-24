@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Define a type for the combined user and profile data
 interface UserProfile {
 	id: string;
-	email: string;
+	email: string; // We'll ensure this is non-null in our state
 	fullName?: string | null;
 	avatarUrl?: string | null;
 }
@@ -29,45 +30,62 @@ interface UserProfile {
 export function UserNav() {
 	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 	const [loading, setLoading] = useState(true);
+	const router = useRouter();
 
 	useEffect(() => {
 		const supabase = createClient();
 
-		const fetchUserProfile = async () => {
-			setLoading(true);
+		const fetchUserProfile = async (isInitialFetch = false) => {
+			if (isInitialFetch) setLoading(true);
 			const {
 				data: { session },
 				error: sessionError,
 			} = await supabase.auth.getSession();
 
 			if (sessionError) {
-				console.error("Error fetching session:", sessionError);
-				setLoading(false);
+				console.error("[UserNav] Error fetching session:", sessionError);
+				if (isInitialFetch) setLoading(false);
 				return;
 			}
 
 			if (session?.user) {
 				const user = session.user;
+
+				// Ensure email exists before proceeding
+				if (!user.email) {
+					console.error("[UserNav] User object missing email:", user.id);
+					setUserProfile(null); // Treat as logged out if email is missing
+					if (isInitialFetch) setLoading(false);
+					return;
+				}
+
+				if (userProfile?.id === user.id && !isInitialFetch) {
+					if (isInitialFetch) setLoading(false);
+					return;
+				}
+
 				// Fetch profile information
 				const { data: profileData, error: profileError } = await supabase
-					.from("profiles") // Assuming your table is named 'profiles'
+					.from("profiles")
 					.select("full_name, avatar_url")
 					.eq("id", user.id)
 					.single();
 
 				if (profileError) {
-					console.error("Error fetching profile:", profileError);
-					// Still set user data even if profile fetch fails
+					console.error(
+						"[UserNav] Error fetching profile:",
+						profileError.message || profileError,
+					);
+					// Set basic user profile (email is checked above)
 					setUserProfile({
 						id: user.id,
-						// biome-ignore lint/style/noNonNullAssertion: Checked above
-						email: user.email!,
+						email: user.email, // Now safe
 					});
 				} else {
+					// Set full profile (email is checked above)
 					setUserProfile({
 						id: user.id,
-						// biome-ignore lint/style/noNonNullAssertion: Checked above
-						email: user.email!,
+						email: user.email, // Now safe
 						fullName: profileData?.full_name,
 						avatarUrl: profileData?.avatar_url,
 					});
@@ -75,32 +93,34 @@ export function UserNav() {
 			} else {
 				setUserProfile(null);
 			}
-			setLoading(false);
+			if (isInitialFetch) setLoading(false);
 		};
 
-		fetchUserProfile();
+		fetchUserProfile(true);
 
-		// Listen for auth changes to update UI in real-time
 		const {
 			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, session) => {
-			// Re-fetch profile when auth state changes
-			// This handles login/logout events happening in other tabs/windows
-			fetchUserProfile();
+		} = supabase.auth.onAuthStateChange(async (_event, session) => {
+			await fetchUserProfile(false);
+
+			if (_event === "SIGNED_IN" && !userProfile) {
+				router.refresh();
+			}
+
+			if (_event === "SIGNED_OUT") {
+				router.refresh();
+			}
 		});
 
-		// Cleanup subscription on unmount
 		return () => {
 			subscription?.unsubscribe();
 		};
-	}, []); // Empty dependency array ensures this runs once on mount
+	}, [userProfile, router]);
 
-	// Show skeleton while loading
 	if (loading) {
 		return <Skeleton className="h-8 w-8 rounded-full" />;
 	}
 
-	// Show login button if not logged in
 	if (!userProfile) {
 		return (
 			<Button variant="ghost" asChild>
@@ -109,7 +129,6 @@ export function UserNav() {
 		);
 	}
 
-	// Show user menu if logged in
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
@@ -148,7 +167,7 @@ export function UserNav() {
 					className="text-red-600 cursor-pointer"
 					onSelect={(event) => {
 						event.preventDefault();
-						signOut(); // Call the server action to sign out
+						signOut();
 					}}
 				>
 					Sign out

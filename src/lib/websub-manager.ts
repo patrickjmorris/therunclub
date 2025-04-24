@@ -381,15 +381,22 @@ class WebSubManager {
 		});
 
 		const subscription = await db.query.websubSubscriptions.findFirst({
-			where: and(
-				eq(websubSubscriptions.topic, topic),
-				eq(websubSubscriptions.status, "active"),
-			),
+			where: eq(websubSubscriptions.topic, topic),
 		});
 
 		if (!subscription) {
 			console.warn(`Received notification for unknown subscription: ${topic}`);
 			return { statusCode: 404, body: "Subscription not found" };
+		}
+
+		// Warn but still proceed if subscription is not (yet) marked active. This can happen
+		// in the short window between a re-subscribe (status=pending) and the hub sending the
+		// first notification, or if our status sync failed. We still verify the signature and
+		// process the update to avoid missing data.
+		if (subscription.status !== "active") {
+			console.warn(
+				`Handling notification for subscription with status=${subscription.status}. Proceeding anyway`,
+			);
 		}
 
 		// Verify the notification signature if provided

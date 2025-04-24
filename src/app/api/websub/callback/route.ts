@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
 	const topic =
 		request.headers.get("hub-topic") ||
 		request.headers.get("x-hub-topic") ||
-		request.headers.get("hub.topic");
+		request.headers.get("hub.topic") ||
+		// New: attempt to extract from standard Link header with rel="self"
+		extractTopicFromLinkHeader(request.headers.get("link"));
 
 	const signature =
 		request.headers.get("hub-signature") ||
@@ -86,4 +88,32 @@ export async function POST(request: NextRequest) {
 		console.error("Error processing WebSub notification:", error);
 		return new NextResponse("Internal server error", { status: 500 });
 	}
+}
+
+// Helper to parse Link header for rel="self" and return the topic URL
+function extractTopicFromLinkHeader(linkHeader: string | null): string | null {
+	if (!linkHeader) return null;
+	// Link header can contain multiple comma-separated links
+	// Each link: <url>; rel="self"; other params
+	const links = linkHeader.split(",");
+	for (const link of links) {
+		const parts = link.split(";").map((p) => p.trim());
+		if (parts.length < 2) continue;
+		const urlPart = parts[0];
+		// Remove angle brackets
+		const urlMatch = urlPart.match(/<([^>]+)>/);
+		if (!urlMatch) continue;
+		let rel = "";
+		for (let i = 1; i < parts.length; i++) {
+			const p = parts[i].toLowerCase();
+			if (p.startsWith("rel=")) {
+				rel = p.replace(/rel=/, "").replace(/\"/g, "");
+				break;
+			}
+		}
+		if (rel === "self") {
+			return urlMatch[1];
+		}
+	}
+	return null;
 }

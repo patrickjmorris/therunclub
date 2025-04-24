@@ -100,12 +100,7 @@ async function handleUpdateExpiring() {
 				expiresAt: websubSubscriptions.expiresAt,
 			})
 			.from(websubSubscriptions)
-			.where(
-				and(
-					eq(websubSubscriptions.status, "active"),
-					lt(websubSubscriptions.expiresAt, expiryThreshold),
-				),
-			);
+			.where(and(lt(websubSubscriptions.expiresAt, expiryThreshold)));
 
 		console.log(
 			`Found ${expiringSubscriptions.length} subscriptions expiring in the next 24 hours`,

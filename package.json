@@ -13,6 +13,7 @@
 		"db:studio": "bunx drizzle-kit studio --config=drizzle-dev.config.ts",
 		"dev": "next dev  --turbopack",
 		"build": "next build",
+		"build:profile": "next build --profile",
 		"start": "next start",
 		"typecheck": "tsc --noEmit",
 		"db:seed": "NODE_ENV=development bun run src/db/seed.ts",

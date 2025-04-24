@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,11 @@ export function UserNav() {
 	const [loading, setLoading] = useState(true);
 	const router = useRouter();
 
-	useEffect(() => {
+	// Wrap fetchUserProfile in useCallback to stabilize its identity
+	const fetchUserProfile = useCallback(async () => {
+		setLoading(true); // Set loading true at the start of every fetch
 		const supabase = createClient();
-
-		const fetchUserProfile = async (isInitialFetch = false) => {
-			if (isInitialFetch) setLoading(true);
+		try {
 			const {
 				data: { session },
 				error: sessionError,
@@ -44,24 +44,17 @@ export function UserNav() {
 
 			if (sessionError) {
 				console.error("[UserNav] Error fetching session:", sessionError);
-				if (isInitialFetch) setLoading(false);
-				return;
+				setUserProfile(null);
+				return; // Exit early on session error
 			}
 
 			if (session?.user) {
 				const user = session.user;
 
-				// Ensure email exists before proceeding
 				if (!user.email) {
 					console.error("[UserNav] User object missing email:", user.id);
-					setUserProfile(null); // Treat as logged out if email is missing
-					if (isInitialFetch) setLoading(false);
-					return;
-				}
-
-				if (userProfile?.id === user.id && !isInitialFetch) {
-					if (isInitialFetch) setLoading(false);
-					return;
+					setUserProfile(null);
+					return; // Exit early if email is missing
 				}
 
 				// Fetch profile information
@@ -76,38 +69,44 @@ export function UserNav() {
 						"[UserNav] Error fetching profile:",
 						profileError.message || profileError,
 					);
-					// Set basic user profile (email is checked above)
+					// Set basic user profile even if profile fetch fails
 					setUserProfile({
 						id: user.id,
-						email: user.email, // Now safe
+						email: user.email,
 					});
 				} else {
-					// Set full profile (email is checked above)
+					// Set full profile
 					setUserProfile({
 						id: user.id,
-						email: user.email, // Now safe
+						email: user.email,
 						fullName: profileData?.full_name,
 						avatarUrl: profileData?.avatar_url,
 					});
 				}
 			} else {
-				setUserProfile(null);
+				setUserProfile(null); // No session, clear profile
 			}
-			if (isInitialFetch) setLoading(false);
-		};
+		} catch (error) {
+			console.error("[UserNav] Unexpected error fetching user profile:", error);
+			setUserProfile(null); // Clear profile on unexpected error
+		} finally {
+			setLoading(false); // Always set loading false at the end
+		}
+	}, []); // No dependencies needed for useCallback here
 
-		fetchUserProfile(true);
+	useEffect(() => {
+		// Initial fetch on component mount
+		fetchUserProfile();
 
+		const supabase = createClient();
 		const {
 			data: { subscription },
-		} = supabase.auth.onAuthStateChange(async (_event, session) => {
-			await fetchUserProfile(false);
+		} = supabase.auth.onAuthStateChange((_event, session) => {
+			// Re-fetch profile on any auth change
+			fetchUserProfile();
 
-			if (_event === "SIGNED_IN" && !userProfile) {
-				router.refresh();
-			}
-
-			if (_event === "SIGNED_OUT") {
+			// Refresh page data on sign in/out to update potentially protected routes
+			if (_event === "SIGNED_IN" || _event === "SIGNED_OUT") {
 				router.refresh();
 			}
 		});
@@ -115,7 +114,8 @@ export function UserNav() {
 		return () => {
 			subscription?.unsubscribe();
 		};
-	}, [userProfile, router]);
+		// Add fetchUserProfile to dependency array
+	}, [fetchUserProfile, router]);
 
 	if (loading) {
 		return <Skeleton className="h-8 w-8 rounded-full" />;

@@ -41,6 +41,9 @@ export async function login(formData: FormData) {
 	}
 
 	revalidatePath("/", "layout");
+	console.log(
+		`[Login Action] Login successful for ${result.data.email}. Redirecting to /dashboard...`,
+	);
 	redirect("/dashboard");
 }
 

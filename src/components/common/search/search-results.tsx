@@ -107,7 +107,7 @@ export function SearchResults({ results, isLoading }: SearchResultsProps) {
 		//   </div>
 		// );
 	}
-	console.log("results", results);
+	// console.log("results", results);
 	return (
 		<div className="space-y-4">
 			{results.map((result) => (

@@ -25,7 +25,7 @@ export default async function RaceDetailPage({
 	let fetchError: Error | null = null;
 
 	try {
-		console.log(`Fetching data for race_id: ${race_id}`);
+		// console.log(`Fetching data for race_id: ${race_id}`);
 		const response: RunSignupRaceResponse = await fetchRace(race_id); // Call fetchRace
 		raceData = response.race; // Extract the race object
 	} catch (error) {

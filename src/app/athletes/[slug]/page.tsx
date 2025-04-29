@@ -19,7 +19,7 @@ export const dynamic = "force-static";
 export const revalidate = 86400; // 1 day
 
 export async function generateStaticParams() {
-	// console.log("[Build] Starting generateStaticParams for athletes");
+	console.log("[Build] Starting generateStaticParams for athletes");
 
 	try {
 		// Get all athletes with their full data
@@ -32,7 +32,7 @@ export async function generateStaticParams() {
 			)
 			.where(isNotNull(athletes.slug));
 
-		// console.log(`[Build] Found ${allAthletes.length} total athletes`);
+		console.log(`[Build] Found ${allAthletes.length} total athletes`);
 
 		// Group by athlete and check if any honor is Olympic
 		const athleteMap = new Map();
@@ -80,7 +80,7 @@ export async function generateStaticParams() {
 			},
 		);
 
-		// console.log(`[Build] Found ${olympicMedalists.length} Olympic medalists`);
+		console.log(`[Build] Found ${olympicMedalists.length} Olympic medalists`);
 
 		return olympicMedalists.map((athlete) => ({
 			slug: athlete.slug,

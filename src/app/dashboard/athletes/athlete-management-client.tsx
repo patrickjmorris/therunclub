@@ -63,7 +63,7 @@ export default function AthleteManagementClient({
 
 	const handleEdit = (athlete: AthleteData) => {
 		// TODO: Implement edit functionality
-		// console.log("Edit athlete:", athlete);
+		console.log("Edit athlete:", athlete);
 	};
 
 	const handleDelete = (athlete: AthleteData) => {

@@ -133,7 +133,7 @@ async function RaceDataFetcher({
 			validMinDistance,
 			validMaxDistance,
 		);
-		// console.log("[FindRaces] API response received.");
+		console.log("[FindRaces] API response received.");
 	} catch (e) {
 		fetchError =
 			e instanceof Error ? e : new Error("Failed to fetch race data");

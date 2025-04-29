@@ -47,30 +47,6 @@ export async function login(formData: FormData) {
 	redirect("/dashboard");
 }
 
-export async function signInWithGoogle() {
-	const supabase = await createClient();
-	const { data, error } = await supabase.auth.signInWithOAuth({
-		provider: "google",
-		options: {
-			redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-			// Optional: Add scopes if needed, e.g., 'profile email https://www.googleapis.com/auth/calendar'
-			// scopes: 'profile email',
-		},
-	});
-
-	if (error) {
-		console.error("Google Sign In error:", error);
-		return redirect("/login?error=Could not authenticate with Google");
-	}
-
-	if (data.url) {
-		redirect(data.url); // Use the redirect method from next/navigation
-	}
-
-	// Fallback redirect if no URL is returned (should not happen in normal flow)
-	return redirect("/login?error=An unexpected error occurred");
-}
-
 export async function signup(formData: FormData) {
 	const supabase = await createClient();
 

@@ -66,7 +66,7 @@ export default function PodcastManagementClient({
 
 	const handleEdit = (podcast: PodcastData) => {
 		// TODO: Implement edit functionality
-		// console.log("Edit podcast:", podcast);
+		console.log("Edit podcast:", podcast);
 	};
 
 	const handleDelete = (podcast: PodcastData) => {

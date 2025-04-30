@@ -43,7 +43,8 @@
 		"reprocess:mentions:prod": "NODE_ENV=production bun run scripts/reprocess-athlete-mentions.ts",
 		"optimize:images": "NODE_ENV=production bun run scripts/optimize-content-images.ts",
 		"test": "vitest",
-		"scrape:gear": "tsx src/cli/scrape-gear.ts"
+		"scrape:gear": "tsx src/cli/scrape-gear.ts",
+		"scrape:gear:prod": "NODE_ENV=production tsx src/cli/scrape-gear.ts"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {

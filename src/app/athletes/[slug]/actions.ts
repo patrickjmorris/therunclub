@@ -237,26 +237,21 @@ export const deleteSponsor = requireRole(["admin", "editor"])(
 	},
 );
 
-interface GearData {
-	name: string;
-	brand: string;
-	category:
-		| "racing_shoes"
-		| "training_shoes"
-		| "shirts"
-		| "shorts"
-		| "tights"
-		| "recovery"
-		| "other";
-	model?: string;
-	description?: string;
-	purchaseUrl?: string;
-	imageUrl?: string;
-	isCurrent?: boolean;
+// Define interface for linking existing gear
+interface LinkGearData {
+	gearId: string;
+	relationship?: string;
 }
 
+// Renamed GearData to UpdateGearData for clarity in updateGear
+interface UpdateGearData {
+	relationship?: string;
+}
+
+// Modified addGear to accept gearId and relationship
 export const addGear = requireRole(["admin", "editor"])(
-	async (slug: string, data: GearData) => {
+	// Renamed to linkGear internally
+	async (slug: string, data: LinkGearData) => {
 		const athlete = await db.query.athletes.findFirst({
 			where: eq(athletes.slug, slug),
 		});
@@ -265,16 +260,21 @@ export const addGear = requireRole(["admin", "editor"])(
 			throw new Error("Athlete not found");
 		}
 
+		// Insert only the expected columns
 		await db.insert(athleteGear).values({
 			athleteId: athlete.id,
-			...data,
+			gearId: data.gearId,
+			relationship: data.relationship,
 		});
 		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
+// Modified updateGear to accept gearId and only update relationship
 export const updateGear = requireRole(["admin", "editor"])(
-	async (gearId: string, slug: string, data: Partial<GearData>) => {
+	// Renamed to updateGearLink internally
+	async (slug: string, gearId: string, data: UpdateGearData) => {
+		// Now needs gearId
 		const athlete = await db.query.athletes.findFirst({
 			where: eq(athletes.slug, slug),
 		});
@@ -283,19 +283,24 @@ export const updateGear = requireRole(["admin", "editor"])(
 			throw new Error("Athlete not found");
 		}
 
+		// Only update the relationship field
 		await db
 			.update(athleteGear)
 			.set({
-				...data,
-				updatedAt: sql`CURRENT_TIMESTAMP`,
+				relationship: data.relationship,
+				// Cannot update updatedAt as it doesn't exist on athleteGear based on schema
 			})
-			.where(eq(athleteGear.id, gearId));
+			.where(
+				sql`${athleteGear.athleteId} = ${athlete.id} AND ${athleteGear.gearId} = ${gearId}`,
+			);
 		revalidatePath(`/athletes/${slug}`);
 	},
 );
 
+// Modified deleteGear to accept gearId and use composite key in where clause
 export const deleteGear = requireRole(["admin", "editor"])(
-	async (gearId: string, slug: string) => {
+	// Renamed to unlinkGear internally
+	async (slug: string, gearId: string) => {
 		const athlete = await db.query.athletes.findFirst({
 			where: eq(athletes.slug, slug),
 		});
@@ -304,7 +309,12 @@ export const deleteGear = requireRole(["admin", "editor"])(
 			throw new Error("Athlete not found");
 		}
 
-		await db.delete(athleteGear).where(eq(athleteGear.id, gearId));
+		// Use composite key in where clause
+		await db
+			.delete(athleteGear)
+			.where(
+				sql`${athleteGear.athleteId} = ${athlete.id} AND ${athleteGear.gearId} = ${gearId}`,
+			);
 		revalidatePath(`/athletes/${slug}`);
 	},
 );

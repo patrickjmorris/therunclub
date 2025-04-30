@@ -74,10 +74,10 @@ export function GearSection({ athleteSlug, gear, isAdmin }: GearSectionProps) {
 		};
 
 		if (editingGearId) {
-			await updateGear(editingGearId, athleteSlug, data);
+			await updateGear(athleteSlug, editingGearId, {});
 			setEditingGearId(null);
 		} else {
-			await addGear(athleteSlug, data);
+			await addGear(athleteSlug, { gearId: "", relationship: "" });
 			setIsAdding(false);
 		}
 	};

@@ -228,7 +228,7 @@ export default async function AthletePage({
 									isAdmin={isAdmin}
 								/> */}
 
-								{/* Gear Section */}
+								{/* Gear Section - Temporarily Disabled */}
 								{/* <div className="mt-8">
 									<GearSection
 										athleteSlug={athlete.slug}

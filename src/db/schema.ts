@@ -673,9 +673,10 @@ export const podcastRankings = pgTable(
 export const gearCategoryEnum = pgEnum("gear_category", [
 	"shoes",
 	"apparel",
+	"watches",
 	"race_spikes",
 	"training_tools",
-	"fuel",
+	"nutrition",
 ]);
 
 export const sexAgeEnum = pgEnum("sex_age", ["mens", "womens", "kids"]);

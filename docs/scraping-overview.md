@@ -6,7 +6,7 @@ Documentation for the scripts used to scrape gear data from external merchants (
 
 ## 1. Overview
 
-The primary goal of this process is to populate the `gear` table in the database with product information scraped from retailer websites. Currently, it supports scraping shoes and apparel from Running Warehouse.
+The primary goal of this process is to populate the `gear` table in the database with product information scraped from retailer websites. Currently, it supports scraping shoes, apparel, and watches from Running Warehouse.
 
 The process involves two main parts:
 1.  **Scraping (`scrape:gear`):** Extracts product details (name, brand, price, image URL, etc.) from the website and saves them to the database.
@@ -29,30 +29,30 @@ The process involves two main parts:
 
 ## 3. Scraping Workflow (`scrape:gear`)
 
-This script orchestrates the extraction of gear data for a specified category and gender/sex.
+This script orchestrates the extraction of gear data for a specified category and gender/sex (where applicable).
 
 **Process:**
 
 1.  **Initialization:** The script is invoked via the CLI (`bun run scrape:gear`), parsing category and gender arguments.
-2.  **Category Navigation:** It constructs the URL for the main category page (e.g., `/mens-running-shoes.html`, `/womens-running-apparel.html`) based on the input arguments.
-3.  **Brand Link Extraction:** It navigates to the category page and extracts links to individual brand pages using category-specific selectors (e.g., `#MRSPPBRANDS a` for men's shoes, `#WRCPPBRANDS a` for women's apparel).
-4.  **Brand Iteration:** It loops through each extracted brand URL.
-5.  **Brand Page Scraping:** For each brand URL:
-    a.  Navigates to the brand-specific page.
+2.  **Category Navigation:** It constructs the URL for the main category page (e.g., `/mens-running-shoes.html`, `/womens-running-apparel.html`, `/catpage-SDMONITORS.html`) based on the input arguments.
+3.  **Brand Link Extraction (Shoes/Apparel):** For shoe and apparel categories, it navigates to the category page and extracts links to individual brand pages using category-specific selectors (e.g., `#MRSPPBRANDS a` for men's shoes, `#WRCPPBRANDS a` for women's apparel). Watches skip this step.
+4.  **Brand Iteration (Shoes/Apparel):** Loops through each extracted brand URL (shoes/apparel only).
+5.  **Page Scraping (Watches/Brand Pages):** For each brand URL (shoes/apparel) or the main category URL (watches):
+    a.  Navigates to the relevant page.
     b.  **Item Scraping (Concurrent):** Identifies individual product containers (`div.cattable-wrap-cell`) and processes them concurrently using `Promise.all`.
     c.  **Data Extraction:** For each item, it extracts:
-        *   `brand`: From `data-gtm_impression_brand` attribute.
+        *   `brand`: From `data-gtm_impression_brand` attribute (shoes/apparel), or parsed from name (watches).
         *   `name`: From `.cattable-wrap-cell-info .cattable-wrap-cell-info-name`, with a wait.
         *   `price`: Extracts the first dollar amount (`\$(\d+\.?\d*)`) from the `.cattable-wrap-cell-info-price` container text, handling both regular and sale structures.
         *   `link`: The product page URL.
         *   `image`: Prioritizes the first URL from the `data-srcset` attribute of the `img.cattable-wrap-cell-imgwrap-inner-img` tag, falling back to `src`.
         *   `rating`, `reviewCount`: Optional, extracted with short timeouts.
-    d.  **Static Data:** Adds `category` (e.g., "shoes", "apparel") and `sexAge` (e.g., "mens", "womens") based on script arguments.
-    e.  **Slug Generation:** Creates a unique slug using `brand`, `name`, and `sexAge` (e.g., `brooks-glycerin-21-womens`).
+    d.  **Static Data:** Adds `category` (e.g., "shoes", "apparel", "watches") and `sexAge` (e.g., "mens", "womens", or `null` for watches) based on script arguments/context.
+    e.  **Slug Generation:** Creates a unique slug using `brand`, `name`, and `sexAge` (or just brand/name for watches).
     f.  **Validation:** Validates the extracted data against the Zod schema (`src/lib/validation/gear.ts`).
     g.  **Database Upsert:** Uses `upsertGear` to insert the new item or update an existing item based on the unique `slug`.
-    h.  **Pagination:** After processing all items on a page concurrently, it checks for and navigates to the next page (`a.next-page-plp`) for the current brand, repeating step 5b-h.
-6.  **Completion:** Logs success or failure for the overall category/gender scrape.
+    h.  **Pagination:** After processing all items on a page concurrently, it checks for and navigates to the next page (`a.next-page-plp`) for the current brand/category, repeating step 5b-h.
+6.  **Completion:** Logs success or failure for the overall category scrape.
 
 --- 
 
@@ -67,10 +67,10 @@ bun run scrape:gear -- [--category <category>] [--gender <gender>]
 
 **Arguments:**
 
-| Argument     | Alias | Type   | Choices          | Default | Description                                    |
-| :----------- | :---- | :----- | :--------------- | :------ | :--------------------------------------------- |
-| `--category` | `-c`  | String | `shoes`, `apparel` | `shoes` | The gear category to scrape.                   |
-| `--gender`   | `-g`  | String | `mens`, `womens`   |         | **Required.** The gender context for the category. |
+| Argument     | Alias | Type   | Choices                 | Default | Description                                                          |
+| :----------- | :---- | :----- | :---------------------- | :------ | :------------------------------------------------------------------- |
+| `--category` | `-c`  | String | `shoes`, `apparel`, `watches` | `shoes` | The gear category to scrape.                                         |
+| `--gender`   | `-g`  | String | `mens`, `womens`          |         | **Required for `shoes`, `apparel`.** Ignored for `watches`.          |
 
 **Examples:**
 
@@ -81,6 +81,10 @@ bun run scrape:gear -- [--category <category>] [--gender <gender>]
 *   Scrape Women's Apparel:
     ```bash
     bun run scrape:gear -- --category apparel --gender womens
+    ```
+*   Scrape Watches:
+    ```bash
+    bun run scrape:gear -- --category watches
     ```
 
 --- 
@@ -145,8 +149,8 @@ Key fields include:
 -   `image` (text) - Original scraped image URL
 -   `optimizedImageUrl` (text) - URL after processing via `optimize:gear-images`
 -   `link` (text) - Link to original product page
--   `category` (enum: shoes, apparel, etc.)
--   `sexAge` (enum: mens, womens, kids)
+-   `category` (enum: shoes, apparel, watches, etc.)
+-   `sexAge` (enum: mens, womens, kids, or NULL for category like watches)
 -   `rating` (numeric)
 -   `reviewCount` (integer)
 -   `merchant` (text)
@@ -160,7 +164,7 @@ Validation is handled by a Zod schema defined in `src/lib/validation/gear.ts`.
 
 ## 8. Future Considerations
 
--   Add scrapers for remaining categories (race spikes, training tools, fuel).
+-   Add scrapers for remaining categories (race spikes, training tools, fuel, accessories).
 -   Implement more robust error handling and retry mechanisms within brand/item loops.
 -   Add configuration options for selectors, base URLs, etc.
 -   Integrate `scrape:gear` into a scheduled job (e.g., using Trigger.dev or a cron job).
@@ -171,6 +175,6 @@ Validation is handled by a Zod schema defined in `src/lib/validation/gear.ts`.
 
 ## 9. Important Notes
 
--   **Concurrency:** Item scraping within a brand page is concurrent (`Promise.all`) for speed, but brand processing is sequential.
+-   **Concurrency:** Item scraping within a page is concurrent (`Promise.all`), but brand processing (shoes/apparel) and pagination are sequential.
 -   **Selector Fragility:** Selectors are based on the current structure of Running Warehouse and may break if the site layout changes.
 -   **Ethical Scraping:** The base scraper includes delays (`NAVIGATION_DELAY_MS`) between navigations. Avoid overly aggressive scraping. 

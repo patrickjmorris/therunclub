@@ -5,6 +5,7 @@ import {
 	insertGearSchema,
 	NewGear,
 	Gear,
+	athleteGear,
 } from "@/db/schema";
 import {
 	eq,
@@ -163,6 +164,36 @@ export async function upsertGear(gearData: NewGear): Promise<Gear> {
 	console.log(`Inserting new gear: ${gearData.slug}`);
 	const inserted = await insertGear(gearData);
 	return inserted;
+}
+
+// Function to get gear items linked to a specific athlete
+export async function getGearByAthleteId(athleteId: string): Promise<Gear[]> {
+	const results = await db
+		.select({
+			// Select all columns from the gear table
+			id: gear.id,
+			slug: gear.slug,
+			name: gear.name,
+			brand: gear.brand,
+			description: gear.description,
+			price: gear.price,
+			rating: gear.rating,
+			reviewCount: gear.reviewCount,
+			image: gear.image,
+			link: gear.link,
+			category: gear.category,
+			sexAge: gear.sexAge,
+			merchant: gear.merchant,
+			optimizedImageUrl: gear.optimizedImageUrl,
+			updatedAt: gear.updatedAt,
+		})
+		.from(gear)
+		.innerJoin(athleteGear, eq(gear.id, athleteGear.gearId))
+		.where(eq(athleteGear.athleteId, athleteId))
+		.orderBy(desc(gear.updatedAt)); // Optional: Order by relevance or date
+
+	// The result directly matches the Gear type because we selected all gear fields
+	return results;
 }
 
 // TODO: Add function to link/unlink gear to athletes (athleteGear table) - Part of Task 12/18

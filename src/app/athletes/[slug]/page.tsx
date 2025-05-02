@@ -13,6 +13,9 @@ import { getAthleteData } from "@/lib/services/athlete-service";
 import { canManageContent } from "@/lib/auth-utils";
 import { Suspense } from "react";
 import { MentionLoading } from "@/components/common/mention-loading";
+import { GearRow } from "@/components/gear/gear-row";
+import { getGearByAthleteId } from "@/lib/db/queries/gear";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Route segment config
 export const dynamic = "force-static";
@@ -143,6 +146,44 @@ export async function generateMetadata({
 	};
 }
 
+// Skeleton for the athlete gear section
+function AthleteGearSkeleton() {
+	return (
+		<section className="mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+			<Skeleton className="h-7 w-40 mb-4" /> {/* Section title */}
+			<div className="flex space-x-4 overflow-hidden pb-4">
+				{[...Array(3)].map((_, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: Static array ok
+					<div key={`gear-skel-${i}`} className="w-48 flex-shrink-0 md:w-56">
+						<Skeleton className="aspect-square w-full rounded-md" />
+						<div className="mt-2 space-y-1">
+							<Skeleton className="h-3 w-1/3" /> {/* Brand */}
+							<Skeleton className="h-4 w-full" /> {/* Name */}
+							<Skeleton className="h-4 w-1/4" /> {/* Price */}
+						</div>
+					</div>
+				))}
+			</div>
+		</section>
+	);
+}
+
+// Async component to fetch and display athlete's gear
+async function AthleteGearSection({ athleteId }: { athleteId: string }) {
+	const athleteGear = await getGearByAthleteId(athleteId);
+
+	if (!athleteGear || athleteGear.length === 0) {
+		return null; // Don't render the section if no gear is linked
+	}
+
+	return (
+		<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+			{/* Removed extra margin-top from here, applied to wrapper */}
+			<GearRow title="Gear They Use" items={athleteGear} />
+		</div>
+	);
+}
+
 export default async function AthletePage({
 	params,
 }: {
@@ -160,6 +201,16 @@ export default async function AthletePage({
 
 	if (!athlete.worldAthleticsId) {
 		notFound();
+	}
+
+	// Use athlete.id (UUID) which comes from the profiles table via getAthleteData
+	const athleteUuid = athlete.id;
+	if (!athleteUuid) {
+		console.error(
+			"Athlete UUID (profile ID) is missing for slug:",
+			athlete.slug,
+		);
+		// Decide how to handle this - maybe don't render gear?
 	}
 
 	// Prepare structured data for SEO
@@ -211,47 +262,25 @@ export default async function AthletePage({
 								<AthleteProfile athlete={athlete} isAdmin={isAdmin} />
 							</div>
 
-							{/* Right column - Sponsors, Gear, Events */}
-							<div className="mt-8 lg:mt-0 lg:col-span-8">
-								{/* Sponsors Section */}
-								{/* <SponsorsSection
-									athleteSlug={athlete.slug}
-									sponsors={athlete.sponsors.map((sponsor) => ({
-										id: sponsor.id,
-										name: sponsor.name,
-										website: sponsor.website,
-										logo: sponsor.logo,
-										startDate: sponsor.startDate,
-										endDate: sponsor.endDate,
-										isPrimary: sponsor.isPrimary,
-									}))}
-									isAdmin={isAdmin}
-								/> */}
+							{/* Right column - Sponsors, Gear, Events, Mentions */}
+							<div className="mt-8 lg:mt-0 lg:col-span-8 space-y-8">
+								{/* Sponsors Section (Commented out) */}
+								{/* <SponsorsSection ... /> */}
 
-								{/* Gear Section */}
-								{/* <div className="mt-8">
-									<GearSection
-										athleteSlug={athlete.slug}
-										gear={athlete.gear.map((item) => ({
-											id: item.id,
-											name: item.name,
-											brand: item.brand || "",
-											category: item.category || "other",
-											model: item.model,
-											description: item.description,
-											purchaseUrl: item.purchaseUrl,
-											imageUrl: item.imageUrl,
-											isCurrent: item.isCurrent,
-										}))}
-										isAdmin={isAdmin}
-									/>
-								</div> */}
+								{/* === NEW Athlete Gear Section === */}
+								{athleteUuid && ( // Only render if we have the athlete's UUID
+									<Suspense fallback={<AthleteGearSkeleton />}>
+										<AthleteGearSection athleteId={athleteUuid} />
+									</Suspense>
+								)}
+								{/* ============================== */}
 
 								{/* Events Section */}
-								{/* <div className="mt-8">
-									<EventsSection
-										athleteSlug={athlete.slug}
-										events={athlete.events.map((event) => ({
+								<EventsSection
+									athleteSlug={athlete.slug}
+									events={
+										athlete.events?.map((event) => ({
+											// Ensure correct mapping based on actual event structure
 											id: event.id,
 											name: event.name,
 											date: event.date,
@@ -260,28 +289,20 @@ export default async function AthletePage({
 											description: event.description,
 											website: event.website,
 											status: event.status,
-											result: event.result
-												? {
-														place: event.result.place ? 1 : undefined,
-														time: event.result.time || undefined,
-														notes: event.result.notes || undefined,
-												  }
-												: undefined,
-										}))}
-										isAdmin={isAdmin}
-									/>
-								</div> */}
+											result: event.result,
+										})) ?? []
+									}
+									isAdmin={isAdmin}
+								/>
 
-								{/* Recent Mentions Section */}
-								<div className="mt-8">
-									<Suspense
-										fallback={<MentionLoading title="Recent Mentions" />}
-									>
+								{/* Mentions Section */}
+								{athlete.worldAthleticsId && (
+									<Suspense fallback={<MentionLoading />}>
 										<AthleteMentionsSection
-											athleteId={athlete.worldAthleticsId || ""}
+											athleteId={athlete.worldAthleticsId}
 										/>
 									</Suspense>
-								</div>
+								)}
 							</div>
 						</div>
 					</div>

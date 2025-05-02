@@ -446,33 +446,6 @@ export const athleteSponsors = pgTable("athlete_sponsors", {
 	updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const athleteGear = pgTable("athlete_gear", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	athleteId: uuid("athlete_id")
-		.notNull()
-		.references(() => athletes.id),
-	name: text("name").notNull(),
-	brand: text("brand").notNull(),
-	category: text("category", {
-		enum: [
-			"racing_shoes",
-			"training_shoes",
-			"shirts",
-			"shorts",
-			"tights",
-			"recovery",
-			"other",
-		],
-	}).notNull(),
-	model: text("model"),
-	description: text("description"),
-	purchaseUrl: text("purchase_url"),
-	imageUrl: text("image_url"),
-	isCurrent: boolean("is_current").default(true),
-	createdAt: timestamp("created_at").defaultNow(),
-	updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 export const athleteEvents = pgTable("athlete_events", {
 	id: uuid("id").primaryKey().defaultRandom(),
 	athleteId: uuid("athlete_id")
@@ -540,10 +513,10 @@ export const athleteRelations = relations(athletes, ({ one, many }) => ({
 		references: [athleteCategories.id],
 	}),
 	results: many(athleteResults),
-	honors: many(athleteHonors),
 	sponsors: many(athleteSponsors),
 	gear: many(athleteGear),
 	events: many(athleteEvents),
+	honors: many(athleteHonors),
 	mentions: many(athleteMentions),
 }));
 
@@ -561,6 +534,13 @@ export const athleteHonorsRelations = relations(athleteHonors, ({ one }) => ({
 	}),
 }));
 
+export const athleteEventsRelations = relations(athleteEvents, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteEvents.athleteId],
+		references: [athletes.id],
+	}),
+}));
+
 export const athleteSponsorsRelations = relations(
 	athleteSponsors,
 	({ one }) => ({
@@ -570,20 +550,6 @@ export const athleteSponsorsRelations = relations(
 		}),
 	}),
 );
-
-export const athleteGearRelations = relations(athleteGear, ({ one }) => ({
-	athlete: one(athletes, {
-		fields: [athleteGear.athleteId],
-		references: [athletes.id],
-	}),
-}));
-
-export const athleteEventsRelations = relations(athleteEvents, ({ one }) => ({
-	athlete: one(athletes, {
-		fields: [athleteEvents.athleteId],
-		references: [athletes.id],
-	}),
-}));
 
 export const athleteMentionsRelations = relations(
 	athleteMentions,
@@ -702,3 +668,85 @@ export const podcastRankings = pgTable(
 		};
 	},
 );
+
+// Gear Schemas
+export const gearCategoryEnum = pgEnum("gear_category", [
+	"shoes",
+	"apparel",
+	"watches",
+	"race_spikes",
+	"training_tools",
+	"nutrition",
+]);
+
+export const sexAgeEnum = pgEnum("sex_age", ["mens", "womens", "kids"]);
+
+export const gear = pgTable(
+	"gear",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		slug: text("slug").unique().notNull(), // e.g. "brooks-adrenaline-gts-23"
+		name: text("name").notNull(),
+		brand: text("brand").notNull(),
+		description: text("description"),
+		price: numeric("price", { precision: 8, scale: 2 }).notNull(),
+		rating: numeric("rating", { precision: 2, scale: 1 }),
+		reviewCount: integer("review_count"),
+		image: text("image").notNull(),
+		link: text("link").notNull(),
+		category: gearCategoryEnum("category").notNull(),
+		sexAge: sexAgeEnum("sex_age"),
+		merchant: text("merchant").default("runningwarehouse"),
+		optimizedImageUrl: text("optimized_image_url"),
+		updatedAt: timestamp("updated_at").defaultNow(),
+	},
+	(table) => ({
+		slugIdx: uniqueIndex("gear_slug_idx").on(table.slug),
+		categoryIdx: index("gear_category_idx").on(table.category),
+		brandIdx: index("gear_brand_idx").on(table.brand),
+	}),
+);
+
+export const athleteGear = pgTable(
+	"athlete_gear",
+	{
+		athleteId: uuid("athlete_id")
+			.notNull()
+			.references(() => athletes.id, { onDelete: "cascade" }),
+		gearId: uuid("gear_id")
+			.notNull()
+			.references(() => gear.id, { onDelete: "cascade" }),
+		relationship: text("relationship"), // "uses", "sponsored", etc.
+	},
+	(table) => ({
+		pk: uniqueIndex("athlete_gear_pk").on(table.athleteId, table.gearId),
+	}),
+);
+
+// Add relations for Gear and AthleteGear
+export const gearRelations = relations(gear, ({ many }) => ({
+	athleteGearEntries: many(athleteGear),
+}));
+
+export const athleteGearRelations = relations(athleteGear, ({ one }) => ({
+	athlete: one(athletes, {
+		fields: [athleteGear.athleteId],
+		references: [athletes.id],
+	}),
+	gear: one(gear, {
+		fields: [athleteGear.gearId],
+		references: [gear.id],
+	}),
+}));
+
+// Add Zod schemas for Gear
+export const insertGearSchema = createInsertSchema(gear);
+export const selectGearSchema = createSelectSchema(gear);
+export const insertAthleteGearSchema = createInsertSchema(athleteGear);
+export const selectAthleteGearSchema = createSelectSchema(athleteGear);
+
+// Add types for Gear
+export type Gear = typeof gear.$inferSelect;
+export type NewGear = typeof gear.$inferInsert;
+export type AthleteGear = typeof athleteGear.$inferSelect;
+export type NewAthleteGear = typeof athleteGear.$inferInsert;

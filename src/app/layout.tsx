@@ -5,7 +5,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
-import { Analytics } from "@/components/common/analytics";
+// import { Analytics } from "@/components/common/analytics";
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { ServerAuthWrapper } from "@/components/auth/server-auth-provider";
 import { TailwindIndicator } from "@/components/common/tailwind-indicator";
@@ -122,7 +122,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 								</div>
 								<Toaster />
 								<TailwindIndicator />
-								<Analytics />
+								
 								<SpeedInsights />
 							</AudioProvider>
 						</ThemeProvider>

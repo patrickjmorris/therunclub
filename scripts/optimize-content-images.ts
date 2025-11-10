@@ -41,7 +41,12 @@ async function processPodcastImages(batchSize = 10000): Promise<ProcessResult> {
 				continue;
 			}
 
-			const optimizedUrl = await optimizeImage(podcast.image, 1400, "podcasts");
+			const optimizedUrl = await optimizeImage(
+				podcast.image,
+				1400,
+				"podcasts",
+				podcast.id,
+			);
 
 			if (optimizedUrl) {
 				await db
@@ -103,7 +108,12 @@ async function processEpisodeImages(batchSize = 10000): Promise<ProcessResult> {
 				continue;
 			}
 
-			const optimizedUrl = await optimizeImage(episode.image, 1400, "episodes");
+			const optimizedUrl = await optimizeImage(
+				episode.image,
+				1400,
+				"episodes",
+				episode.id,
+			);
 
 			if (optimizedUrl) {
 				await db

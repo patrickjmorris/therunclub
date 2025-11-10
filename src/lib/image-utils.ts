@@ -14,6 +14,7 @@ export async function optimizeImage(
 	imageUrl: string,
 	targetSize: number,
 	prefix: string,
+	entityId?: string,
 ): Promise<string | null> {
 	try {
 		// Validate image URL
@@ -98,8 +99,10 @@ export async function optimizeImage(
 
 			console.log(`[IMAGE] Successfully processed image: ${normalizedUrl}`);
 
-			// Upload to Supabase Storage
-			const fileName = `${prefix}/${nanoid()}.webp`;
+			// Upload to Supabase Storage with deterministic filename if entityId provided
+			const fileName = entityId
+				? `${prefix}/${entityId}.webp`
+				: `${prefix}/${nanoid()}.webp`;
 			const supabase = supabaseAdmin;
 
 			const { data: uploadData, error: uploadError } = await supabase.storage

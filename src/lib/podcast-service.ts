@@ -49,11 +49,12 @@ async function processImage(
 	imageUrl: string,
 	size: number,
 	prefix: string,
+	entityId?: string,
 ): Promise<string | null> {
 	if (DEV_MODE_SKIP_ACTUAL_PROCESSING) {
 		return mockImageProcessing(imageUrl, prefix);
 	}
-	return optimizeImage(imageUrl, size, prefix);
+	return optimizeImage(imageUrl, size, prefix, entityId);
 }
 
 // Add a function to check if image processing should be skipped
@@ -350,13 +351,20 @@ async function processPodcast(
 						  : "No image found",
 		});
 
-		// Optimize podcast image if we have one
+		// Optimize podcast image if we have one and source URL changed
 		let podcast_image = undefined;
-		if (podcastImageUrl && !shouldSkipImageProcessing(podcastImageUrl)) {
+		const sourceImageChanged = podcastImageUrl !== podcast.image;
+		const needsProcessing =
+			podcastImageUrl &&
+			!shouldSkipImageProcessing(podcastImageUrl) &&
+			(sourceImageChanged || !podcast.podcastImage);
+
+		if (needsProcessing) {
 			console.log(
 				`[IMAGE-DEBUG] Attempting to process image for ${podcast.title}`,
 				{
 					url: podcastImageUrl,
+					sourceChanged: sourceImageChanged,
 					skipImageProcessing: SKIP_IMAGE_PROCESSING,
 					devMode: DEV_MODE_SKIP_ACTUAL_PROCESSING,
 				},
@@ -367,6 +375,7 @@ async function processPodcast(
 					podcastImageUrl,
 					1400,
 					"podcasts",
+					podcast.id,
 				);
 				if (processedImage) {
 					podcast_image = processedImage;
@@ -402,7 +411,13 @@ async function processPodcast(
 				{
 					hasUrl: !!podcastImageUrl,
 					url: podcastImageUrl,
-					skipReason: !podcastImageUrl ? "No URL" : "Failed skip check",
+					hasExistingProcessed: !!podcast.podcastImage,
+					sourceChanged: sourceImageChanged,
+					skipReason: !podcastImageUrl
+						? "No URL"
+						: !sourceImageChanged && podcast.podcastImage
+							? "Source unchanged and already processed"
+							: "Failed skip check",
 				},
 			);
 		}
@@ -514,14 +529,40 @@ async function processPodcast(
 					// Get the episode image URL
 					const episodeImageUrl = item.itunes?.image || null;
 
-					// Optimize episode image if we have one
+					// Check if episode exists to get its ID and current image
+					const existingEpisode = item.guid
+						? await db
+								.select({ id: episodes.id, image: episodes.image })
+								.from(episodes)
+								.where(eq(episodes.guid, item.guid))
+								.limit(1)
+								.then((res) => res[0])
+						: item.enclosure?.url
+							? await db
+									.select({ id: episodes.id, image: episodes.image })
+									.from(episodes)
+									.where(eq(episodes.enclosureUrl, item.enclosure.url))
+									.limit(1)
+									.then((res) => res[0])
+							: undefined;
+
+					// Only process if source image changed or doesn't exist
 					let episode_image = null;
-					if (episodeImageUrl && !shouldSkipImageProcessing(episodeImageUrl)) {
+					const sourceImageChanged = episodeImageUrl !== existingEpisode?.image;
+					if (
+						episodeImageUrl &&
+						!shouldSkipImageProcessing(episodeImageUrl) &&
+						(sourceImageChanged || !existingEpisode)
+					) {
 						try {
+							// Use existing episode ID if available, otherwise use guid or hash of enclosureUrl
+							const episodeIdentifier =
+								existingEpisode?.id || item.guid || undefined;
 							episode_image = await processImage(
 								episodeImageUrl,
 								1400,
 								"episodes",
+								episodeIdentifier,
 							);
 						} catch (error) {
 							console.error(

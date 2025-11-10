@@ -30,11 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Access the production Supabase database using psql:
 
 ```bash
-# Using environment variable (recommended)
 psql $DATABASE_URL -c "SELECT COUNT(*) FROM podcasts;"
-
-# Using connection string directly
-psql "postgresql://postgres.akzhyzwiwjxtjuirmqyx:Hukjeq-jobru0-hebqod@aws-0-us-east-1.pooler.supabase.com:6543/postgres" -c "QUERY"
 ```
 
 Common queries for debugging:

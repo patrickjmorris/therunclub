@@ -415,6 +415,7 @@ export const getAthleteRecentMentions = unstable_cache(
 				videos.viewCount,
 				videos.likeCount,
 			)
+			.orderBy(desc(videos.publishedAt))
 			.limit(limit); // Limit individually initially
 
 		// Combine and map results in TypeScript
@@ -1686,11 +1687,11 @@ export const getRecentlyMentionedAthletes = unstable_cache(
 		contentType?: "podcast" | "video";
 		limit?: number;
 	}): Promise<RecentlyMentionedAthlete[]> => {
-		const sevenDaysAgo = new Date();
-		sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+		const oneYearAgo = new Date();
+		oneYearAgo.setDate(oneYearAgo.getDate() - 365);
 
 		// Base conditions for the subquery (mentions within timeframe)
-		const mentionConditions = [gte(athleteMentions.createdAt, sevenDaysAgo)];
+		const mentionConditions = [gte(athleteMentions.createdAt, oneYearAgo)];
 
 		if (contentType) {
 			mentionConditions.push(eq(athleteMentions.contentType, contentType));

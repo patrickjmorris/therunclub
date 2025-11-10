@@ -58,6 +58,7 @@ export const addPodcast = requireRole(["admin", "editor"])(
 						addedPodcast.image,
 						1400,
 						"podcasts",
+						addedPodcast.id,
 					);
 
 					if (optimizedUrl) {

@@ -10,6 +10,7 @@ export async function optimizeImage(
 	imageUrl: string,
 	targetSize: number,
 	prefix: string,
+	entityId?: string,
 ): Promise<string | null> {
 	try {
 		// Fetch the image
@@ -32,8 +33,10 @@ export async function optimizeImage(
 			.webp({ quality: 85 })
 			.toBuffer();
 
-		// Upload to Supabase Storage
-		const fileName = `${prefix}/${nanoid()}.webp`;
+		// Upload to Supabase Storage with deterministic filename if entityId provided
+		const fileName = entityId
+			? `${prefix}/${entityId}.webp`
+			: `${prefix}/${nanoid()}.webp`;
 
 		const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
 			.from("content-images")

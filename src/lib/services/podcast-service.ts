@@ -543,12 +543,7 @@ export const getTopRankedPodcasts = unstable_cache(
 	async (): Promise<TopRankedPodcast[]> => {
 		console.log("[Data Fetching] Fetching top ranked podcasts...");
 		try {
-			// Subquery to get the latest timestamp directly
-			const latestTimestampSubquery = db
-				.select({ value: sql<Date>`max(${podcastRankings.createdAt})` })
-				.from(podcastRankings);
-
-			// Get rankings joining with podcasts and filtering by the latest timestamp using the subquery
+			// Get rankings joining with podcasts and filtering by the latest timestamp using a subquery
 			const results = await db
 				.select({
 					// Select required fields from podcasts table
@@ -575,52 +570,14 @@ export const getTopRankedPodcasts = unstable_cache(
 						isNotNull(podcasts.iTunesId),
 					),
 				)
-				.where(eq(podcastRankings.createdAt, latestTimestampSubquery)) // Filter using the subquery
+				.where(
+					sql`${podcastRankings.createdAt} = (SELECT MAX(created_at) FROM podcast_rankings)`,
+				)
 				.orderBy(podcastRankings.rank) // Order by rank ascending
 				.limit(10); // Limit to top 10
 
-			// Check if any results were found (subquery might return null if table is empty)
-			if (results.length === 0) {
-				// Attempt to fetch without the timestamp filter if the first query failed,
-				// possibly because the subquery didn't resolve as expected or no matches
-				console.log(
-					"[Data Fetching] No podcasts found with latest timestamp, attempting join without timestamp filter...",
-				);
-				const fallbackResults = await db
-					.select(
-						/* same fields */ {
-							id: podcasts.id,
-							title: podcasts.title,
-							slug: podcasts.podcastSlug,
-							imageUrl: podcasts.podcastImage,
-							rank: podcastRankings.rank,
-							taddyUuid: podcastRankings.taddyUuid,
-							podcastName: podcastRankings.podcastName,
-							itunesId: podcastRankings.itunesId,
-						},
-					)
-					.from(podcastRankings)
-					.innerJoin(
-						podcasts,
-						and(
-							eq(
-								sql<string>`${podcastRankings.itunesId}::text`,
-								podcasts.iTunesId,
-							),
-							isNotNull(podcastRankings.itunesId),
-							isNotNull(podcasts.iTunesId),
-						),
-					)
-					.orderBy(podcastRankings.createdAt, desc(podcastRankings.rank)) // Order by timestamp first, then rank
-					.limit(10);
-				console.log(
-					`[Data Fetching] Fallback query found ${fallbackResults.length} podcasts.`,
-				);
-				return fallbackResults;
-			}
-
 			console.log(
-				`[Data Fetching] Found ${results.length} top ranked podcasts after join and timestamp filter.`,
+				`[Data Fetching] Found ${results.length} top ranked podcasts.`,
 			);
 
 			return results;

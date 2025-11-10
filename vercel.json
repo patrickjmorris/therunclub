@@ -7,6 +7,14 @@
 		{
 			"path": "/api/content?type=videos",
 			"schedule": "15 12 * * *"
+		},
+		{
+			"path": "/api/content?type=athlete-detection&maxAgeHours=48&batchSize=50",
+			"schedule": "30 13 * * *"
+		},
+		{
+			"path": "/api/content?type=video-mentions&maxAgeHours=48&batchSize=50",
+			"schedule": "0 14 * * *"
 		}
 	]
 }

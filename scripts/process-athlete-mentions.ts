@@ -191,7 +191,7 @@ async function processEpisode(episodeId: string) {
 	};
 }
 
-async function processAllEpisodes() {
+async function processAllEpisodes(daysBack?: number, batchSize = 100) {
 	console.log("Starting athlete mention detection...");
 
 	// First check total episodes
@@ -215,6 +215,15 @@ async function processAllEpisodes() {
 		console.log(`- ${status === true ? "Processed" : "Unprocessed"}: ${count}`);
 	}
 
+	// Build where clause based on parameters
+	const episodeWhereClause = daysBack
+		? sql`${episodes.pubDate} >= NOW() - INTERVAL '${sql.raw(daysBack.toString())} days'`
+		: sql`${episodes.athleteMentionsProcessed} IS NOT true`;
+
+	if (daysBack) {
+		console.log(`\nFiltering to episodes from last ${daysBack} days`);
+	}
+
 	// Get all unprocessed episodes - treat both null and false as unprocessed
 	const unprocessedEpisodes = await db
 		.select({
@@ -222,9 +231,9 @@ async function processAllEpisodes() {
 			title: episodes.title,
 		})
 		.from(episodes)
-		.where(sql`${episodes.athleteMentionsProcessed} IS NOT true`)
+		.where(episodeWhereClause)
 		.orderBy(desc(episodes.pubDate))
-		.limit(100); // Process in batches of 100 to avoid overwhelming the system
+		.limit(batchSize); // Process in batches to avoid overwhelming the system
 
 	console.log(
 		`\nFound ${unprocessedEpisodes.length} episodes to process in this batch`,
@@ -254,7 +263,7 @@ async function processAllEpisodes() {
 	const remainingCount = await db
 		.select({ count: sql<number>`count(*)` })
 		.from(episodes)
-		.where(sql`${episodes.athleteMentionsProcessed} IS NOT true`);
+		.where(episodeWhereClause);
 
 	if (remainingCount[0].count > 0) {
 		console.log(`\nRemaining episodes to process: ${remainingCount[0].count}`);
@@ -262,5 +271,13 @@ async function processAllEpisodes() {
 	}
 }
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const daysArg = args.find(arg => arg.startsWith('--days='));
+const batchArg = args.find(arg => arg.startsWith('--batch='));
+
+const daysBack = daysArg ? parseInt(daysArg.split('=')[1]) : undefined;
+const batchSize = batchArg ? parseInt(batchArg.split('=')[1]) : 100;
+
 // Run the processor
-processAllEpisodes().catch(console.error);
+processAllEpisodes(daysBack, batchSize).catch(console.error);

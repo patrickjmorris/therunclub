@@ -25,3 +25,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Use Drizzle ORM for database operations
 - Run migrations with `bun run db:migrate`
 - Use `bun run db:studio` to view database
+
+### Supabase Database Access
+Access the production Supabase database using psql:
+
+```bash
+# Using environment variable (recommended)
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM podcasts;"
+
+# Using connection string directly
+psql "postgresql://postgres.akzhyzwiwjxtjuirmqyx:Hukjeq-jobru0-hebqod@aws-0-us-east-1.pooler.supabase.com:6543/postgres" -c "QUERY"
+```
+
+Common queries for debugging:
+```bash
+# Check podcast rankings count
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM podcast_rankings;"
+
+# Check latest podcast rankings
+psql $DATABASE_URL -c "SELECT pr.rank, pr.podcast_name, pr.itunes_id FROM podcast_rankings pr ORDER BY pr.created_at DESC, pr.rank LIMIT 10;"
+
+# Check athlete mentions within timeframe
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM athlete_mentions WHERE created_at >= NOW() - INTERVAL '365 days';"
+
+# Check athlete mentions date range
+psql $DATABASE_URL -c "SELECT MIN(created_at) as earliest, MAX(created_at) as latest FROM athlete_mentions;"
+
+# Check distinct athletes mentioned
+psql $DATABASE_URL -c "SELECT COUNT(DISTINCT athlete_id) FROM athlete_mentions WHERE created_at >= NOW() - INTERVAL '365 days';"
+```

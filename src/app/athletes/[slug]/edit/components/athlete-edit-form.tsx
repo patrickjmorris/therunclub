@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -21,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { getAthleteData } from "@/lib/services/athlete-service";
 import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
+import { AthleteImage } from "@/components/athletes/AthleteImage";
 
 // Define the form schema using Zod
 const formSchema = z.object({
@@ -90,22 +90,14 @@ export function AthleteEditForm({
 				<FormItem>
 					<FormLabel>Current Profile Image</FormLabel>
 					<div className="mt-2">
-						{currentImageUrl ? (
-							<Image
-								src={currentImageUrl}
-								alt={`${athlete?.name || "Athlete"}'s profile picture`}
-								width={128}
-								height={128}
-								className="rounded-md object-cover"
-								onError={(e) => {
-									e.currentTarget.style.display = "none";
-								}}
-							/>
-						) : (
-							<div className="w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400">
-								No Image
-							</div>
-						)}
+						<AthleteImage
+							src={currentImageUrl}
+							name={athlete?.name}
+							alt={`${athlete?.name || "Athlete"}'s profile picture`}
+							width={128}
+							height={128}
+							className="rounded-md object-cover"
+						/>
 					</div>
 				</FormItem>
 

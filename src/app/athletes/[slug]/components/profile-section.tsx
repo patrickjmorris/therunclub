@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { updateProfile, updateAthleteImage } from "../actions";
-import Image from "next/image";
 import { X, Instagram, Facebook, Globe, Youtube, Podcast } from "lucide-react";
 import { convertToAlpha2 } from "@/lib/utils/country-codes";
+import { AthleteImage } from "@/components/athletes/AthleteImage";
 
 function getCountryFlag(countryCode: string | null) {
 	if (!countryCode) return null;
@@ -131,17 +131,17 @@ export function ProfileSection({
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-8">
-				{imageUrl && (
-					<div className="relative w-48 h-48 rounded-lg overflow-hidden flex-shrink-0 mx-auto lg:mx-0">
-						<Image
-							src={imageUrl}
-							alt={name}
-							width={192}
-							height={192}
-							priority
-						/>
-					</div>
-				)}
+				<div className="relative w-48 h-48 rounded-lg overflow-hidden flex-shrink-0 mx-auto lg:mx-0">
+					<AthleteImage
+						src={imageUrl}
+						name={name}
+						alt={name}
+						fill
+						sizes="192px"
+						priority
+						className="object-cover"
+					/>
+				</div>
 
 				<div className="flex-grow space-y-4">
 					{bio && (

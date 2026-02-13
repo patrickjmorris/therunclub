@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import type { RecentlyMentionedAthlete } from "@/lib/services/athlete-service";
+import { AthleteImage } from "@/components/athletes/AthleteImage";
 
 interface CompactAthleteCardProps {
 	athlete: RecentlyMentionedAthlete;
@@ -22,10 +22,12 @@ export function CompactAthleteCard({ athlete }: CompactAthleteCardProps) {
 			<Card className="w-[150px] overflow-hidden transition-transform hover:scale-105">
 				<CardContent className="p-0 flex flex-col items-center">
 					<div className="aspect-square w-full relative mb-2">
-						<Image
-							src={athlete.imageUrl || "/placeholder-athlete.svg"} // Use a placeholder if no image
+						<AthleteImage
+							src={athlete.imageUrl}
+							name={athlete.name}
 							alt={athlete.name || "Athlete"}
 							fill
+							sizes="150px"
 							className="object-cover rounded-full border-2 border-background"
 							priority // Prioritize loading images in the initial viewport
 						/>

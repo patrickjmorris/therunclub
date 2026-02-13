@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCountryFlag } from "@/lib/utils/country-codes";
+import { AthleteImage } from "@/components/athletes/AthleteImage";
 
 // Common data structure for athletes in these rows
 export interface AthleteRowItem {
@@ -25,19 +25,14 @@ function AthleteCard({ athlete }: { athlete: AthleteRowItem }) {
 			className="flex flex-col items-center space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow min-w-32"
 		>
 			<div className="relative w-16 h-16">
-				{athlete.imageUrl ? (
-					<Image
-						src={athlete.imageUrl}
-						alt={athlete.name}
-						width={64}
-						height={64}
-						className="object-cover rounded-full"
-					/>
-				) : (
-					<div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-						<span className="text-gray-500 dark:text-gray-400 text-xl">?</span>
-					</div>
-				)}
+				<AthleteImage
+					src={athlete.imageUrl}
+					name={athlete.name}
+					alt={athlete.name}
+					width={64}
+					height={64}
+					className="object-cover rounded-full"
+				/>
 			</div>
 			<div className="text-center">
 				<span className="text-sm font-medium dark:text-gray-100">

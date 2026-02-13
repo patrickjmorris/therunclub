@@ -10,7 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash } from "lucide-react";
-import Image from "next/image";
+import { AthleteImage } from "@/components/athletes/AthleteImage";
 
 export interface AthleteData {
 	id: string;
@@ -37,17 +37,19 @@ export const getAthleteColumns = (
 		accessorKey: "imageUrl",
 		header: "Image",
 		cell: ({ row }) => {
-			const imageUrl = row.getValue("imageUrl") as string;
-			return imageUrl ? (
+			const imageUrl = row.getValue("imageUrl") as string | null;
+			return (
 				<div className="relative h-10 w-10">
-					<Image
+					<AthleteImage
 						src={imageUrl}
+						name={row.getValue("name") as string}
 						alt={row.getValue("name")}
 						fill
+						sizes="40px"
 						className="rounded-full object-cover"
 					/>
 				</div>
-			) : null;
+			);
 		},
 	},
 	{

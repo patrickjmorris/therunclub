@@ -9,7 +9,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { DateRangePickerServer } from "./DateRangePickerServer";
-import { AppliedFilters } from "../page";
+import { AppliedFilters } from "../(index)/page";
 import Link from "next/link";
 import { FilterToggleWrapper } from "./FilterToggleWrapper"; // Import the wrapper
 

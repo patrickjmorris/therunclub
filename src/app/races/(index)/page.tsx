@@ -1,7 +1,7 @@
 // Main page for race discovery
 import { Suspense } from "react"; // Import Suspense
-import EventListView from "./components/race-list-view";
-import { RaceFilters, COMMON_DISTANCES } from "./components/RaceFilters"; // Import RaceFilters and distance constants
+import EventListView from "../components/race-list-view";
+import { RaceFilters, COMMON_DISTANCES } from "../components/RaceFilters"; // Import RaceFilters and distance constants
 import { fetchRaces } from "@/lib/runsignup-api";
 import type { RunSignupRacesResponse, RunSignupRace } from "@/types/runsignup";
 import { getUserZipFromHeaders } from "@/lib/geolocation";

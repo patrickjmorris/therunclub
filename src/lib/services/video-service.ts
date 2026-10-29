@@ -1,4 +1,5 @@
 import { db } from "@/db/client";
+import { isUuid } from "@/lib/utils";
 import { videos, channels, type Video, type Channel } from "@/db/schema";
 import { desc, eq, ilike, sql, isNotNull } from "drizzle-orm";
 import {
@@ -81,6 +82,7 @@ export const getLatestVideos = unstable_cache(
 
 // Get channel by ID
 export async function getChannelById(channelId: string) {
+	if (!isUuid(channelId)) return undefined;
 	const [channel] = await db
 		.select()
 		.from(channels)

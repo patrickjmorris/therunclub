@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { isUuid } from "@/lib/utils";
 import { getVideoById, getChannelVideos } from "@/lib/services/video-service";
 import { notFound, permanentRedirect } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
@@ -233,13 +234,10 @@ export async function generateStaticParams() {
 	}
 }
 
-const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
 	// The old sitemap linked /videos/<youtubeId>; send those to the UUID URL.
-	if (!UUID_PATTERN.test(video)) {
+	if (!isUuid(video)) {
 		const [match] = await db
 			.select({ id: videos.id })
 			.from(videos)

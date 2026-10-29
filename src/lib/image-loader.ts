@@ -24,14 +24,14 @@ export default function imageLoader({ src, width, quality }: ImageLoaderProps) {
 	}
 
 	if (src.startsWith("https://yt3.ggpht.com/") && GGPHT_SIZE.test(src)) {
-		return src.replace(GGPHT_SIZE, `=s${width}`);
+		return src.replace(GGPHT_SIZE, `=s${Math.min(width, 800)}`);
 	}
 
 	const supabase = src.match(SUPABASE_TRANSFORMABLE);
 	if (supabase) {
 		return `${supabase[1]}/render/image/public/${
 			supabase[2]
-		}?width=${width}&quality=${quality ?? 75}`;
+		}?width=${Math.min(width, 800)}&quality=${quality ?? 75}`;
 	}
 
 	return src;

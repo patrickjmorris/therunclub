@@ -93,6 +93,7 @@
     "drizzle-zod": "^0.8.3",
     "geist": "^1.8.2",
     "html-entities": "^2.6.0",
+    "ioredis": "^6.0.0",
     "isomorphic-dompurify": "^4.6.0",
     "jotai": "^3.0.1",
     "link-preview-js": "^4.0.4",
@@ -136,6 +137,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",
     "@types/yargs": "^17.0.35",
+    "commander": "^15.0.0",
     "drizzle-kit": "^0.31.11",
     "supabase": "^2.122.0",
     "tsx": "^4.23.15",

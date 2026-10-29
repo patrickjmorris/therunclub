@@ -4,6 +4,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ClubFilters } from "@/app/clubs/club-filters";
 import { getClubsData } from "@/lib/services/club-service";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+	title: "Running Clubs",
+	description:
+		"Find running clubs in New York, Boston, Chicago, and more: meetup schedules, pace groups, and how to join.",
+	path: "/clubs",
+});
 
 // This ensures the page and data are generated at build time
 export const revalidate = 3600; // Revalidate every hour

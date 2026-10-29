@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useSelectedLayoutSegment } from "next/navigation";
 
 interface DynamicHeaderProps {
 	imageUrl: string;
@@ -17,6 +18,8 @@ export default function DynamicHeader({
 	vibrantColor,
 	podcastSlug,
 }: DynamicHeaderProps) {
+	// On an episode page the episode title is the h1.
+	const Title = useSelectedLayoutSegment() ? "p" : "h1";
 	const bgColor = {
 		background: vibrantColor,
 	};
@@ -40,7 +43,7 @@ export default function DynamicHeader({
 							</div>
 						</div>
 						<div className="flex flex-col justify-end">
-							<h1 className="text-4xl md:text-5xl font-bold">{title}</h1>
+							<Title className="text-4xl md:text-5xl font-bold">{title}</Title>
 						</div>
 					</div>
 				</div>

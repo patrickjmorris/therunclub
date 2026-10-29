@@ -4,7 +4,7 @@ import {
 	getEpisode,
 	getLastTenEpisodesByPodcastSlug,
 } from "@/lib/services/podcast-service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Play, Calendar, Clock, Pause } from "lucide-react";
 import { FormattedDate } from "@/components/common/formatted-date";
@@ -243,7 +243,9 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 						/>
 					</div>
 					<div className="flex-grow mt-6 lg:mt-0">
-						<CardTitle className="text-2xl">{episode.title}</CardTitle>
+						<h1 className="text-2xl font-semibold leading-tight tracking-tight">
+							{episode.title}
+						</h1>
 						<div className="flex items-center gap-4 text-sm text-muted-foreground mt-4">
 							<div className="flex items-center">
 								<Calendar className="mr-2 h-4 w-4" />

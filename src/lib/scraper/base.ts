@@ -1,5 +1,5 @@
 import { chromium, type Browser, type Page } from "playwright";
-import pRetry, { FailedAttemptError } from "p-retry";
+import pRetry from "p-retry";
 import { sleep } from "../../utils/sleep";
 
 const NAVIGATION_DELAY_MS = 2000;
@@ -48,9 +48,9 @@ export abstract class BaseScraper {
 			},
 			{
 				retries: MAX_RETRIES,
-				onFailedAttempt: (error: FailedAttemptError) => {
+				onFailedAttempt: ({ error, attemptNumber }) => {
 					console.warn(
-						`Navigation attempt ${error.attemptNumber} failed. Retrying... Error: ${error.message}`,
+						`Navigation attempt ${attemptNumber} failed. Retrying... Error: ${error.message}`,
 					);
 				},
 			},

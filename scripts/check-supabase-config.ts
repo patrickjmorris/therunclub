@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 
 // Load environment variables
-config();
+config({ quiet: true });
 
 const requiredEnvVars = [
 	"NEXT_PUBLIC_SUPABASE_URL",

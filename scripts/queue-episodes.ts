@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { config } from "dotenv";
 
 // Load environment variables
-config({ path: ".env" });
+config({ path: ".env", quiet: true });
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 

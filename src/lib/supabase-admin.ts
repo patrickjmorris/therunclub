@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 
-config({ path: ".env" });
+config({ path: ".env", quiet: true });
 
 if (!process.env.SUPABASE_URL) {
 	throw new Error("Missing SUPABASE_URL environment variable");

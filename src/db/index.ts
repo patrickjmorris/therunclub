@@ -11,7 +11,7 @@ import {
 	type FetchVideosOptions,
 } from "@/lib/youtube-service";
 
-config({ path: ".env" });
+config({ path: ".env", quiet: true });
 
 // Add a function to update channel videos
 export async function updateChannelVideos(

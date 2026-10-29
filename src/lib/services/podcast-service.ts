@@ -312,9 +312,9 @@ export const getEpisodeTitles = unstable_cache(
 	{ tags: ["episodes"], revalidate: 3600 },
 );
 
-// Get episode by slug
+// Episode slugs are only unique within a podcast.
 export const getEpisode = unstable_cache(
-	async (episodeSlug: string) => {
+	async (podcastSlug: string, episodeSlug: string) => {
 		// console.log("getEpisode - Input slug:", episodeSlug);
 		const results = await db
 			.select({
@@ -338,7 +338,13 @@ export const getEpisode = unstable_cache(
 			})
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-			.where(eq(episodes.episodeSlug, episodeSlug))
+			.where(
+				and(
+					eq(podcasts.podcastSlug, podcastSlug),
+					eq(episodes.episodeSlug, episodeSlug),
+				),
+			)
+			.orderBy(desc(episodes.pubDate))
 			.limit(1);
 
 		// console.log("getEpisode - Query results:", results);
@@ -591,4 +597,89 @@ export const getTopRankedPodcasts = unstable_cache(
 	},
 	["top-ranked-podcasts"], // Cache key
 	{ revalidate: 86400, tags: ["podcasts", "rankings"] }, // Revalidate daily (24 hours)
+);
+
+interface LatestEpisodeRef {
+	slug: string;
+	title: string;
+	pubDate: string;
+}
+
+export interface RankedPodcastEntry {
+	rank: number;
+	podcastName: string;
+	itunesId: number | null;
+	podcast: {
+		slug: string;
+		title: string;
+		image: string | null;
+		author: string | null;
+		description: string | null;
+		latestEpisode: LatestEpisodeRef | null;
+	} | null;
+}
+
+export interface PodcastRankingSnapshot {
+	fetchedAt: string;
+	entries: RankedPodcastEntry[];
+}
+
+const MIN_RANKED_PODCASTS = 5;
+
+// The whole latest snapshot, including shows we don't carry; those link out
+// to Apple Podcasts instead of a podcast page. Null when too short to publish.
+export const getLatestPodcastRanking = unstable_cache(
+	async (): Promise<PodcastRankingSnapshot | null> => {
+		const rows = await db
+			.select({
+				rank: podcastRankings.rank,
+				podcastName: podcastRankings.podcastName,
+				itunesId: podcastRankings.itunesId,
+				fetchedAt: podcastRankings.createdAt,
+				slug: podcasts.podcastSlug,
+				title: podcasts.title,
+				image: podcasts.podcastImage,
+				author: podcasts.author,
+				description: podcasts.description,
+				latestEpisode: sql<LatestEpisodeRef | null>`(
+					select json_build_object(
+						'slug', ${episodes.episodeSlug},
+						'title', ${episodes.title},
+						'pubDate', ${episodes.pubDate})
+					from ${episodes}
+					where ${episodes.podcastId} = ${podcasts.id}
+					order by ${episodes.pubDate} desc nulls last
+					limit 1)`,
+			})
+			.from(podcastRankings)
+			.leftJoin(
+				podcasts,
+				eq(sql`${podcastRankings.itunesId}::text`, podcasts.iTunesId),
+			)
+			.where(
+				sql`${podcastRankings.createdAt} = (SELECT MAX(created_at) FROM podcast_rankings)`,
+			)
+			.orderBy(podcastRankings.rank);
+		if (rows.length < MIN_RANKED_PODCASTS) return null;
+		return {
+			fetchedAt: rows[0].fetchedAt.toISOString(),
+			entries: rows.map((row) => ({
+				rank: row.rank,
+				podcastName: row.podcastName,
+				itunesId: row.itunesId,
+				podcast: row.slug
+					? {
+							slug: row.slug,
+							title: row.title ?? row.podcastName,
+							image: row.image,
+							author: row.author,
+							description: row.description,
+							latestEpisode: row.latestEpisode,
+						}
+					: null,
+			})),
+		};
+	},
+	["latest-podcast-ranking"],
+	{ revalidate: 86400, tags: ["podcasts", "rankings"] },
 );

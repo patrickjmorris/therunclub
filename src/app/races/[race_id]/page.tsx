@@ -1,58 +1,95 @@
-import { fetchRace } from "@/lib/runsignup-api"; // Use fetchRace
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { cache } from "react";
+import { fetchRace } from "@/lib/runsignup-api";
 import RaceDetailsView from "./components/RaceDetailsView";
-import type { RunSignupRace, RunSignupRaceResponse } from "@/types/runsignup"; // Import correct types
-import { Suspense } from "react";
+import { JsonLd } from "@/components/common/json-ld";
+import { absoluteUrl } from "@/config/site";
+import { breadcrumbList, metaDescription, pageMetadata } from "@/lib/seo";
 
-// TODO: Add better loading UI with Skeleton
-function LoadingFallback() {
-	return <div>Loading race details...</div>;
-}
-
-// TODO: Add better error UI
-function ErrorFallback({ error }: { error: Error }) {
-	return <div>Error loading race details: {error.message}</div>;
-}
-
-export default async function RaceDetailPage({
-	params: paramsPromise,
-}: {
+interface RacePageProps {
 	params: Promise<{ race_id: string }>;
-}) {
-	const params = await paramsPromise;
-	const { race_id } = params;
+}
 
-	let raceData: RunSignupRace | null = null;
-	let fetchError: Error | null = null;
+const getRace = cache(async (raceId: string) => {
+	if (!/^\d+$/.test(raceId)) return null;
+	const response = await fetchRace(raceId);
+	return response?.race ?? null;
+});
 
-	try {
-		console.log(`Fetching data for race_id: ${race_id}`);
-		const response: RunSignupRaceResponse = await fetchRace(race_id); // Call fetchRace
-		raceData = response.race; // Extract the race object
-	} catch (error) {
-		fetchError =
-			error instanceof Error
-				? error
-				: new Error("Failed to fetch race details");
-		console.error("Failed to fetch race details:", fetchError);
-	}
+// RunSignup dates are MM/DD/YYYY; schema.org wants ISO 8601.
+function isoDate(date: string | undefined) {
+	const match = date?.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+	return match ? `${match[3]}-${match[1]}-${match[2]}` : undefined;
+}
 
-	// Handle Error State
-	if (fetchError) {
-		return <ErrorFallback error={fetchError} />;
-	}
+function raceLocation(race: { address?: { city?: string; state?: string } }) {
+	return [race.address?.city, race.address?.state].filter(Boolean).join(", ");
+}
 
-	// Handle Not Found State (or raceData is null/undefined after fetch)
-	if (!raceData) {
-		// This case might indicate a 404 or empty response from API
-		// You might want to use Next.js notFound() utility here
-		// import { notFound } from 'next/navigation';
-		// notFound();
-		return <div>Race not found.</div>;
-	}
+export async function generateMetadata({
+	params,
+}: RacePageProps): Promise<Metadata> {
+	const { race_id } = await params;
+	const race = await getRace(race_id);
+	if (!race) return { title: "Race Not Found" };
 
+	const location = raceLocation(race);
+	const when = race.next_date ? ` on ${race.next_date}` : "";
+	return pageMetadata({
+		title: location ? `${race.name} - ${location}` : race.name,
+		description: metaDescription(
+			race.description,
+			`${race.name}${
+				location ? ` in ${location}` : ""
+			}${when}: course details, distances, and registration.`,
+		),
+		path: `/races/${race_id}`,
+		images: race.logo_url
+			? [{ url: race.logo_url, alt: race.name }]
+			: undefined,
+	});
+}
+
+export default async function RaceDetailPage({ params }: RacePageProps) {
+	const { race_id } = await params;
+	const race = await getRace(race_id);
+	if (!race) notFound();
+
+	const path = `/races/${race_id}`;
 	return (
-		<Suspense fallback={<LoadingFallback />}>
-			<RaceDetailsView raceData={raceData} />
-		</Suspense>
+		<>
+			<JsonLd
+				data={[
+					{
+						"@context": "https://schema.org",
+						"@type": "SportsEvent",
+						name: race.name,
+						url: absoluteUrl(path),
+						startDate: isoDate(race.next_date),
+						endDate: isoDate(race.next_end_date),
+						image: race.logo_url || undefined,
+						location: {
+							"@type": "Place",
+							name: raceLocation(race) || race.name,
+							address: {
+								"@type": "PostalAddress",
+								streetAddress: race.address?.street,
+								addressLocality: race.address?.city,
+								addressRegion: race.address?.state,
+								postalCode: race.address?.zipcode,
+								addressCountry: race.address?.country_code,
+							},
+						},
+						offers: race.url ? { "@type": "Offer", url: race.url } : undefined,
+					},
+					breadcrumbList([
+						{ name: "Races", path: "/races" },
+						{ name: race.name, path },
+					]),
+				]}
+			/>
+			<RaceDetailsView raceData={race} />
+		</>
 	);
 }

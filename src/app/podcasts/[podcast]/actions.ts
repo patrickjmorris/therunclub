@@ -20,7 +20,7 @@ export async function fetchMore(
 
 	// Fetch full episode data for each episode
 	const fullEpisodes = await Promise.all(
-		episodes.map((episode) => getEpisode(episode.episodeSlug)),
+		episodes.map((episode) => getEpisode(podcastSlug, episode.episodeSlug)),
 	);
 
 	// Filter out any null episodes and convert to BasicEpisode type

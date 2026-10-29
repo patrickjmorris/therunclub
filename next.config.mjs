@@ -8,46 +8,8 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	images: {
-		// remotePatterns: [
-		// 	{
-		// 		protocol: "https",
-		// 		hostname: "res.cloudinary.com",
-		// 		port: "",
-		// 		pathname: "**",
-		// 	},
-		// 	{
-		// 		protocol: "https",
-		// 		hostname: "abs.twimg.com",
-		// 		port: "",
-		// 		pathname: "**",
-		// 	},
-
-		// 	{
-		// 		protocol: "https",
-		// 		hostname: "i.ytimg.com",
-		// 		port: "",
-		// 		pathname: "**",
-		// 	},
-		// 	{
-		// 		protocol: "https",
-		// 		hostname: "yt3.ggpht.com",
-		// 		port: "",
-		// 		pathname: "**",
-		// 	},
-		// 	{
-		// 		protocol: "https",
-		// 		hostname: "akzhyzwiwjxtjuirmqyx.supabase.co",
-		// 		port: "",
-		// 		pathname: "/storage/v1/object/public/*/**",
-		// 	},
-		// 	{
-		// 		protocol: "https",
-		// 		hostname: "is1-ssl.mzstatic.com",
-		// 		port: "",
-		// 		pathname: "**",
-		// 	},
-		// ],
-		unoptimized: true,
+		loader: "custom",
+		loaderFile: "./src/lib/image-loader.ts",
 	},
 	reactCompiler: true,
 	experimental: {
@@ -58,6 +20,11 @@ const nextConfig = {
 		// ppr: "incremental",
 	},
 	serverExternalPackages: ["whatwg-url"],
+	async rewrites() {
+		return {
+			beforeFiles: [{ source: "/sitemap.xml", destination: "/sitemap-index.xml" }],
+		};
+	},
 	async headers() {
 		return [{ source: "/:path*", headers: securityHeaders }];
 	},

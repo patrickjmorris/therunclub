@@ -3,6 +3,7 @@ import {
 	getOlympicGoldMedalists,
 	getWorldChampions,
 	getAthletesByCountry,
+	getAthleteCountries,
 } from "@/lib/services/athlete-service";
 import {
 	AthleteMentionsSection,
@@ -12,10 +13,21 @@ import {
 	AthleteRow,
 	AthleteRowSkeleton,
 } from "@/components/athletes/AthleteRow";
+import { pageMetadata } from "@/lib/seo";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+
+export const metadata = pageMetadata({
+	title: "Elite Running Athletes",
+	description:
+		"Profiles of elite track, road, and trail runners: personal bests, honors, results, and the podcasts and videos that mention them.",
+	path: "/athletes",
+});
 
 export default async function AthletesPage() {
 	// Fetch all data concurrently
 	const [
+		countries,
 		olympicChampions,
 		worldChampions,
 		usaAthletes,
@@ -23,6 +35,7 @@ export default async function AthletesPage() {
 		gbAthletes,
 		jamaicaAthletes,
 	] = await Promise.all([
+		getAthleteCountries(),
 		getOlympicGoldMedalists(10), // Limit to 10
 		getWorldChampions(10), // Limit to 10
 		getAthletesByCountry("USA", 10),
@@ -73,6 +86,21 @@ export default async function AthletesPage() {
 			<Suspense fallback={<AthleteRowSkeleton title="Jamaican Athletes" />}>
 				<AthleteRow title="Jamaican Athletes" athletes={jamaicaAthletes} />
 			</Suspense>
+
+			<nav aria-label="Athletes by country" className="mb-8">
+				<h2 className="text-xl font-semibold mb-4 dark:text-gray-100">
+					Browse athletes by country
+				</h2>
+				<div className="flex flex-wrap gap-2">
+					{countries.map((country) => (
+						<Link key={country.slug} href={`/athletes/country/${country.slug}`}>
+							<Badge variant="outline" className="hover:bg-muted">
+								{country.name} ({country.count})
+							</Badge>
+						</Link>
+					))}
+				</div>
+			</nav>
 		</div>
 	);
 }

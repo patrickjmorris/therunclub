@@ -21,7 +21,7 @@ import {
 	parseDistanceToMiles,
 } from "@/lib/utils/event-helpers";
 import type { RunSignupRace, EventDetails } from "@/types/runsignup";
-import type { AppliedFilters } from "../page";
+import type { AppliedFilters } from "../(index)/page";
 import { parseISO, isWithinInterval, isValid } from "date-fns";
 import type { Interval } from "date-fns";
 

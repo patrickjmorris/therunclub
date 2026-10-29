@@ -9,6 +9,10 @@ import { sql, isNotNull, desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import { channels } from "@/db/schema";
 import dynamic from "next/dynamic";
+import { metaDescription, pageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/common/json-ld";
+import { absoluteUrl } from "@/config/site";
+import { breadcrumbList } from "@/lib/seo";
 
 // Dynamically import components
 const InfiniteVideoGrid = dynamic(
@@ -71,39 +75,17 @@ export async function generateMetadata({
 
 	if (!channel) return {};
 
-	const imageUrl = channel.thumbnailUrl || "";
-	const description =
-		channel.description?.substring(0, 155) ||
-		`Watch videos from ${channel.title} on The Run Club`;
-
-	return {
+	return pageMetadata({
 		title: channel.title,
-		description: description,
-		openGraph: {
-			type: "website",
-			title: channel.title,
-			description: description,
-			siteName: "The Run Club",
-			images: [
-				{
-					url: imageUrl,
-					width: 1200,
-					height: 630,
-					alt: channel.title,
-				},
-			],
-			locale: "en_US",
-		},
-		twitter: {
-			card: "summary_large_image",
-			title: channel.title,
-			description: description,
-			images: [imageUrl],
-		},
-		alternates: {
-			canonical: `/videos/channels/${resolvedParams.channelId}`,
-		},
-	};
+		description: metaDescription(
+			channel.description,
+			`Watch videos from ${channel.title} on The Run Club`,
+		),
+		path: `/videos/channels/${channel.id}`,
+		images: channel.thumbnailUrl
+			? [{ url: channel.thumbnailUrl, alt: channel.title }]
+			: undefined,
+	});
 }
 
 export default async function ChannelPage({ params }: ChannelPageProps) {
@@ -155,11 +137,11 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 
 	const jsonLd = {
 		"@context": "https://schema.org",
-		"@type": "WebPage",
+		"@type": "CollectionPage",
 		name: channel.title,
 		description: channel.description,
 		image: channel.thumbnailUrl,
-		url: `/videos/channels/${channel.id}`,
+		url: absoluteUrl(`/videos/channels/${channel.id}`),
 	};
 
 	return (
@@ -215,10 +197,15 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 				</Suspense>
 			</div>
 
-			<script
-				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			<JsonLd
+				data={[
+					jsonLd,
+					breadcrumbList([
+						{ name: "Videos", path: "/videos" },
+						{ name: "Channels", path: "/videos/channels" },
+						{ name: channel.title, path: `/videos/channels/${channel.id}` },
+					]),
+				]}
 			/>
 		</div>
 	);

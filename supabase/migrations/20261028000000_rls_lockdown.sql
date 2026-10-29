@@ -68,10 +68,15 @@ create policy "athlete_images_managers_all" on storage.objects
 commit;
 
 -- http lives in public and is owned by supabase_admin, so the revoke above cannot reach it.
--- Reinstalling it in extensions takes it off the PostgREST surface.
+-- Reinstalling it in extensions takes it off the PostgREST surface (only public is exposed).
 begin;
 drop extension if exists http;
 create extension if not exists http with schema extensions;
-revoke execute on all functions in schema extensions from anon;
 commit;
 notify pgrst, 'reload schema';
+
+-- avatars are served via getPublicUrl, so the bucket is public; the old SELECT policy only enabled listing every user's folder.
+begin;
+update storage.buckets set public = true where id = 'avatars';
+drop policy if exists "Avatar images are publicly accessible" on storage.objects;
+commit;

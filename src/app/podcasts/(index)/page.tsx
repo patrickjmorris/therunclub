@@ -26,21 +26,14 @@ import {
 	AthleteMentionsSection,
 	AthleteMentionsSectionSkeleton,
 } from "@/components/athletes/AthleteMentionsSection";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-	title: "Running Podcasts | The Run Club",
+export const metadata: Metadata = pageMetadata({
+	title: "Running Podcasts",
 	description:
 		"Discover the latest episodes from your favorite running podcasts",
-	openGraph: {
-		title: "Running Podcasts | The Run Club",
-		description:
-			"Discover the latest episodes from your favorite running podcasts",
-		type: "website",
-	},
-	alternates: {
-		canonical: "/podcasts",
-	},
-};
+	path: "/podcasts",
+});
 
 interface PageProps {
 	searchParams: Promise<{ q?: string; category?: string }>;
@@ -114,6 +107,11 @@ export default async function PodcastList({ searchParams }: PageProps) {
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
 					<h2 className="text-2xl font-bold">Explore Top Ranked Podcasts</h2>
+					<Button variant="ghost" asChild>
+						<Link href="/podcasts/top">
+							Full ranking <ArrowRight className="ml-2 h-4 w-4" />
+						</Link>
+					</Button>
 				</div>
 				<Suspense fallback={<TopRankedPodcastsSkeleton />}>
 					<TopRankedPodcastsRow />

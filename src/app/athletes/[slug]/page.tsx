@@ -1,3 +1,4 @@
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db/client";
@@ -9,13 +10,20 @@ import { SponsorsSection } from "./components/sponsors-section";
 import { GearSection } from "./components/gear-section";
 import { EventsSection } from "./components/events-section";
 import AthleteMentionsSection from "./components/mentions-section";
-import { getAthleteData } from "@/lib/services/athlete-service";
+import {
+	getAthleteCountries,
+	getAthleteData,
+} from "@/lib/services/athlete-service";
 import { canManageContent } from "@/lib/auth-utils";
 import { Suspense } from "react";
 import { MentionLoading } from "@/components/common/mention-loading";
 import { GearRow } from "@/components/gear/gear-row";
 import { getGearByAthleteId } from "@/lib/db/queries/gear";
 import { Skeleton } from "@/components/ui/skeleton";
+import { metaDescription, pageMetadata } from "@/lib/seo";
+import { absoluteUrl } from "@/config/site";
+import { JsonLd } from "@/components/common/json-ld";
+import { breadcrumbList } from "@/lib/seo";
 
 // Route segment config
 export const dynamic = "force-static";
@@ -108,42 +116,20 @@ export async function generateMetadata({
 		};
 	}
 
-	const description =
-		athlete.bio ||
-		`Profile page for ${athlete.name}${
-			athlete.countryName ? ` from ${athlete.countryName}` : ""
-		}`;
-	const imageUrl = athlete.imageUrl || "";
-
-	return {
+	return pageMetadata({
 		title: athlete.name,
-		description: description,
-		openGraph: {
-			type: "profile",
-			title: athlete.name,
-			description: description,
-			siteName: "The Run Club",
-			images: athlete.imageUrl
-				? [
-						{
-							url: imageUrl,
-							width: 350,
-							height: 350,
-							alt: athlete.name,
-						},
-				  ]
-				: [],
-		},
-		twitter: {
-			card: "summary_large_image",
-			title: athlete.name,
-			description: description,
-			images: athlete.imageUrl ? [imageUrl] : [],
-		},
-		alternates: {
-			canonical: `/athletes/${athlete.slug}`,
-		},
-	};
+		description: metaDescription(
+			athlete.bio,
+			`Profile page for ${athlete.name}${
+				athlete.countryName ? ` from ${athlete.countryName}` : ""
+			}`,
+		),
+		path: `/athletes/${athlete.slug}`,
+		images: athlete.imageUrl
+			? [{ url: athlete.imageUrl, alt: athlete.name }]
+			: undefined,
+		type: "profile",
+	});
 }
 
 // Skeleton for the athlete gear section
@@ -190,9 +176,10 @@ export default async function AthletePage({
 	params: Promise<{ slug: string }>;
 }) {
 	const resolvedParams = await params;
-	const [athlete, isAdmin] = await Promise.all([
+	const [athlete, isAdmin, countries] = await Promise.all([
 		getAthleteData(resolvedParams.slug),
 		canManageContent(),
+		getAthleteCountries(),
 	]);
 
 	if (!athlete) {
@@ -213,29 +200,42 @@ export default async function AthletePage({
 		// Decide how to handle this - maybe don't render gear?
 	}
 
+	const country = countries.find((entry) => entry.code === athlete.countryCode);
+	const countryCrumb = country && {
+		name: country.name,
+		path: `/athletes/country/${country.slug}`,
+	};
+
 	// Prepare structured data for SEO
 	const structuredData = {
 		"@context": "https://schema.org",
 		"@type": "Person",
 		name: athlete.name,
-		bio: athlete.bio,
-		nationality: athlete.countryName,
-		image: athlete.imageUrl,
-		url: `https://therunclub.com/athletes/${athlete.slug}`,
+		description: athlete.bio || undefined,
+		nationality: athlete.countryName
+			? { "@type": "Country", name: athlete.countryName }
+			: undefined,
+		image: athlete.imageUrl || undefined,
+		url: absoluteUrl(`/athletes/${athlete.slug}`),
 		sameAs: [
 			athlete.socialMedia?.twitter,
 			athlete.socialMedia?.instagram,
 			athlete.socialMedia?.facebook,
 			athlete.socialMedia?.website,
-		].filter((url): url is string => typeof url === "string"),
+		].filter((url): url is string => Boolean(url)),
 	};
 
 	return (
 		<>
-			<script
-				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+			<JsonLd
+				data={[
+					structuredData,
+					breadcrumbList([
+						{ name: "Athletes", path: "/athletes" },
+						...(countryCrumb ? [countryCrumb] : []),
+						{ name: athlete.name, path: `/athletes/${athlete.slug}` },
+					]),
+				]}
 			/>
 			<main className="min-h-screen bg-gray-50 dark:bg-gray-900/50">
 				<div className="container mx-auto py-8 px-4">
@@ -248,6 +248,7 @@ export default async function AthletePage({
 								bio={athlete.bio}
 								imageUrl={athlete.imageUrl}
 								countryName={athlete.countryName}
+								countryHref={countryCrumb?.path}
 								countryCode={athlete.countryCode}
 								socialMedia={athlete.socialMedia}
 								verified={athlete.verified ?? undefined}
@@ -303,6 +304,8 @@ export default async function AthletePage({
 										/>
 									</Suspense>
 								)}
+
+								<SpotSportsCta placement="athlete_detail" />
 							</div>
 						</div>
 					</div>

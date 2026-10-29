@@ -1,10 +1,11 @@
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
 	getEpisode,
 	getLastTenEpisodesByPodcastSlug,
 } from "@/lib/services/podcast-service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Play, Calendar, Clock, Pause } from "lucide-react";
 import { FormattedDate } from "@/components/common/formatted-date";
@@ -28,6 +29,14 @@ import { LinkPreviewErrorBoundary } from "@/components/common/link-preview/link-
 import { MoreContent } from "@/components/common/content/more-content";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { LinkPreviewClientWrapper } from "@/components/common/link-preview/link-preview-client-wrapper";
+import { JsonLd } from "@/components/common/json-ld";
+import { absoluteUrl } from "@/config/site";
+import {
+	breadcrumbList,
+	isoDuration,
+	metaDescription,
+	pageMetadata,
+} from "@/lib/seo";
 
 export const dynamic = "force-static";
 export const revalidate = 604800;
@@ -121,12 +130,8 @@ const safeHandleDate = (
 // Create a cached function for fetching episode data
 const getEpisodeData = createWeeklyCache(
 	async (podcastSlug: string, episodeSlug: string) => {
-		const episode = await getEpisode(episodeSlug);
-
-		// Return null if episode doesn't exist or doesn't match podcast
-		if (!episode || episode.podcastSlug !== podcastSlug) {
-			return null;
-		}
+		const episode = await getEpisode(podcastSlug, episodeSlug);
+		if (!episode) return null;
 
 		// Get more episodes from the same podcast (fetch 4 to ensure we have enough after filtering)
 		const moreEpisodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 4);
@@ -168,43 +173,21 @@ export async function generateMetadata({
 	}
 
 	const { episode, imageUrl } = data;
-	const title = `${episode.title} | ${episode.podcastTitle}`;
-	const description = episode.content
-		? `${episode.content.substring(0, 155).replace(/<[^>]*>/g, "")}...`
-		: `Listen to ${episode.title} on The Run Club`;
-
+	const metadata = pageMetadata({
+		title: `${episode.title} | ${episode.podcastTitle}`,
+		description: metaDescription(
+			episode.content,
+			`Listen to ${episode.title} on The Run Club`,
+		),
+		path: `/podcasts/${podcastSlug}/${episodeSlug}`,
+		images: imageUrl ? [{ url: imageUrl, alt: episode.title }] : undefined,
+		type: "article",
+	});
 	return {
-		title,
-		description,
+		...metadata,
 		openGraph: {
-			title,
-			description,
-			type: "article",
-			images: [
-				{
-					url: imageUrl,
-					width: 350,
-					height: 350,
-					alt: episode.title,
-				},
-			],
-			audio: episode.enclosureUrl
-				? [
-						{
-							url: episode.enclosureUrl,
-							type: "audio/mpeg",
-						},
-				  ]
-				: undefined,
-		},
-		twitter: {
-			card: "summary_large_image",
-			title,
-			description,
-			images: imageUrl ? [imageUrl] : undefined,
-		},
-		alternates: {
-			canonical: `/podcasts/${podcastSlug}/${episodeSlug}`,
+			...metadata.openGraph,
+			audio: [{ url: episode.enclosureUrl, type: "audio/mpeg" }],
 		},
 	};
 }
@@ -230,31 +213,43 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
 
+	const episodePath = `/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`;
+	const podcastPath = `/podcasts/${episode.podcastSlug}`;
 	const jsonLd = {
 		"@context": "https://schema.org",
 		"@type": "PodcastEpisode",
 		name: episode.title,
+		url: absoluteUrl(episodePath),
 		datePublished: safeHandleDate(episode.pubDate, { returnEmpty: true }),
-		description:
-			episode.content || `Listen to ${episode.title} on The Run Club`,
-		duration: episode.duration,
+		description: metaDescription(
+			episode.content,
+			`Listen to ${episode.title} on The Run Club`,
+		),
+		image: imageUrl || undefined,
 		associatedMedia: {
 			"@type": "MediaObject",
 			contentUrl: episode.enclosureUrl,
+			duration: isoDuration(episode.duration),
 		},
 		partOfSeries: {
 			"@type": "PodcastSeries",
 			name: episode.podcastTitle,
-			image: episode.podcastImage,
+			url: absoluteUrl(podcastPath),
+			image: episode.podcastImage || undefined,
 		},
 	};
 
 	return (
 		<div className="space-y-8">
-			<script
-				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			<JsonLd
+				data={[
+					jsonLd,
+					breadcrumbList([
+						{ name: "Podcasts", path: "/podcasts" },
+						{ name: episode.podcastTitle, path: podcastPath },
+						{ name: episode.title, path: episodePath },
+					]),
+				]}
 			/>
 			<Card className="">
 				<CardHeader className="flex flex-col lg:flex-row lg:items-start lg:gap-8 px-6">
@@ -268,7 +263,9 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 						/>
 					</div>
 					<div className="grow mt-6 lg:mt-0">
-						<CardTitle className="text-2xl">{episode.title}</CardTitle>
+						<h1 className="text-2xl font-semibold leading-tight tracking-tight">
+							{episode.title}
+						</h1>
 						<div className="flex items-center gap-4 text-sm text-muted-foreground mt-4">
 							<div className="flex items-center">
 								<Calendar className="mr-2 h-4 w-4" />
@@ -379,6 +376,8 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 					)}
 				</CardContent>
 			</Card>
+
+			<SpotSportsCta placement="episode_detail" />
 
 			{/* More Episodes Section */}
 			{moreEpisodes.length > 0 && (

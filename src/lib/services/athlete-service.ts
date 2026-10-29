@@ -1738,3 +1738,111 @@ export const getRecentlyMentionedAthletes = unstable_cache(
 		revalidate: 3600, // Revalidate every hour
 	},
 );
+
+// Most athlete rows are a name and a results table. Profiles with a bio, a
+// photo, or a podcast/video mention are the ones worth surfacing to search.
+export const isNotableAthlete = and(
+	isNotNull(athletes.worldAthleticsId),
+	sql`(length(coalesce(${athletes.bio}, '')) > 50
+		or ${athletes.imageUrl} is not null
+		or exists (select 1 from ${athleteMentions}
+			where ${athleteMentions.athleteId} = ${athletes.worldAthleticsId}))`,
+);
+
+const MIN_ATHLETES_PER_COUNTRY = 10;
+const COUNTRY_PAGE_LIMIT = 60;
+
+export interface AthleteCountry {
+	code: string;
+	name: string;
+	slug: string;
+	count: number;
+	lastModified: string;
+}
+
+// World Athletics official names, mapped to what people search for.
+const COUNTRY_DISPLAY_NAMES: Record<string, string> = {
+	"PR of China": "China",
+	"Great Britain & N.I.": "Great Britain",
+	"DPR of Korea": "North Korea",
+	"Islamic Republic of Iran": "Iran",
+	"Hong Kong, China": "Hong Kong",
+	"Republic of North Macedonia": "North Macedonia",
+	"Republic of Yemen": "Yemen",
+	"Commonwealth of Dominica": "Dominica",
+};
+
+export const getAthleteCountries = unstable_cache(
+	async (): Promise<AthleteCountry[]> => {
+		const rows = await db
+			.select({
+				code: athletes.countryCode,
+				name: sql<string>`max(${athletes.countryName})`,
+				count: sql<number>`count(*)::int`,
+				lastModified: sql<string>`max(coalesce(${athletes.updatedAt}, ${athletes.createdAt}))`,
+			})
+			.from(athletes)
+			.where(
+				and(
+					isNotableAthlete,
+					isNotNull(athletes.countryCode),
+					isNotNull(athletes.countryName),
+				),
+			)
+			.groupBy(athletes.countryCode)
+			.having(sql`count(*) >= ${MIN_ATHLETES_PER_COUNTRY}`)
+			.orderBy(sql`count(*) desc`);
+		return rows.flatMap((row) =>
+			row.code
+				? [
+						{
+							code: row.code,
+							name: COUNTRY_DISPLAY_NAMES[row.name] ?? row.name,
+							slug: slugify(COUNTRY_DISPLAY_NAMES[row.name] ?? row.name),
+							count: row.count,
+							lastModified: new Date(row.lastModified).toISOString(),
+						},
+				  ]
+				: [],
+		);
+	},
+	["athlete-countries"],
+	{ tags: ["athletes"], revalidate: 86400 },
+);
+
+export interface CountryAthlete {
+	id: string;
+	name: string;
+	slug: string;
+	imageUrl: string | null;
+	bio: string | null;
+	mentions: number;
+}
+
+// Most-discussed first, so the page leads with athletes people search for.
+export const getNotableAthletesInCountry = unstable_cache(
+	async (countryCode: string): Promise<CountryAthlete[]> => {
+		const mentions = sql<number>`(select count(*)::int from ${athleteMentions}
+			where ${athleteMentions.athleteId} = ${athletes.worldAthleticsId})`;
+		return db
+			.select({
+				id: athletes.id,
+				name: athletes.name,
+				slug: athletes.slug,
+				imageUrl: athletes.imageUrl,
+				bio: athletes.bio,
+				mentions,
+			})
+			.from(athletes)
+			.where(and(isNotableAthlete, eq(athletes.countryCode, countryCode)))
+			.orderBy(
+				desc(mentions),
+				sql`${athletes.imageUrl} is null`,
+				sql`length(coalesce(${athletes.bio}, '')) desc`,
+				athletes.name,
+			)
+			.limit(COUNTRY_PAGE_LIMIT);
+	},
+	["notable-athletes-in-country"],
+	{ tags: ["athletes"], revalidate: 86400 },
+);

@@ -1,6 +1,8 @@
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
 import { Metadata } from "next";
+import { isUuid } from "@/lib/utils";
 import { getVideoById, getChannelVideos } from "@/lib/services/video-service";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -16,15 +18,13 @@ import { preloadLinks } from "@/components/common/link-preview/link-preview-prel
 import { AthleteMentions } from "@/components/athletes/athlete-mentions";
 import { AthleteReferences } from "@/components/athletes/athlete-references";
 import { MentionLoading } from "@/components/common/mention-loading";
+// Server-rendered so its 16:9 placeholder reserves space before hydration.
+import { VideoPlayer } from "@/components/videos/video-player";
+import { breadcrumbList, metaDescription, pageMetadata } from "@/lib/seo";
+import { absoluteUrl } from "@/config/site";
+import { JsonLd } from "@/components/common/json-ld";
 
 // Dynamically import components
-const DynamicVideoPlayer = (await import("next/dynamic")).default(
-	() =>
-		import("@/components/videos/video-player").then((mod) => ({
-			default: mod.VideoPlayer,
-		})),
-	{ ssr: false },
-);
 
 const DynamicTabsWithState = (await import("next/dynamic")).default(
 	() =>
@@ -84,6 +84,16 @@ function convertUrlsToLinks(text: string): string {
 	return text.replace(
 		urlRegex,
 		'<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+	);
+}
+
+function youtubeThumbnail(video: {
+	youtubeVideoId: string;
+	thumbnailUrl: string | null;
+}) {
+	return (
+		video.thumbnailUrl ??
+		`https://i.ytimg.com/vi/${video.youtubeVideoId}/hqdefault.jpg`
 	);
 }
 
@@ -156,19 +166,23 @@ export async function generateMetadata({
 	}
 
 	const { video: videoData } = data;
-
+	const metadata = pageMetadata({
+		title: videoData.title,
+		description: metaDescription(
+			videoData.description,
+			`Watch ${videoData.title} on The Run Club`,
+		),
+		path: `/videos/${videoData.id}`,
+		images: [{ url: youtubeThumbnail(videoData), alt: videoData.title }],
+		type: "video.other",
+	});
 	return {
-		title: `${videoData.title} | The Run Club`,
-		description: videoData.description ?? undefined,
+		...metadata,
 		keywords: videoData.tags,
 		openGraph: {
-			title: videoData.title,
-			description: videoData.description ?? undefined,
-			type: "video.other",
+			...metadata.openGraph,
 			videos: [
-				{
-					url: `https://youtube.com/watch?v=${videoData.youtubeVideoId}`,
-				},
+				{ url: `https://www.youtube.com/watch?v=${videoData.youtubeVideoId}` },
 			],
 		},
 	};
@@ -223,6 +237,16 @@ export async function generateStaticParams() {
 
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
+	// The old sitemap linked /videos/<youtubeId>; send those to the UUID URL.
+	if (!isUuid(video)) {
+		const [match] = await db
+			.select({ id: videos.id })
+			.from(videos)
+			.where(eq(videos.youtubeVideoId, video))
+			.limit(1);
+		if (match) permanentRedirect(`/videos/${match.id}`);
+		notFound();
+	}
 	const data = await getVideoData(video);
 
 	if (!data) {
@@ -242,12 +266,52 @@ export default async function VideoPage({ params }: VideoPageProps) {
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
 
+	const videoPath = `/videos/${videoData.id}`;
+	const channelPath = `/videos/channels/${videoData.channelId}`;
+	const structuredData = [
+		{
+			"@context": "https://schema.org",
+			"@type": "VideoObject",
+			name: videoData.title,
+			description: metaDescription(
+				videoData.description,
+				`Watch ${videoData.title} on The Run Club`,
+			),
+			thumbnailUrl: [youtubeThumbnail(videoData)],
+			uploadDate: videoData.publishedAt
+				? new Date(videoData.publishedAt).toISOString()
+				: undefined,
+			duration: videoData.duration ?? undefined,
+			embedUrl: `https://www.youtube.com/embed/${videoData.youtubeVideoId}`,
+			url: absoluteUrl(videoPath),
+			author: videoData.channelTitle
+				? {
+						"@type": "Organization",
+						name: videoData.channelTitle,
+						url: absoluteUrl(channelPath),
+				  }
+				: undefined,
+			interactionStatistic: videoData.viewCount
+				? {
+						"@type": "InteractionCounter",
+						interactionType: { "@type": "WatchAction" },
+						userInteractionCount: Number(videoData.viewCount),
+				  }
+				: undefined,
+		},
+		breadcrumbList([
+			{ name: "Videos", path: "/videos" },
+			...(videoData.channelTitle
+				? [{ name: videoData.channelTitle, path: channelPath }]
+				: []),
+			{ name: videoData.title, path: videoPath },
+		]),
+	];
+
 	return (
 		<div className="container py-8">
-			<DynamicVideoPlayer
-				videoId={videoData.youtubeVideoId}
-				title={videoData.title}
-			/>
+			<JsonLd data={structuredData} />
+			<VideoPlayer videoId={videoData.youtubeVideoId} title={videoData.title} />
 			<div className="mt-4">
 				<h1 className="text-2xl font-bold">{videoData.title}</h1>
 
@@ -378,6 +442,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						</div>
 					)}
 				</div>
+
+				<SpotSportsCta placement="video_detail" className="mt-8 max-w-3xl" />
 			</div>
 
 			{/* More Videos Section */}

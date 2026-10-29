@@ -31,6 +31,7 @@ import { UpcomingRacesWidget } from "@/components/common/homepage/UpcomingRacesW
 import { GearRow } from "@/components/gear/gear-row";
 import { queryGear } from "@/lib/db/queries/gear";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageMetadata } from "@/lib/seo";
 // import { TopRankedPodcastsSkeleton } from "@/components/podcasts/TopRankedPodcastsRow";
 
 // Route segment config
@@ -38,11 +39,12 @@ export const dynamic = "force-static";
 export const revalidate = 3600; // 1 hour (down from 24 hours)
 
 // Add dynamic metadata
-export const metadata = {
+export const metadata = pageMetadata({
 	title: "The Run Club - Running Podcasts, Videos & More",
 	description:
 		"Discover the best running podcasts, videos, and content from top athletes and coaches.",
-};
+	path: "/",
+});
 
 // Define a simple skeleton for the GearRow
 function LatestGearSectionSkeleton() {

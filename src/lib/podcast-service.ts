@@ -14,35 +14,12 @@ import { optimizeImage } from "@/lib/image-utils";
 const BATCH_SIZE = 5;
 // Set to true to temporarily disable image processing if there are issues
 const SKIP_IMAGE_PROCESSING = false;
-// Skip actual image processing in development (faster, saves storage)
-// but still validate the logic flow by returning a mock URL
+// Skip image processing in development (faster, saves storage). Nothing is
+// uploaded, so no image URL is stored and cards fall back to the podcast image.
 // Can be overridden with FORCE_IMAGE_PROCESSING=true environment variable
 const DEV_MODE_SKIP_ACTUAL_PROCESSING =
 	process.env.NODE_ENV === "development" &&
 	process.env.FORCE_IMAGE_PROCESSING !== "true";
-
-// Function to simulate image processing in development
-async function mockImageProcessing(
-	imageUrl: string,
-	prefix: string,
-): Promise<string | null> {
-	// Validate URL and check skipImageProcessing logic
-	if (!imageUrl || shouldSkipImageProcessing(imageUrl)) {
-		console.log(`[DEV-IMAGE] Would skip processing for: ${imageUrl}`);
-		return null;
-	}
-
-	console.log(`[DEV-IMAGE] Would process image: ${imageUrl}`);
-
-	// Generate a deterministic mock URL based on the input URL
-	// This ensures we get the same result for the same input, which helps with testing
-	// Using a hash of the URL would be better, but for simplicity:
-	const mockId = imageUrl
-		.replace(/[^a-z0-9]/gi, "") // Remove special chars
-		.substring(0, 8); // Take first 8 chars
-
-	return `https://dev-mocked-image-cdn.example.com/${prefix}/${mockId}.webp`;
-}
 
 // Wrapper function to handle image processing based on environment
 async function processImage(
@@ -52,7 +29,8 @@ async function processImage(
 	entityId?: string,
 ): Promise<string | null> {
 	if (DEV_MODE_SKIP_ACTUAL_PROCESSING) {
-		return mockImageProcessing(imageUrl, prefix);
+		console.log(`[DEV-IMAGE] Skipping image processing for: ${imageUrl}`);
+		return null;
 	}
 	return optimizeImage(imageUrl, size, prefix, entityId);
 }
@@ -666,7 +644,7 @@ async function processPodcast(
 									duration: sql`EXCLUDED.duration`,
 									explicit: sql`EXCLUDED.explicit`,
 									image: sql`EXCLUDED.image`,
-									episodeImage: sql`EXCLUDED.episode_image`,
+									episodeImage: keepProcessedEpisodeImage,
 									itunesEpisode: sql`EXCLUDED.itunes_episode`,
 									updatedAt: sql`CURRENT_TIMESTAMP`,
 								},
@@ -700,7 +678,7 @@ async function processPodcast(
 									duration: sql`EXCLUDED.duration`,
 									explicit: sql`EXCLUDED.explicit`,
 									image: sql`EXCLUDED.image`,
-									episodeImage: sql`EXCLUDED.episode_image`,
+									episodeImage: keepProcessedEpisodeImage,
 									guid: sql`EXCLUDED.guid`,
 									itunesEpisode: sql`EXCLUDED.itunes_episode`,
 									updatedAt: sql`CURRENT_TIMESTAMP`,
@@ -759,6 +737,13 @@ interface UpdatePodcastOptions {
 	randomSample?: boolean;
 }
 
+// Ingest only reprocesses an episode image when its source changes, and passes
+// null otherwise; keep the stored processed image in that case.
+const keepProcessedEpisodeImage = sql`CASE
+	WHEN EXCLUDED.image IS DISTINCT FROM ${episodes.image} THEN EXCLUDED.episode_image
+	ELSE COALESCE(EXCLUDED.episode_image, ${episodes.episodeImage})
+END`;
+
 export async function updatePodcastData(options: UpdatePodcastOptions = {}) {
 	const { minHoursSinceUpdate = 24, limit, randomSample = false } = options;
 
@@ -768,9 +753,9 @@ export async function updatePodcastData(options: UpdatePodcastOptions = {}) {
 		environment: process.env.NODE_ENV || "unknown",
 		skipImageProcessing: SKIP_IMAGE_PROCESSING,
 		devModeSkipActualProcessing: DEV_MODE_SKIP_ACTUAL_PROCESSING,
-		isUsingMockedImages: DEV_MODE_SKIP_ACTUAL_PROCESSING
-			? "Yes - using mock URLs"
-			: "No - processing real images",
+		isProcessingImages: DEV_MODE_SKIP_ACTUAL_PROCESSING
+			? "No - skipped in development"
+			: "Yes - processing real images",
 		processingLimit: limit || "unlimited",
 		batchSize: BATCH_SIZE,
 	});

@@ -1,3 +1,4 @@
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
@@ -379,6 +380,8 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 					)}
 				</CardContent>
 			</Card>
+
+			<SpotSportsCta placement="episode_detail" />
 
 			{/* More Episodes Section */}
 			{moreEpisodes.length > 0 && (

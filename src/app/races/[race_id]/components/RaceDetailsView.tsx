@@ -1,3 +1,4 @@
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
 import {
 	Calendar,
 	Clock,
@@ -218,6 +219,10 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 									</div>
 								)}
 							</div>
+							<SpotSportsCta
+								placement="race_detail"
+								className="sm:flex-col sm:items-stretch"
+							/>
 						</div>
 					</div>
 				</CardContent>

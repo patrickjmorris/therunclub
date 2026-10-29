@@ -1,3 +1,4 @@
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
 import { Metadata } from "next";
 import { getVideoById, getChannelVideos } from "@/lib/services/video-service";
 import { notFound } from "next/navigation";
@@ -378,6 +379,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						</div>
 					)}
 				</div>
+
+				<SpotSportsCta placement="video_detail" className="mt-8 max-w-3xl" />
 			</div>
 
 			{/* More Videos Section */}

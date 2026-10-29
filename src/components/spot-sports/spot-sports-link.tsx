@@ -31,6 +31,7 @@ export function SpotSportsLink({
 			onClick={() => track("Spot Sports Click", { placement, pageType })}
 		>
 			{children}
+			<span className="sr-only"> (opens in new tab)</span>
 		</a>
 	);
 }

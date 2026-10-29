@@ -39,7 +39,7 @@ export function SpotSportsCta({ placement, className }: SpotSportsCtaProps) {
 				)}
 			>
 				{cta}
-				<ArrowUpRight className="h-4 w-4" />
+				<ArrowUpRight className="h-4 w-4" aria-hidden="true" />
 			</SpotSportsLink>
 		</aside>
 	);

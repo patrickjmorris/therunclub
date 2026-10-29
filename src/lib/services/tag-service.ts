@@ -134,8 +134,13 @@ export async function canonicalizeTags(tags: string[]): Promise<string[]> {
 		const topic = topicOf(row.tag);
 		if (!canonicalByTopic.has(topic)) canonicalByTopic.set(topic, row.tag);
 	}
+	// Unseen topics keep the first spelling given, one tag per topic.
+	for (const tag of tags) {
+		const topic = topicOf(tag);
+		if (!canonicalByTopic.has(topic)) canonicalByTopic.set(topic, tag);
+	}
 	return Array.from(
-		new Set(tags.map((tag) => canonicalByTopic.get(topicOf(tag)) ?? tag)),
+		new Set(tags.map((tag) => canonicalByTopic.get(topicOf(tag)) as string)),
 	);
 }
 

@@ -79,8 +79,8 @@ function LinkPreviewSkeleton({ className }: { className?: string }) {
 	);
 }
 
-// Matches the route's canonical form (no fragment, normalized) to skip
-// its redirect.
+// Canonical form (no fragment, normalized) so equivalent links share a
+// CDN cache entry.
 function canonical(url: string) {
 	if (!URL.canParse(url)) return url;
 	const parsed = new URL(url);
@@ -113,7 +113,8 @@ function LazyLinkPreview({
 			([entry]) => {
 				if (!entry.isIntersecting) return;
 				observer.disconnect();
-				fetch(`/api/link-preview?url=${encodeURIComponent(canonical(url))}`, {
+				const query = new URLSearchParams({ url: canonical(url) });
+				fetch(`/api/link-preview?${query}`, {
 					signal: controller.signal,
 				})
 					.then((response) => (response.ok ? response.json() : null))

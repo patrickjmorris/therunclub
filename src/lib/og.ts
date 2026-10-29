@@ -2,6 +2,7 @@ import { lookup as dnsLookup, type LookupAddress } from "node:dns";
 import { get as httpGet } from "node:http";
 import { get as httpsGet } from "node:https";
 import { BlockList, isIP, type LookupFunction } from "node:net";
+import type { Transform } from "node:stream";
 import {
 	createBrotliDecompress,
 	createGunzip,
@@ -70,18 +71,19 @@ interface FetchedPage {
 	data: string;
 }
 
-function decoder(encoding: string | undefined) {
-	switch (encoding?.trim().toLowerCase()) {
-		case "gzip":
-		case "x-gzip":
-			return createGunzip();
-		case "deflate":
-			return createInflate();
-		case "br":
-			return createBrotliDecompress();
-		default:
-			return null;
-	}
+// Content-Encoding lists codings in the order applied, so undo them in
+// reverse. Unknown codings can't be read, so they fail the preview.
+function decoders(contentEncoding: string | undefined): Transform[] {
+	const codings = (contentEncoding ?? "")
+		.split(",")
+		.map((coding) => coding.trim().toLowerCase())
+		.filter((coding) => coding && coding !== "identity");
+	return codings.reverse().map((coding) => {
+		if (coding === "gzip" || coding === "x-gzip") return createGunzip();
+		if (coding === "deflate") return createInflate();
+		if (coding === "br") return createBrotliDecompress();
+		throw new Error(`Unsupported content-encoding ${coding}`);
+	});
 }
 
 function requestOnce(
@@ -103,9 +105,26 @@ function requestOnce(
 	const get = url.protocol === "https:" ? httpsGet : httpGet;
 	return new Promise((resolve, reject) => {
 		let responded = false;
+		let streams: Transform[] = [];
+		// Every exit closes the socket and any decoders.
+		const cleanup = () => {
+			for (const stream of streams) stream.destroy();
+			request.destroy();
+		};
+		const done = (page: FetchedPage & { location?: string }) => {
+			resolve(page);
+			cleanup();
+		};
+		const fail = (error: Error) => {
+			reject(error);
+			cleanup();
+		};
+
 		const request = get(
 			url,
 			{
+				// One-off fetches to arbitrary hosts: no pooled sockets.
+				agent: false,
 				lookup: publicLookup,
 				signal,
 				headers: {
@@ -124,18 +143,22 @@ function requestOnce(
 				const status = response.statusCode ?? 0;
 				const page = { url: url.href, status, headers };
 				if (status >= 300 && status < 400 && headers.location) {
-					request.destroy();
-					return resolve({ ...page, data: "", location: headers.location });
+					return done({ ...page, data: "", location: headers.location });
 				}
-				const decode = decoder(headers["content-encoding"]);
-				const body = decode ? response.pipe(decode) : response;
+				try {
+					streams = decoders(headers["content-encoding"]);
+				} catch (error) {
+					return fail(error as Error);
+				}
 				const chunks: Buffer[] = [];
 				let size = 0;
-				const finish = () => {
-					resolve({ ...page, data: Buffer.concat(chunks).toString("utf8") });
-					decode?.destroy();
-					request.destroy();
-				};
+				const finish = () =>
+					done({ ...page, data: Buffer.concat(chunks).toString("utf8") });
+				let body: NodeJS.ReadableStream = response;
+				for (const stream of streams) {
+					stream.on("error", fail);
+					body = body.pipe(stream);
+				}
 				body.on("data", (chunk: Buffer) => {
 					if (size >= MAX_BYTES) return;
 					chunks.push(chunk);
@@ -143,11 +166,11 @@ function requestOnce(
 					if (size >= MAX_BYTES) finish();
 				});
 				body.on("end", finish);
-				body.on("error", reject);
+				response.on("error", fail);
 				// A body cut off mid-stream; no-op once settled.
 				response.on("close", () => {
 					if (!response.complete) {
-						reject(new Error(`Connection closed by ${url.href}`));
+						fail(new Error(`Connection closed by ${url.href}`));
 					}
 				});
 			},
@@ -156,14 +179,12 @@ function requestOnce(
 		// which otherwise never settle.
 		request.on("upgrade", (_response, socket) => {
 			socket.destroy();
-			reject(new Error(`Unexpected upgrade from ${url.href}`));
+			fail(new Error(`Unexpected upgrade from ${url.href}`));
 		});
 		request.on("close", () => {
-			if (!responded) {
-				reject(new Error(`Connection closed by ${url.href}`));
-			}
+			if (!responded) fail(new Error(`Connection closed by ${url.href}`));
 		});
-		request.on("error", reject);
+		request.on("error", fail);
 	});
 }
 

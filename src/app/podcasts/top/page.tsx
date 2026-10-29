@@ -14,6 +14,7 @@ import {
 import { absoluteUrl } from "@/config/site";
 import { itemList, metaDescription, pageMetadata } from "@/lib/seo";
 
+export const dynamic = "force-static";
 export const revalidate = 86400;
 
 const PATH = "/podcasts/top";

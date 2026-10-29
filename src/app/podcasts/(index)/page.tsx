@@ -139,12 +139,6 @@ export default async function PodcastList({ searchParams }: PageProps) {
 			<div className="mb-12">
 				<div className="flex items-center justify-between mb-6">
 					<h2 className="text-2xl font-bold">Latest Episodes</h2>
-					<Button variant="ghost" asChild>
-						<Link href="/podcasts/episodes" className="group">
-							View All Episodes
-							<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-						</Link>
-					</Button>
 				</div>
 				<Suspense fallback={<LoadingGridSkeleton />}>
 					<HorizontalScroll>

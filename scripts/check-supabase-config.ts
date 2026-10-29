@@ -1,106 +1,67 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
+import postgres from "postgres";
 
-// Load environment variables
+// Verifies the RLS lockdown: the service role can read, while the public
+// anon key is denied on every public table.
 config({ quiet: true });
 
-const requiredEnvVars = [
-	"NEXT_PUBLIC_SUPABASE_URL",
-	"SUPABASE_SERVICE_ROLE_KEY",
-];
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const dbUrl = process.env.DATABASE_URL;
 
-console.log("\nChecking Supabase configuration...\n");
-
-// Check environment variables
-let missingVars = false;
-for (const envVar of requiredEnvVars) {
-	if (!process.env[envVar]) {
-		console.error(`❌ Missing ${envVar}`);
-		missingVars = true;
-	} else {
-		console.log(`✅ ${envVar} is set`);
-		// Show first few chars of values
-		console.log(
-			`   Value starts with: ${process.env[envVar]?.substring(0, 8)}...`,
-		);
-	}
-}
-
-if (missingVars) {
-	console.error("\n❌ Missing required environment variables");
+if (!url || !anonKey || !serviceKey || !dbUrl) {
+	console.error(
+		"Missing NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY or DATABASE_URL",
+	);
 	process.exit(1);
 }
 
-// Test Supabase connection
-const supabase = createClient(
-	process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-	process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-	{
-		auth: {
-			autoRefreshToken: false,
-			persistSession: false,
-		},
-	},
-);
+const clientOptions = {
+	auth: { autoRefreshToken: false, persistSession: false },
+};
+const service = createClient(url, serviceKey, clientOptions);
+const anon = createClient(url, anonKey, clientOptions);
 
-async function testConnection() {
-	console.log("\nTesting Supabase connection...");
+async function main() {
+	const sql = postgres(dbUrl as string, { max: 1 });
+	const rows = await sql<{ name: string }[]>`
+		select tablename as name from pg_tables
+		where schemaname = 'public' order by tablename`;
+	await sql.end();
 
-	try {
-		// Test a simple query
-		const { data, error } = await supabase
-			.from("episodes")
-			.select("id")
-			.limit(1);
+	let failures = 0;
 
-		if (error) {
-			console.error("\n❌ Connection test failed");
-			console.error("Error details:", {
-				code: error.code,
-				message: error.message,
-				details: error.details,
-				hint: error.hint,
-			});
-			return false;
-		}
-
-		// Test permissions by attempting to write
-		const testId = `test-${Date.now()}`;
-		const { error: writeError } = await supabase
-			.from("athlete_mentions")
-			.upsert({
-				id: testId,
-				athleteId: "test",
-				episodeId: "test",
-				source: "title",
-				confidence: "1.0",
-				context: "test",
-			});
-
-		if (writeError) {
-			console.error("\n❌ Write permission test failed");
-			console.error("Error details:", {
-				code: writeError.code,
-				message: writeError.message,
-				details: writeError.details,
-				hint: writeError.hint,
-			});
-			return false;
-		}
-
-		// Clean up test data
-		await supabase.from("athlete_mentions").delete().eq("id", testId);
-
-		console.log("\n✅ Connection and permissions test successful");
-		return true;
-	} catch (error) {
-		console.error("\n❌ Connection test threw an error:", error);
-		return false;
+	const { error: serviceError } = await service
+		.from("podcasts")
+		.select("id")
+		.limit(1);
+	if (serviceError) {
+		console.error(`❌ service role read failed: ${serviceError.message}`);
+		failures++;
+	} else {
+		console.log("✅ service role can read");
 	}
+
+	for (const { name } of rows) {
+		const { data, error } = await anon.from(name).select("*").limit(1);
+		// Only a permission denial counts; auth or network errors would
+		// otherwise pass a bad anon key off as a locked table.
+		if (error?.code === "42501") continue;
+		console.error(
+			error
+				? `❌ ${name}: unexpected error ${error.code} ${error.message}`
+				: `❌ anon can read ${name} (${data?.length ?? 0} rows)`,
+		);
+		failures++;
+	}
+
+	if (failures > 0) process.exit(1);
+	console.log(`✅ anon denied on all ${rows.length} public tables`);
 }
 
-testConnection().then((success) => {
-	if (!success) {
-		process.exit(1);
-	}
+main().catch((error) => {
+	console.error(error);
+	process.exit(1);
 });

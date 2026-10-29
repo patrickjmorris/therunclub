@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,6 +41,7 @@ interface ProfileSectionProps {
 	isAdmin?: boolean;
 	imageUrl?: string | null;
 	countryName?: string | null;
+	countryHref?: string;
 	countryCode?: string | null;
 }
 
@@ -52,6 +54,7 @@ export function ProfileSection({
 	isAdmin,
 	imageUrl,
 	countryName,
+	countryHref,
 	countryCode,
 }: ProfileSectionProps) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -112,7 +115,13 @@ export function ProfileSection({
 							<span className="text-xl" aria-hidden="true">
 								{getCountryFlag(countryCode)}
 							</span>
-							<span>{countryName}</span>
+							{countryHref ? (
+								<Link href={countryHref} className="hover:underline">
+									{countryName}
+								</Link>
+							) : (
+								<span>{countryName}</span>
+							)}
 						</p>
 					)}
 				</div>

@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
-import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { count, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
-	athleteMentions,
 	athletes,
 	channels,
 	contentTags,
@@ -11,6 +10,10 @@ import {
 	videos,
 } from "@/db/schema";
 import { absoluteUrl } from "@/config/site";
+import {
+	getAthleteCountries,
+	isNotableAthlete,
+} from "@/lib/services/athlete-service";
 import { getClubCities } from "@/lib/services/club-service";
 import { getLatestPodcastRanking } from "@/lib/services/podcast-service";
 
@@ -39,6 +42,7 @@ type SitemapId =
 	| "athletes"
 	| "tags"
 	| "club-cities"
+	| "athlete-countries"
 	| `episodes-${number}`
 	| `videos-${number}`;
 
@@ -63,6 +67,7 @@ export async function generateSitemaps(): Promise<{ id: SitemapId }[]> {
 		"athletes",
 		"tags",
 		"club-cities",
+		"athlete-countries",
 		...episodeIds,
 		...videoIds,
 	];
@@ -131,9 +136,6 @@ async function videoEntries(chunk: number): Promise<MetadataRoute.Sitemap> {
 	}));
 }
 
-// Most athlete rows are a name and a results table. List only profiles with
-// a bio, a photo, or a podcast/video mention so the sitemap leads with pages
-// that have something to rank for.
 async function athleteEntries(): Promise<MetadataRoute.Sitemap> {
 	const rows = await db
 		.select({
@@ -141,15 +143,7 @@ async function athleteEntries(): Promise<MetadataRoute.Sitemap> {
 			lastModified: sql<Date>`coalesce(${athletes.updatedAt}, ${athletes.createdAt})`,
 		})
 		.from(athletes)
-		.where(
-			and(
-				isNotNull(athletes.worldAthleticsId),
-				sql`(length(coalesce(${athletes.bio}, '')) > 50
-					or ${athletes.imageUrl} is not null
-					or exists (select 1 from ${athleteMentions}
-						where ${athleteMentions.athleteId} = ${athletes.worldAthleticsId}))`,
-			),
-		)
+		.where(isNotableAthlete)
 		.orderBy(athletes.slug);
 	return rows.map((row) => ({
 		url: absoluteUrl(`/athletes/${row.slug}`),
@@ -198,6 +192,14 @@ async function clubCityEntries(): Promise<MetadataRoute.Sitemap> {
 	}));
 }
 
+async function athleteCountryEntries(): Promise<MetadataRoute.Sitemap> {
+	const countries = await getAthleteCountries();
+	return countries.map((country) => ({
+		url: absoluteUrl(`/athletes/country/${country.slug}`),
+		lastModified: new Date(country.lastModified),
+	}));
+}
+
 export default async function sitemap({
 	id,
 }: {
@@ -209,6 +211,7 @@ export default async function sitemap({
 	if (id === "athletes") return athleteEntries();
 	if (id === "tags") return tagEntries();
 	if (id === "club-cities") return clubCityEntries();
+	if (id === "athlete-countries") return athleteCountryEntries();
 	if (id.startsWith("episodes-")) return episodeEntries(chunkIndex(id));
 	if (id.startsWith("videos-")) return videoEntries(chunkIndex(id));
 	return [];

@@ -9,7 +9,10 @@ import { SponsorsSection } from "./components/sponsors-section";
 import { GearSection } from "./components/gear-section";
 import { EventsSection } from "./components/events-section";
 import AthleteMentionsSection from "./components/mentions-section";
-import { getAthleteData } from "@/lib/services/athlete-service";
+import {
+	getAthleteCountries,
+	getAthleteData,
+} from "@/lib/services/athlete-service";
 import { canManageContent } from "@/lib/auth-utils";
 import { Suspense } from "react";
 import { MentionLoading } from "@/components/common/mention-loading";
@@ -172,9 +175,10 @@ export default async function AthletePage({
 	params: Promise<{ slug: string }>;
 }) {
 	const resolvedParams = await params;
-	const [athlete, isAdmin] = await Promise.all([
+	const [athlete, isAdmin, countries] = await Promise.all([
 		getAthleteData(resolvedParams.slug),
 		canManageContent(),
+		getAthleteCountries(),
 	]);
 
 	if (!athlete) {
@@ -194,6 +198,12 @@ export default async function AthletePage({
 		);
 		// Decide how to handle this - maybe don't render gear?
 	}
+
+	const country = countries.find((entry) => entry.code === athlete.countryCode);
+	const countryCrumb = country && {
+		name: country.name,
+		path: `/athletes/country/${country.slug}`,
+	};
 
 	// Prepare structured data for SEO
 	const structuredData = {
@@ -221,6 +231,7 @@ export default async function AthletePage({
 					structuredData,
 					breadcrumbList([
 						{ name: "Athletes", path: "/athletes" },
+						...(countryCrumb ? [countryCrumb] : []),
 						{ name: athlete.name, path: `/athletes/${athlete.slug}` },
 					]),
 				]}
@@ -236,6 +247,7 @@ export default async function AthletePage({
 								bio={athlete.bio}
 								imageUrl={athlete.imageUrl}
 								countryName={athlete.countryName}
+								countryHref={countryCrumb?.path}
 								countryCode={athlete.countryCode}
 								socialMedia={athlete.socialMedia}
 								verified={athlete.verified ?? undefined}

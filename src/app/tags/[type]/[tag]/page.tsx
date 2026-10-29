@@ -3,6 +3,7 @@ import {
 	type TagHub,
 	getEpisodesByTag,
 	getTagHubs,
+	isCanonicalHub,
 	getVideosByTag,
 	tagHubPath,
 } from "@/lib/services/tag-service";
@@ -29,9 +30,14 @@ async function findHub(params: TagPageProps["params"]) {
 	const hub = hubs.find(
 		(entry) => entry.type === type && entry.tag === decodedTag,
 	);
-	const sibling = hubs.find(
-		(entry) => entry.type !== type && entry.tag === decodedTag,
-	);
+	const sibling =
+		hub &&
+		hubs.find(
+			(entry) =>
+				entry.type !== type &&
+				entry.topic === hub.topic &&
+				isCanonicalHub(entry),
+		);
 	return { hub, sibling };
 }
 
@@ -124,13 +130,10 @@ export default async function TagPage(props: TagPageProps) {
 				{sibling && (
 					<p className="mt-2">
 						<Link
-							href={tagHubPath({
-								type: sibling.type,
-								tag: sibling.canonicalTag,
-							})}
+							href={tagHubPath(sibling)}
 							className="text-primary hover:underline"
 						>
-							{sibling.count.toLocaleString("en-US")} {hub.tag}{" "}
+							{sibling.count.toLocaleString("en-US")} {sibling.tag}{" "}
 							{TYPE_LABELS[sibling.type].noun.toLowerCase()} →
 						</Link>
 					</p>

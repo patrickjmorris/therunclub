@@ -96,6 +96,8 @@ export interface TagHub {
 	// Largest variant of the same topic ("elite athlete" -> "elite athletes");
 	// only canonical hubs are listed, the rest point their canonical here.
 	canonicalTag: string;
+	// Spelling-insensitive topic, shared across episode and video hubs.
+	topic: string;
 	count: number;
 	lastModified: string;
 }
@@ -103,10 +105,13 @@ export interface TagHub {
 // Plural looks like a variant but is a different topic.
 const DISTINCT_PLURALS = new Set(["disciplines"]);
 
-function topicKey(type: string, tag: string) {
+function topicOf(tag: string) {
 	const compact = tag.toLowerCase().replace(/[\s-]+/g, "");
-	const stem = DISTINCT_PLURALS.has(compact) ? compact : compact.replace(/s$/, "");
-	return `${type}:${stem}`;
+	return DISTINCT_PLURALS.has(compact) ? compact : compact.replace(/s$/, "");
+}
+
+function topicKey(type: string, tag: string) {
+	return `${type}:${topicOf(tag)}`;
 }
 
 export const getTagHubs = createDailyCache(
@@ -143,6 +148,7 @@ export const getTagHubs = createDailyCache(
 			type: row.type as TagHubType,
 			tag: row.tag,
 			canonicalTag: canonicalByTopic.get(topicKey(row.type, row.tag)) ?? row.tag,
+			topic: topicOf(row.tag),
 			count: row.count,
 			lastModified: new Date(row.lastModified).toISOString(),
 		}));

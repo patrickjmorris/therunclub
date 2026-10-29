@@ -149,12 +149,12 @@ export async function generateMetadata({
 // Skeleton for the athlete gear section
 function AthleteGearSkeleton() {
 	return (
-		<section className="mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+		<section className="mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
 			<Skeleton className="h-7 w-40 mb-4" /> {/* Section title */}
 			<div className="flex space-x-4 overflow-hidden pb-4">
 				{[...Array(3)].map((_, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: Static array ok
-					<div key={`gear-skel-${i}`} className="w-48 flex-shrink-0 md:w-56">
+					<div key={`gear-skel-${i}`} className="w-48 shrink-0 md:w-56">
 						<Skeleton className="aspect-square w-full rounded-md" />
 						<div className="mt-2 space-y-1">
 							<Skeleton className="h-3 w-1/3" /> {/* Brand */}
@@ -177,7 +177,7 @@ async function AthleteGearSection({ athleteId }: { athleteId: string }) {
 	}
 
 	return (
-		<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+		<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
 			{/* Removed extra margin-top from here, applied to wrapper */}
 			<GearRow title="Gear They Use" items={athleteGear} />
 		</div>
@@ -241,7 +241,7 @@ export default async function AthletePage({
 				<div className="container mx-auto py-8 px-4">
 					<div className="max-w-7xl mx-auto">
 						{/* Profile Information */}
-						<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow mb-8">
+						<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-8">
 							<ProfileSection
 								athleteSlug={athlete.slug}
 								name={athlete.name}

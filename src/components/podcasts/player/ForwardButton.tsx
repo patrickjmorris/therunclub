@@ -44,7 +44,7 @@ export const ForwardButton = forwardRef<HTMLDivElement, ForwardButtonProps>(
 		return (
 			<div
 				ref={ref}
-				className={`group relative flex flex-shrink-0 items-center justify-center ${className}`}
+				className={`group relative flex shrink-0 items-center justify-center ${className}`}
 				{...props}
 				onClick={() => player.seekBy(amount)}
 				aria-label={`Fast-forward ${amount} seconds`}

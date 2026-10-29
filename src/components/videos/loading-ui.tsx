@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 
 export function LoadingCardSkeleton() {
 	return (
-		<div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+		<div className="rounded-lg border bg-card text-card-foreground shadow-xs overflow-hidden">
 			<div className="aspect-video bg-muted animate-pulse" />
 			<div className="p-4">
 				<Skeleton className="h-4 w-3/4 mb-2" />

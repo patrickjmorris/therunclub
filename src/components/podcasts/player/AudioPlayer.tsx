@@ -64,7 +64,7 @@ function AccessibleButton({
 					onClick(e);
 				}
 			}}
-			className="focus:outline-none"
+			className="focus:outline-hidden"
 		>
 			{children}
 		</div>
@@ -197,7 +197,7 @@ export function AudioPlayer() {
 							transition={{ duration: 0.2 }}
 						>
 							<div className="flex items-center gap-4">
-								<div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+								<div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted">
 									{(player.episode.episodeImage ||
 										player.episode.podcastImage) && (
 										<Image
@@ -283,7 +283,7 @@ export function AudioPlayer() {
 										player={player}
 										variant="ghost"
 										size="icon"
-										className="group relative rounded-md focus:outline-none"
+										className="group relative rounded-md focus:outline-hidden"
 										onClick={(e) => {
 											e.preventDefault();
 											e.stopPropagation();

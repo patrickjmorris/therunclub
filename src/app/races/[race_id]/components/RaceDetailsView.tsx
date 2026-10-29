@@ -80,7 +80,7 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 	return (
 		<div className="max-w-4xl mx-auto p-4">
 			<Card className="overflow-hidden border-0 shadow-lg">
-				<div className="bg-gradient-to-r from-rose-500 via-orange-400 to-amber-300 h-3" />
+				<div className="bg-linear-to-r from-rose-500 via-orange-400 to-amber-300 h-3" />
 				<CardHeader className="relative pb-0">
 					<div className="flex justify-between items-start">
 						<div>
@@ -222,7 +222,7 @@ export default function RaceDetailsView({ raceData }: RaceDetailsViewProps) {
 					</div>
 				</CardContent>
 				<CardFooter className="flex flex-col sm:flex-row justify-between items-center bg-slate-50 border-t border-slate-100 py-4 px-6 gap-4">
-					<div className="flex-grow" />
+					<div className="grow" />
 					<div className="flex gap-2">
 						<Button variant="outline" size="sm" className="text-slate-600">
 							Share Event

@@ -725,7 +725,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 										{(form.formState.errors.hours ||
 											form.formState.errors.minutes ||
 											form.formState.errors.seconds) && (
-											<p className="text-sm text-red-500 mt-1 min-h-[1.25rem]">
+											<p className="text-sm text-red-500 mt-1 min-h-5">
 												{form.formState.errors.hours?.message ||
 													form.formState.errors.minutes?.message ||
 													form.formState.errors.seconds?.message}
@@ -818,7 +818,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 										}
 									/>
 									{form.formState.errors.pace && (
-										<p className="text-sm text-red-500 mt-1 min-h-[1.25rem]">
+										<p className="text-sm text-red-500 mt-1 min-h-5">
 											{form.formState.errors.pace.message}
 										</p>
 									)}

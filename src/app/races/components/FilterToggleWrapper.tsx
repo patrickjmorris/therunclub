@@ -28,7 +28,7 @@ export function FilterToggleWrapper({ children }: FilterToggleWrapperProps) {
 			<div
 				className={`${
 					showFilters ? "block" : "hidden"
-				} md:block p-4 border rounded-lg bg-card text-card-foreground shadow-sm`}
+				} md:block p-4 border rounded-lg bg-card text-card-foreground shadow-xs`}
 			>
 				{children} {/* Render the filter form content here */}
 			</div>

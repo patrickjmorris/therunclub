@@ -42,7 +42,7 @@ export default function Loading() {
 							<div
 								// biome-ignore lint/suspicious/noArrayIndexKey: Just a loading skeleton
 								key={`video-skeleton-${i}`}
-								className="w-[280px] flex-shrink-0"
+								className="w-[280px] shrink-0"
 							>
 								<LoadingCardSkeleton />
 							</div>
@@ -65,7 +65,7 @@ export default function Loading() {
 									// biome-ignore lint/suspicious/noArrayIndexKey: Just a loading skeleton
 									i
 								}`}
-								className="w-[280px] flex-shrink-0"
+								className="w-[280px] shrink-0"
 							>
 								<LoadingCardSkeleton />
 							</div>
@@ -86,7 +86,7 @@ export default function Loading() {
 							<div
 								// biome-ignore lint/suspicious/noArrayIndexKey: Just a loading skeleton
 								key={`channel-skeleton-${i}`}
-								className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"
+								className="rounded-lg border bg-card text-card-foreground shadow-xs overflow-hidden"
 							>
 								<div className="h-40 bg-muted animate-pulse" />
 								<div className="p-6 space-y-4">

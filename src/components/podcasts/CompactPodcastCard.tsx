@@ -14,7 +14,7 @@ export function CompactPodcastCard({
 	className,
 }: CompactPodcastCardProps) {
 	return (
-		<div className={cn("w-[180px] flex-shrink-0 snap-center", className)}>
+		<div className={cn("w-[180px] shrink-0 snap-center", className)}>
 			<Card className="h-full transition-shadow hover:shadow-md overflow-hidden">
 				<Link
 					href={`/podcasts/${podcast.slug}`}

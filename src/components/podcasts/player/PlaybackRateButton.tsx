@@ -179,7 +179,7 @@ export function PlaybackRateButton({
 			type="button"
 			className={
 				className ||
-				"relative flex h-6 w-6 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-foreground/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+				"relative flex h-6 w-6 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-foreground/90 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2"
 			}
 			onClick={handleClick}
 			aria-label="Playback rate"

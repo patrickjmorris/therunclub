@@ -170,7 +170,7 @@ export function SponsorsSection({
 				</Card>
 			)}
 
-			<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+			<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
 				<div className="flex justify-between items-center">
 					{!isAdding && !editingSponsorId && isAdmin && (
 						<Button onClick={() => setIsAdding(true)}>Add Sponsor</Button>

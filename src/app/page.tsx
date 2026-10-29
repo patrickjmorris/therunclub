@@ -57,7 +57,7 @@ function LatestGearSectionSkeleton() {
 					<div
 						// biome-ignore lint/suspicious/noArrayIndexKey: Static array for skeleton, index is fine
 						key={`skeleton-item-${i}`}
-						className="w-48 flex-shrink-0 md:w-56"
+						className="w-48 shrink-0 md:w-56"
 					>
 						<Skeleton className="aspect-square w-full rounded-md" />
 						<div className="mt-2 space-y-1">

@@ -30,7 +30,7 @@ export function VideoPlayer({ videoId, className, title }: VideoPlayerProps) {
 	}
 
 	return (
-		<div className={cn("relative [&_lite-youtube]:!max-w-none", className)}>
+		<div className={cn("relative [&_lite-youtube]:max-w-none!", className)}>
 			<AspectRatio ratio={16 / 9}>
 				<div className="absolute inset-0 h-full w-full">
 					<YouTubeEmbed

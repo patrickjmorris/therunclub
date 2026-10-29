@@ -131,7 +131,7 @@ export function ProfileSection({
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-8">
-				<div className="relative w-48 h-48 rounded-lg overflow-hidden flex-shrink-0 mx-auto lg:mx-0">
+				<div className="relative w-48 h-48 rounded-lg overflow-hidden shrink-0 mx-auto lg:mx-0">
 					<AthleteImage
 						src={imageUrl}
 						name={name}
@@ -143,7 +143,7 @@ export function ProfileSection({
 					/>
 				</div>
 
-				<div className="flex-grow space-y-4">
+				<div className="grow space-y-4">
 					{bio && (
 						<div className="prose dark:prose-invert max-w-none">
 							<p className="text-gray-600 dark:text-gray-300">{bio}</p>

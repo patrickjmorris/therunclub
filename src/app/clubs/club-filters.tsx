@@ -82,7 +82,7 @@ export function ClubFilters({ cities, initialClubs }: ClubFiltersProps) {
 							</div>
 						</CardHeader>
 
-						<CardContent className="flex-grow">
+						<CardContent className="grow">
 							{club.website && (
 								<ClubLinkPreview website={club.website} ogData={club.ogData} />
 							)}

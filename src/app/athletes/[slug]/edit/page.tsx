@@ -35,7 +35,7 @@ export default async function AthleteEditPage({
 	return (
 		<main className="min-h-screen bg-gray-50 dark:bg-gray-900/50">
 			<div className="container mx-auto py-8 px-4">
-				<div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+				<div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
 					<h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
 						Edit Athlete: {athlete.name}
 					</h1>

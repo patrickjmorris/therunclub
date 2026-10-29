@@ -98,7 +98,7 @@ export function FeaturedChannelClient({
 						className="object-cover mix-blend-overlay"
 						priority
 					/>
-					<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
+					<div className="absolute inset-0 bg-linear-to-b from-black/20 to-black/60">
 						<div className="absolute bottom-4 left-4">
 							<h1 className="text-white text-2xl font-bold">{title}</h1>
 						</div>
@@ -124,7 +124,7 @@ export function FeaturedChannelClient({
 						priority
 						sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					/>
-					<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
+					<div className="absolute inset-0 bg-linear-to-b from-black/20 to-black/60">
 						<div className="absolute bottom-4 left-4">
 							<h1 className="text-white text-2xl font-bold">{title}</h1>
 						</div>

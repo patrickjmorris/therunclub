@@ -21,7 +21,7 @@ export function CompactVideoCard({
 	className = "",
 }: CompactVideoCardProps) {
 	return (
-		<div className={cn("w-[220px] flex-shrink-0 snap-center", className)}>
+		<div className={cn("w-[220px] shrink-0 snap-center", className)}>
 			<Card className="h-full transition-shadow hover:shadow-md">
 				<Link href={`/videos/${video.id}`} className="flex flex-col h-full">
 					<CardContent className="p-3 flex flex-col h-full">

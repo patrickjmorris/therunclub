@@ -6,22 +6,22 @@ import { podcasts, episodes } from "./schema";
 // Function to revalidate cache
 export function revalidatePodcastsAndEpisodes() {
 	// Revalidate main tags
-	revalidateTag("podcasts");
-	revalidateTag("episodes");
+	revalidateTag("podcasts", { expire: 0 });
+	revalidateTag("episodes", { expire: 0 });
 
 	// Revalidate specific podcast-related tags
-	revalidateTag("podcast");
-	revalidateTag("podcast-by-slug");
-	revalidateTag("last-ten-episodes");
-	revalidateTag("last-ten-episodes-by-slug");
-	revalidateTag("last-episode");
-	revalidateTag("podcasts-and-last-episodes");
-	revalidateTag("all-podcasts-with-last-episodes");
-	revalidateTag("episode-titles");
-	revalidateTag("episode");
-	revalidateTag("featured-podcasts");
-	revalidateTag("podcast-tags");
-	revalidateTag("new-episodes");
+	revalidateTag("podcast", { expire: 0 });
+	revalidateTag("podcast-by-slug", { expire: 0 });
+	revalidateTag("last-ten-episodes", { expire: 0 });
+	revalidateTag("last-ten-episodes-by-slug", { expire: 0 });
+	revalidateTag("last-episode", { expire: 0 });
+	revalidateTag("podcasts-and-last-episodes", { expire: 0 });
+	revalidateTag("all-podcasts-with-last-episodes", { expire: 0 });
+	revalidateTag("episode-titles", { expire: 0 });
+	revalidateTag("episode", { expire: 0 });
+	revalidateTag("featured-podcasts", { expire: 0 });
+	revalidateTag("podcast-tags", { expire: 0 });
+	revalidateTag("new-episodes", { expire: 0 });
 }
 
 export const searchEpisodesWithPodcasts = async (query: string) => {

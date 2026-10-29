@@ -49,12 +49,12 @@ const nextConfig = {
 		// ],
 		unoptimized: true,
 	},
+	reactCompiler: true,
 	experimental: {
 		serverActions: {
 			allowedOrigins: ["therunclub.xyz"],
 			bodySizeLimit: "3mb",
 		},
-		reactCompiler: true,
 		// ppr: "incremental",
 	},
 	serverExternalPackages: ["whatwg-url"],

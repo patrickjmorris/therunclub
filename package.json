@@ -132,7 +132,8 @@
   "overrides": {
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "jsdom": "26.1.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",

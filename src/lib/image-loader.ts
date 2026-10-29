@@ -8,7 +8,9 @@ const YOUTUBE_THUMB =
 const GGPHT_SIZE = /=s\d+/;
 // Supabase bills transforms per origin image: podcast art (225) and
 // athlete photos (1.7k) yes; per-episode art (45k) no. Widths cap at the
-// stored size: podcast art 1400px, athlete photos 800px.
+// stored size: podcast art 1400px, athlete photos 800px. resize=contain
+// keeps the aspect ratio; the default (cover) keeps the stored height and
+// crops a width-only request to a strip (256x1400).
 const SUPABASE_TRANSFORMABLE =
 	/^(https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1)\/object\/public\/((?:content-images\/podcasts|athlete-images)\/.+)$/;
 
@@ -35,7 +37,7 @@ export default function imageLoader({ src, width, quality }: ImageLoaderProps) {
 		}?width=${Math.min(
 			width,
 			supabase[2].startsWith("athlete-images/") ? 800 : 1400,
-		)}&quality=${quality ?? 75}`;
+		)}&resize=contain&quality=${quality ?? 75}`;
 	}
 
 	return src;

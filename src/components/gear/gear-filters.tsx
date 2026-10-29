@@ -42,12 +42,10 @@ export function GearFilters({ className }: GearFiltersProps) {
 
 	const handleClear = () => {
 		// TODO: Implement clear logic
-		console.log("Clear filters");
 	};
 
 	const handleApply = () => {
 		// TODO: Implement apply logic (e.g., update URL params or call onFilterChange)
-		console.log("Apply filters");
 	};
 
 	return (

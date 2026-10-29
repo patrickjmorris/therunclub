@@ -628,7 +628,6 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 
 	// Placeholder onSubmit - might not be needed if calculations happen onChange/onBlur
 	const onSubmit = (data: FormData) => {
-		console.log("Form submitted (optional):", data);
 		// Trigger final validation and pace sync on explicit submit if needed
 		if (data.distance) {
 			if (

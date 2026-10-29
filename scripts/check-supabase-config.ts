@@ -46,8 +46,14 @@ async function main() {
 
 	for (const { name } of rows) {
 		const { data, error } = await anon.from(name).select("*").limit(1);
-		if (error) continue;
-		console.error(`❌ anon can read ${name} (${data?.length ?? 0} rows)`);
+		// Only a permission denial counts; auth or network errors would
+		// otherwise pass a bad anon key off as a locked table.
+		if (error?.code === "42501") continue;
+		console.error(
+			error
+				? `❌ ${name}: unexpected error ${error.code} ${error.message}`
+				: `❌ anon can read ${name} (${data?.length ?? 0} rows)`,
+		);
 		failures++;
 	}
 

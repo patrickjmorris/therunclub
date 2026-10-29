@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import { contentTags, videos, episodes, podcasts } from "@/db/schema";
-import { eq, and, or, desc, sql, count, gte } from "drizzle-orm";
+import { eq, and, or, desc, sql, count, gte, inArray } from "drizzle-orm";
 import { subDays, format } from "date-fns";
 import { createDailyCache } from "@/lib/utils/cache";
 
@@ -108,6 +108,40 @@ const DISTINCT_PLURALS = new Set(["disciplines"]);
 function topicOf(tag: string) {
 	const compact = tag.toLowerCase().replace(/[\s-]+/g, "");
 	return DISTINCT_PLURALS.has(compact) ? compact : compact.replace(/s$/, "");
+}
+
+// Maps each tag to the most-used existing spelling of its topic, so new
+// tags don't recreate variants that were already consolidated.
+export async function canonicalizeTags(tags: string[]): Promise<string[]> {
+	if (tags.length === 0) return tags;
+	const compacts = tags.flatMap((tag) => {
+		const topic = topicOf(tag);
+		return [topic, `${topic}s`];
+	});
+	const rows = await db
+		.select({ tag: contentTags.tag, count: count() })
+		.from(contentTags)
+		.where(
+			inArray(
+				sql`regexp_replace(${contentTags.tag}, '[\\s-]+', '', 'g')`,
+				compacts,
+			),
+		)
+		.groupBy(contentTags.tag)
+		.orderBy(desc(count()), contentTags.tag);
+	const canonicalByTopic = new Map<string, string>();
+	for (const row of rows) {
+		const topic = topicOf(row.tag);
+		if (!canonicalByTopic.has(topic)) canonicalByTopic.set(topic, row.tag);
+	}
+	// Unseen topics keep the first spelling given, one tag per topic.
+	for (const tag of tags) {
+		const topic = topicOf(tag);
+		if (!canonicalByTopic.has(topic)) canonicalByTopic.set(topic, tag);
+	}
+	return Array.from(
+		new Set(tags.map((tag) => canonicalByTopic.get(topicOf(tag)) as string)),
+	);
 }
 
 function topicKey(type: string, tag: string) {

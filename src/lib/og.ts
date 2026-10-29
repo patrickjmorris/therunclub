@@ -1,5 +1,7 @@
-import { lookup } from "node:dns/promises";
-import { BlockList } from "node:net";
+import { lookup as dnsLookup, type LookupAddress } from "node:dns";
+import { get as httpGet } from "node:http";
+import { get as httpsGet } from "node:https";
+import { BlockList, isIP, type LookupFunction } from "node:net";
 import { getPreviewFromContent } from "link-preview-js";
 
 // Previews fetch user-supplied URLs server-side, so refuse any host that
@@ -25,49 +27,122 @@ for (const [net, prefix] of [
 	PRIVATE.addSubnet(net, prefix, "ipv6");
 }
 
-async function assertPublicHost(url: URL) {
-	if (url.protocol !== "http:" && url.protocol !== "https:") {
-		throw new Error(`Unsupported protocol for ${url.href}`);
-	}
-	// URL.hostname keeps brackets on IPv6 literals.
-	const host = url.hostname.replace(/^\[(.*)\]$/, "$1");
-	const addresses = await lookup(host, { all: true });
-	for (const { address, family } of addresses) {
-		const v4Mapped = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-		const blocked = v4Mapped
-			? PRIVATE.check(v4Mapped[1], "ipv4")
-			: PRIVATE.check(address, family === 6 ? "ipv6" : "ipv4");
-		if (blocked) throw new Error(`Refusing private address for ${url.href}`);
-	}
+function isPrivate(address: string, family: number) {
+	const v4Mapped = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+	if (v4Mapped) return PRIVATE.check(v4Mapped[1], "ipv4");
+	return PRIVATE.check(address, family === 6 ? "ipv6" : "ipv4");
 }
 
-const MAX_REDIRECTS = 3;
+// Used as the socket's DNS lookup, so the address that is checked is the
+// one connected to (no rebinding window). TLS still verifies the hostname.
+const publicLookup: LookupFunction = (hostname, options, callback) => {
+	dnsLookup(hostname, { ...options, all: true }, (error, addresses) => {
+		if (error) return callback(error, "", 0);
+		const list = addresses as LookupAddress[];
+		if (list.length === 0 || list.some((a) => isPrivate(a.address, a.family))) {
+			return callback(
+				new Error(`Refusing private address for ${hostname}`),
+				"",
+				0,
+			);
+		}
+		if (options.all) return callback(null, list);
+		callback(null, list[0].address, list[0].family);
+	});
+};
 
-// Fetches by hostname (keeps TLS valid) after checking each hop's DNS.
-async function fetchPublicPage(target: string) {
+const MAX_REDIRECTS = 5;
+const MAX_BYTES = 1_000_000;
+const TIMEOUT_MS = 3000;
+
+interface FetchedPage {
+	url: string;
+	status: number;
+	headers: Record<string, string>;
+	data: string;
+}
+
+function requestOnce(url: URL): Promise<FetchedPage & { location?: string }> {
+	if (url.protocol !== "http:" && url.protocol !== "https:") {
+		return Promise.reject(new Error(`Unsupported protocol for ${url.href}`));
+	}
+	// IP literals skip DNS lookup, so check them directly. URL.hostname
+	// keeps brackets on IPv6 literals.
+	const host = url.hostname.replace(/^\[(.*)\]$/, "$1");
+	const family = isIP(host);
+	if (family && isPrivate(host, family)) {
+		return Promise.reject(
+			new Error(`Refusing private address for ${url.href}`),
+		);
+	}
+	const get = url.protocol === "https:" ? httpsGet : httpGet;
+	return new Promise((resolve, reject) => {
+		const request = get(
+			url,
+			{
+				lookup: publicLookup,
+				timeout: TIMEOUT_MS,
+				headers: {
+					"user-agent": HEADERS.userAgent,
+					accept: HEADERS.accept,
+					"accept-language": HEADERS.acceptLanguage,
+				},
+			},
+			(response) => {
+				const headers: Record<string, string> = {};
+				for (const [key, value] of Object.entries(response.headers)) {
+					if (value !== undefined) headers[key] = String(value);
+				}
+				const status = response.statusCode ?? 0;
+				if (status >= 300 && status < 400 && headers.location) {
+					response.resume();
+					return resolve({
+						url: url.href,
+						status,
+						headers,
+						data: "",
+						location: headers.location,
+					});
+				}
+				const chunks: Buffer[] = [];
+				let size = 0;
+				// OG tags live in <head>, so a capped body is still enough.
+				const finish = () =>
+					resolve({
+						url: url.href,
+						status,
+						headers,
+						data: Buffer.concat(chunks).toString("utf8"),
+					});
+				response.on("data", (chunk: Buffer) => {
+					chunks.push(chunk);
+					size += chunk.length;
+					if (size >= MAX_BYTES) {
+						finish();
+						request.destroy();
+					}
+				});
+				response.on("end", finish);
+				response.on("error", reject);
+			},
+		);
+		request.on("timeout", () =>
+			request.destroy(
+				Object.assign(new Error("Request timed out"), {
+					name: "TimeoutError",
+				}),
+			),
+		);
+		request.on("error", reject);
+	});
+}
+
+async function fetchPublicPage(target: string): Promise<FetchedPage> {
 	let url = new URL(target);
 	for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-		await assertPublicHost(url);
-		const response = await fetch(url, {
-			redirect: "manual",
-			signal: AbortSignal.timeout(3000),
-			headers: {
-				"user-agent": HEADERS.userAgent,
-				accept: HEADERS.accept,
-				"accept-language": HEADERS.acceptLanguage,
-			},
-		});
-		const location = response.headers.get("location");
-		if (response.status >= 300 && response.status < 400 && location) {
-			url = new URL(location, url);
-			continue;
-		}
-		return {
-			url: url.href,
-			status: response.status,
-			headers: Object.fromEntries(response.headers),
-			data: await response.text(),
-		};
+		const { location, ...page } = await requestOnce(url);
+		if (!location) return page;
+		url = new URL(location, url);
 	}
 	throw new Error(`Too many redirects for ${target}`);
 }
@@ -95,7 +170,10 @@ function cleanContent(content: string | null): string {
 
 export async function getOpenGraphData(url: string): Promise<OpenGraphData> {
 	try {
-		const data = await getPreviewFromContent(await fetchPublicPage(url));
+		const page = await fetchPublicPage(url);
+		// Error pages ("Page not found") aren't a preview of the site.
+		if (page.status >= 400) throw new Error(`HTTP ${page.status}`);
+		const data = await getPreviewFromContent(page);
 
 		// Handle different response types from link-preview-js
 		if ("title" in data && typeof data.title === "string") {

@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Link2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useRef, useState } from "react";
 
 export interface OpenGraphData {
 	title: string;
@@ -62,71 +62,99 @@ export function LinkPreview({ url, className, ogData }: LinkPreviewProps) {
 	);
 }
 
-function LinkPreviewSkeleton() {
+function LinkPreviewSkeleton({ className }: { className?: string }) {
 	return (
-		<div className="flex gap-4 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+		<div
+			className={cn(
+				"flex gap-4 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900",
+				className,
+			)}
+		>
 			<div className="h-24 w-24 animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-800" />
-			<div className="flex min-w-0 flex-col justify-center gap-2">
+			<div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
 				<div className="h-5 w-3/4 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
-				<div className="h-4 w-full animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
 				<div className="h-4 w-1/2 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
 			</div>
 		</div>
 	);
 }
 
-interface PreviewData {
-	title?: string;
-	description?: string;
-	images?: string[];
-	siteName?: string;
+// Canonical form (no fragment, normalized) so equivalent links share a
+// CDN cache entry.
+function canonical(url: string) {
+	if (!URL.canParse(url)) return url;
+	const parsed = new URL(url);
+	parsed.hash = "";
+	return parsed.href;
+}
+
+// Fetches the preview once the card scrolls near the viewport; renders
+// nothing if the site has no usable preview. Keyed by url so a new url
+// starts from a fresh, observable state.
+export function LinkPreviewCard(props: { url: string; className?: string }) {
+	return <LazyLinkPreview key={props.url} {...props} />;
+}
+
+function LazyLinkPreview({
+	url,
+	className,
+}: {
 	url: string;
+	className?: string;
+}) {
+	const ref = useRef<HTMLDivElement>(null);
+	const [ogData, setOgData] = useState<OpenGraphData | null | undefined>();
+
+	useEffect(() => {
+		const node = ref.current;
+		if (!node) return;
+		const controller = new AbortController();
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				if (!entry.isIntersecting) return;
+				observer.disconnect();
+				const query = new URLSearchParams({ url: canonical(url) });
+				fetch(`/api/link-preview?${query}`, {
+					signal: controller.signal,
+				})
+					.then((response) => (response.ok ? response.json() : null))
+					.then((data) => setOgData(data?.preview ?? null))
+					.catch(() => {
+						if (!controller.signal.aborted) setOgData(null);
+					});
+			},
+			{ rootMargin: "200px" },
+		);
+		observer.observe(node);
+		return () => {
+			observer.disconnect();
+			controller.abort();
+		};
+	}, [url]);
+
+	if (ogData === null) return null;
+	return (
+		<div ref={ref}>
+			{ogData ? (
+				<LinkPreview url={url} ogData={ogData} className={className} />
+			) : (
+				<LinkPreviewSkeleton className={className} />
+			)}
+		</div>
+	);
 }
 
-interface LinkPreviewListProps {
-	urls: PreviewData[];
+export function LinkPreviewList({
+	urls,
+	podcastsLink,
+}: {
+	urls: string[];
 	podcastsLink?: string;
-}
-
-export function LinkPreviewList({ urls, podcastsLink }: LinkPreviewListProps) {
+}) {
 	return (
 		<div className="space-y-4">
-			{urls.map((preview) => (
-				<Card key={preview.url}>
-					<CardContent className="p-4">
-						<a
-							href={preview.url}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="flex items-start gap-4 hover:opacity-80 transition-opacity"
-						>
-							{preview.images?.[0] && (
-								<div className="shrink-0">
-									<Image
-										src={preview.images[0]}
-										alt={preview.title || "Link preview"}
-										width={96}
-										height={96}
-										className="rounded-lg object-cover w-24 h-24"
-									/>
-								</div>
-							)}
-							<div className="grow min-w-0">
-								<h3 className="font-medium line-clamp-2">{preview.title}</h3>
-								{preview.description && (
-									<p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-										{preview.description}
-									</p>
-								)}
-								{preview.siteName && (
-									<p className="text-xs text-muted-foreground mt-2">
-										{preview.siteName}
-									</p>
-								)}
-							</div>
-						</a>
-					</CardContent>
-				</Card>
+			{urls.map((url) => (
+				<LinkPreviewCard key={url} url={url} />
 			))}
 			{podcastsLink && (
 				<div className="text-sm text-muted-foreground">

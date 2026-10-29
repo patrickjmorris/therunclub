@@ -14,7 +14,7 @@ import { db } from "@/db/client";
 import { Suspense } from "react";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { and } from "drizzle-orm";
-import { preloadLinks } from "@/components/common/link-preview/link-preview-preloader";
+import { LinkPreviewList } from "@/components/common/link-preview/link-preview";
 import { AthleteMentions } from "@/components/athletes/athlete-mentions";
 import { AthleteReferences } from "@/components/athletes/athlete-references";
 import { MentionLoading } from "@/components/common/mention-loading";
@@ -31,36 +31,6 @@ const DynamicTabsWithState = (await import("next/dynamic")).default(
 		import("@/components/common/tabs-with-state").then((mod) => ({
 			default: mod.TabsWithState,
 		})),
-	{ ssr: false },
-);
-
-const DynamicLinkPreviewClientWrapper = (await import("next/dynamic")).default(
-	() =>
-		import("@/components/common/link-preview/link-preview-client-wrapper").then(
-			(mod) => ({
-				default: mod.LinkPreviewClientWrapper,
-			}),
-		),
-	{ ssr: false },
-);
-
-const DynamicLinkPreviewPreloader = (await import("next/dynamic")).default(
-	() =>
-		import("@/components/common/link-preview/link-preview-preloader").then(
-			(mod) => ({
-				default: mod.LinkPreviewPreloader,
-			}),
-		),
-	{ ssr: false },
-);
-
-const DynamicLinkPreviewErrorBoundary = (await import("next/dynamic")).default(
-	() =>
-		import("@/components/common/link-preview/link-preview-error-boundary").then(
-			(mod) => ({
-				default: mod.LinkPreviewErrorBoundary,
-			}),
-		),
 	{ ssr: false },
 );
 
@@ -263,9 +233,6 @@ export default async function VideoPage({ params }: VideoPageProps) {
 		descriptionWithLinks,
 	} = data;
 
-	// Start preloading the link previews
-	const preloadedData = preloadLinks(urls);
-
 	const videoPath = `/videos/${videoData.id}`;
 	const channelPath = `/videos/channels/${videoData.channelId}`;
 	const structuredData = [
@@ -380,57 +347,32 @@ export default async function VideoPage({ params }: VideoPageProps) {
 				{/* Content */}
 				<div className="mt-6 max-w-3xl">
 					{urls.length > 0 ? (
-						<>
-							<DynamicLinkPreviewPreloader urls={urls} />
-							<DynamicTabsWithState
-								className="max-w-3xl"
-								tabs={[
-									{
-										value: "description",
-										label: "Description",
-										content: (
-											<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap wrap-break-word [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
-												<div
-													// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
-													dangerouslySetInnerHTML={{
-														__html: descriptionWithLinks,
-													}}
-												/>
-											</div>
-										),
-									},
-									{
-										value: "links",
-										label: `Links (${urls.length})`,
-										content: (
-											<div className="space-y-4">
-												<Suspense
-													fallback={
-														<div className="animate-pulse">
-															Loading link previews...
-														</div>
-													}
-												>
-													<DynamicLinkPreviewErrorBoundary
-														fallback={
-															<div className="text-sm text-muted-foreground">
-																Unable to load link previews. You can still
-																click the links in the description.
-															</div>
-														}
-													>
-														<DynamicLinkPreviewClientWrapper
-															urls={urls}
-															preloadedData={preloadedData}
-														/>
-													</DynamicLinkPreviewErrorBoundary>
-												</Suspense>
-											</div>
-										),
-									},
-								]}
-							/>
-						</>
+						<DynamicTabsWithState
+							className="max-w-3xl"
+							tabs={[
+								{
+									value: "description",
+									label: "Description",
+									content: (
+										<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap wrap-break-word [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
+											<div
+												// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
+												dangerouslySetInnerHTML={{
+													__html: descriptionWithLinks,
+												}}
+											/>
+										</div>
+									),
+								},
+								{
+									value: "links",
+									label: `Links (${urls.length})`,
+									content: (
+										<LinkPreviewList urls={urls} />
+									),
+								},
+							]}
+						/>
 					) : (
 						<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap wrap-break-word [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
 							<div

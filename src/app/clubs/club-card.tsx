@@ -12,16 +12,14 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import type { RunningClub } from "@/db/schema";
-import type { OpenGraphData } from "@/lib/og";
-import { ClubLinkPreview } from "./club-link-preview";
+import { LinkPreviewCard } from "@/components/common/link-preview/link-preview";
 
 interface ClubCardProps {
 	club: RunningClub;
-	ogData?: OpenGraphData | null;
 	cityHref?: string;
 }
 
-export function ClubCard({ club, ogData, cityHref }: ClubCardProps) {
+export function ClubCard({ club, cityHref }: ClubCardProps) {
 	const place = `${club.location.city}${
 		club.location.state ? `, ${club.location.state}` : ""
 	}`;
@@ -52,8 +50,8 @@ export function ClubCard({ club, ogData, cityHref }: ClubCardProps) {
 			</CardHeader>
 
 			<CardContent className="grow space-y-2">
-				{club.website && ogData && (
-					<ClubLinkPreview website={club.website} ogData={ogData} />
+				{club.website && (
+					<LinkPreviewCard url={club.website} className="mb-4" />
 				)}
 				{club.description && (
 					<p className="text-sm text-muted-foreground">{club.description}</p>

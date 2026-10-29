@@ -124,7 +124,10 @@ export default async function TagPage(props: TagPageProps) {
 				{sibling && (
 					<p className="mt-2">
 						<Link
-							href={tagHubPath(sibling)}
+							href={tagHubPath({
+								type: sibling.type,
+								tag: sibling.canonicalTag,
+							})}
 							className="text-primary hover:underline"
 						>
 							{sibling.count.toLocaleString("en-US")} {hub.tag}{" "}

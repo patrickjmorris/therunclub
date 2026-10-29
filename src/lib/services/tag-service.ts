@@ -100,8 +100,13 @@ export interface TagHub {
 	lastModified: string;
 }
 
+// Plural looks like a variant but is a different topic.
+const DISTINCT_PLURALS = new Set(["disciplines"]);
+
 function topicKey(type: string, tag: string) {
-	return `${type}:${tag.toLowerCase().replace(/[\s-]+/g, "").replace(/s$/, "")}`;
+	const compact = tag.toLowerCase().replace(/[\s-]+/g, "");
+	const stem = DISTINCT_PLURALS.has(compact) ? compact : compact.replace(/s$/, "");
+	return `${type}:${stem}`;
 }
 
 export const getTagHubs = createDailyCache(

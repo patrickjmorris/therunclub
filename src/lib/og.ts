@@ -2,6 +2,11 @@ import { lookup as dnsLookup, type LookupAddress } from "node:dns";
 import { get as httpGet } from "node:http";
 import { get as httpsGet } from "node:https";
 import { BlockList, isIP, type LookupFunction } from "node:net";
+import {
+	createBrotliDecompress,
+	createGunzip,
+	createInflate,
+} from "node:zlib";
 import { getPreviewFromContent } from "link-preview-js";
 
 // Previews fetch user-supplied URLs server-side, so refuse any host that
@@ -52,8 +57,11 @@ const publicLookup: LookupFunction = (hostname, options, callback) => {
 };
 
 const MAX_REDIRECTS = 5;
+// Decompressed bytes; OG tags live in <head>, so a capped body is enough.
 const MAX_BYTES = 1_000_000;
-const TIMEOUT_MS = 3000;
+// Wall-clock budget for the whole fetch, redirects included, so a slow
+// drip of bytes can't hold the function open.
+const DEADLINE_MS = 5000;
 
 interface FetchedPage {
 	url: string;
@@ -62,7 +70,24 @@ interface FetchedPage {
 	data: string;
 }
 
-function requestOnce(url: URL): Promise<FetchedPage & { location?: string }> {
+function decoder(encoding: string | undefined) {
+	switch (encoding?.trim().toLowerCase()) {
+		case "gzip":
+		case "x-gzip":
+			return createGunzip();
+		case "deflate":
+			return createInflate();
+		case "br":
+			return createBrotliDecompress();
+		default:
+			return null;
+	}
+}
+
+function requestOnce(
+	url: URL,
+	signal: AbortSignal,
+): Promise<FetchedPage & { location?: string }> {
 	if (url.protocol !== "http:" && url.protocol !== "https:") {
 		return Promise.reject(new Error(`Unsupported protocol for ${url.href}`));
 	}
@@ -77,70 +102,76 @@ function requestOnce(url: URL): Promise<FetchedPage & { location?: string }> {
 	}
 	const get = url.protocol === "https:" ? httpsGet : httpGet;
 	return new Promise((resolve, reject) => {
+		let responded = false;
 		const request = get(
 			url,
 			{
 				lookup: publicLookup,
-				timeout: TIMEOUT_MS,
+				signal,
 				headers: {
 					"user-agent": HEADERS.userAgent,
 					accept: HEADERS.accept,
 					"accept-language": HEADERS.acceptLanguage,
+					"accept-encoding": "gzip, deflate, br",
 				},
 			},
 			(response) => {
+				responded = true;
 				const headers: Record<string, string> = {};
 				for (const [key, value] of Object.entries(response.headers)) {
 					if (value !== undefined) headers[key] = String(value);
 				}
 				const status = response.statusCode ?? 0;
+				const page = { url: url.href, status, headers };
 				if (status >= 300 && status < 400 && headers.location) {
-					response.resume();
-					return resolve({
-						url: url.href,
-						status,
-						headers,
-						data: "",
-						location: headers.location,
-					});
+					request.destroy();
+					return resolve({ ...page, data: "", location: headers.location });
 				}
+				const decode = decoder(headers["content-encoding"]);
+				const body = decode ? response.pipe(decode) : response;
 				const chunks: Buffer[] = [];
 				let size = 0;
-				// OG tags live in <head>, so a capped body is still enough.
-				const finish = () =>
-					resolve({
-						url: url.href,
-						status,
-						headers,
-						data: Buffer.concat(chunks).toString("utf8"),
-					});
-				response.on("data", (chunk: Buffer) => {
+				const finish = () => {
+					resolve({ ...page, data: Buffer.concat(chunks).toString("utf8") });
+					decode?.destroy();
+					request.destroy();
+				};
+				body.on("data", (chunk: Buffer) => {
+					if (size >= MAX_BYTES) return;
 					chunks.push(chunk);
 					size += chunk.length;
-					if (size >= MAX_BYTES) {
-						finish();
-						request.destroy();
+					if (size >= MAX_BYTES) finish();
+				});
+				body.on("end", finish);
+				body.on("error", reject);
+				// A body cut off mid-stream; no-op once settled.
+				response.on("close", () => {
+					if (!response.complete) {
+						reject(new Error(`Connection closed by ${url.href}`));
 					}
 				});
-				response.on("end", finish);
-				response.on("error", reject);
 			},
 		);
-		request.on("timeout", () =>
-			request.destroy(
-				Object.assign(new Error("Request timed out"), {
-					name: "TimeoutError",
-				}),
-			),
-		);
+		// Covers upgrades (101) and sockets closed before any response,
+		// which otherwise never settle.
+		request.on("upgrade", (_response, socket) => {
+			socket.destroy();
+			reject(new Error(`Unexpected upgrade from ${url.href}`));
+		});
+		request.on("close", () => {
+			if (!responded) {
+				reject(new Error(`Connection closed by ${url.href}`));
+			}
+		});
 		request.on("error", reject);
 	});
 }
 
 async function fetchPublicPage(target: string): Promise<FetchedPage> {
+	const signal = AbortSignal.timeout(DEADLINE_MS);
 	let url = new URL(target);
 	for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-		const { location, ...page } = await requestOnce(url);
+		const { location, ...page } = await requestOnce(url, signal);
 		if (!location) return page;
 		url = new URL(location, url);
 	}
@@ -216,7 +247,7 @@ export async function getOpenGraphData(url: string): Promise<OpenGraphData> {
 		);
 		if (
 			error instanceof Error &&
-			(error.name === "TimeoutError" || error.message?.includes("aborted"))
+			["TimeoutError", "AbortError"].includes(error.name)
 		) {
 			return {
 				title: new URL(url).hostname,

@@ -79,9 +79,23 @@ function LinkPreviewSkeleton({ className }: { className?: string }) {
 	);
 }
 
+// Matches the route's canonical form (no fragment, normalized) to skip
+// its redirect.
+function canonical(url: string) {
+	if (!URL.canParse(url)) return url;
+	const parsed = new URL(url);
+	parsed.hash = "";
+	return parsed.href;
+}
+
 // Fetches the preview once the card scrolls near the viewport; renders
-// nothing if the site has no usable preview.
-export function LinkPreviewCard({
+// nothing if the site has no usable preview. Keyed by url so a new url
+// starts from a fresh, observable state.
+export function LinkPreviewCard(props: { url: string; className?: string }) {
+	return <LazyLinkPreview key={props.url} {...props} />;
+}
+
+function LazyLinkPreview({
 	url,
 	className,
 }: {
@@ -99,7 +113,7 @@ export function LinkPreviewCard({
 			([entry]) => {
 				if (!entry.isIntersecting) return;
 				observer.disconnect();
-				fetch(`/api/link-preview?url=${encodeURIComponent(url)}`, {
+				fetch(`/api/link-preview?url=${encodeURIComponent(canonical(url))}`, {
 					signal: controller.signal,
 				})
 					.then((response) => (response.ok ? response.json() : null))

@@ -644,7 +644,7 @@ async function processPodcast(
 									duration: sql`EXCLUDED.duration`,
 									explicit: sql`EXCLUDED.explicit`,
 									image: sql`EXCLUDED.image`,
-									episodeImage: sql`EXCLUDED.episode_image`,
+									episodeImage: keepProcessedEpisodeImage,
 									itunesEpisode: sql`EXCLUDED.itunes_episode`,
 									updatedAt: sql`CURRENT_TIMESTAMP`,
 								},
@@ -678,7 +678,7 @@ async function processPodcast(
 									duration: sql`EXCLUDED.duration`,
 									explicit: sql`EXCLUDED.explicit`,
 									image: sql`EXCLUDED.image`,
-									episodeImage: sql`EXCLUDED.episode_image`,
+									episodeImage: keepProcessedEpisodeImage,
 									guid: sql`EXCLUDED.guid`,
 									itunesEpisode: sql`EXCLUDED.itunes_episode`,
 									updatedAt: sql`CURRENT_TIMESTAMP`,
@@ -736,6 +736,13 @@ interface UpdatePodcastOptions {
 	limit?: number;
 	randomSample?: boolean;
 }
+
+// Ingest only reprocesses an episode image when its source changes, and passes
+// null otherwise; keep the stored processed image in that case.
+const keepProcessedEpisodeImage = sql`CASE
+	WHEN EXCLUDED.image IS DISTINCT FROM ${episodes.image} THEN EXCLUDED.episode_image
+	ELSE COALESCE(EXCLUDED.episode_image, ${episodes.episodeImage})
+END`;
 
 export async function updatePodcastData(options: UpdatePodcastOptions = {}) {
 	const { minHoursSinceUpdate = 24, limit, randomSample = false } = options;

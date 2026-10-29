@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedJob } from "@/lib/api-auth";
+import { canonicalizeTags } from "@/lib/services/tag-service";
 import { db } from "@/db/client";
 import { videos, podcasts, episodes, contentTags } from "@/db/schema";
 import { eq, and, gte, desc, sql, not } from "drizzle-orm";
@@ -368,7 +369,8 @@ async function saveTags(
 
 		// Insert new tags
 		if (tags.length > 0) {
-			const tagsToInsert = tags.map((tag) => ({
+			const canonical = await canonicalizeTags(tags);
+			const tagsToInsert = canonical.map((tag) => ({
 				contentId,
 				contentType,
 				tag,

@@ -17,6 +17,7 @@
 import fs from "fs";
 import path from "path";
 import { db } from "../src/db/client";
+import { canonicalizeTags } from "../src/lib/services/tag-service";
 import {
 	videos,
 	podcasts,
@@ -1108,7 +1109,8 @@ async function saveTags(
 
 		// Insert new tags
 		if (tags.length > 0) {
-			const tagsToInsert = tags.map((tag) => ({
+			const canonical = await canonicalizeTags(tags);
+			const tagsToInsert = canonical.map((tag) => ({
 				contentId,
 				contentType,
 				tag,

@@ -1,6 +1,6 @@
 export const siteConfig = {
 	name: "The Run Club",
-	url: "https://therunclub.xyz",
+	url: "https://www.therunclub.xyz",
 	ogImage: "https://therunclub.xyz/og.jpg",
 	description:
 		"The Run Club is a podcast about running, fitness, and everything in between.",
@@ -11,3 +11,7 @@ export const siteConfig = {
 };
 
 export type SiteConfig = typeof siteConfig;
+
+export function absoluteUrl(path: string) {
+	return new URL(path, siteConfig.url).toString();
+}

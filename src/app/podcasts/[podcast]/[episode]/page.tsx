@@ -121,12 +121,8 @@ const safeHandleDate = (
 // Create a cached function for fetching episode data
 const getEpisodeData = createWeeklyCache(
 	async (podcastSlug: string, episodeSlug: string) => {
-		const episode = await getEpisode(episodeSlug);
-
-		// Return null if episode doesn't exist or doesn't match podcast
-		if (!episode || episode.podcastSlug !== podcastSlug) {
-			return null;
-		}
+		const episode = await getEpisode(podcastSlug, episodeSlug);
+		if (!episode) return null;
 
 		// Get more episodes from the same podcast (fetch 4 to ensure we have enough after filtering)
 		const moreEpisodes = await getLastTenEpisodesByPodcastSlug(podcastSlug, 4);

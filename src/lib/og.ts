@@ -33,6 +33,9 @@ for (const [net, prefix] of [
 	PRIVATE.addSubnet(net, prefix, "ipv6");
 }
 
+// A failure retrying won't fix (blocked host, unreadable response).
+class NoPreviewError extends Error {}
+
 function isPrivate(address: string, family: number) {
 	const v4Mapped = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
 	if (v4Mapped) return PRIVATE.check(v4Mapped[1], "ipv4");
@@ -47,7 +50,7 @@ const publicLookup: LookupFunction = (hostname, options, callback) => {
 		const list = addresses as LookupAddress[];
 		if (list.length === 0 || list.some((a) => isPrivate(a.address, a.family))) {
 			return callback(
-				new Error(`Refusing private address for ${hostname}`),
+				new NoPreviewError(`Refusing private address for ${hostname}`),
 				"",
 				0,
 			);
@@ -82,7 +85,7 @@ function decoders(contentEncoding: string | undefined): Transform[] {
 		if (coding === "gzip" || coding === "x-gzip") return createGunzip();
 		if (coding === "deflate") return createInflate();
 		if (coding === "br") return createBrotliDecompress();
-		throw new Error(`Unsupported content-encoding ${coding}`);
+		throw new NoPreviewError(`Unsupported content-encoding ${coding}`);
 	});
 }
 
@@ -91,7 +94,7 @@ function requestOnce(
 	signal: AbortSignal,
 ): Promise<FetchedPage & { location?: string }> {
 	if (url.protocol !== "http:" && url.protocol !== "https:") {
-		return Promise.reject(new Error(`Unsupported protocol for ${url.href}`));
+		return Promise.reject(new NoPreviewError(`Unsupported protocol for ${url.href}`));
 	}
 	// IP literals skip DNS lookup, so check them directly. URL.hostname
 	// keeps brackets on IPv6 literals.
@@ -99,7 +102,7 @@ function requestOnce(
 	const family = isIP(host);
 	if (family && isPrivate(host, family)) {
 		return Promise.reject(
-			new Error(`Refusing private address for ${url.href}`),
+			new NoPreviewError(`Refusing private address for ${url.href}`),
 		);
 	}
 	const get = url.protocol === "https:" ? httpsGet : httpGet;
@@ -196,7 +199,7 @@ async function fetchPublicPage(target: string): Promise<FetchedPage> {
 		if (!location) return page;
 		url = new URL(location, url);
 	}
-	throw new Error(`Too many redirects for ${target}`);
+	throw new NoPreviewError(`Too many redirects for ${target}`);
 }
 
 const HEADERS = {
@@ -220,68 +223,44 @@ function cleanContent(content: string | null): string {
 	return content.trim().replace(/\s+/g, " ");
 }
 
-export async function getOpenGraphData(url: string): Promise<OpenGraphData> {
+// HTTP statuses worth retrying; any other 4xx/5xx is a page with no
+// preview.
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+// Resolves to the preview, or null when the page definitively has none
+// (error page, no title, blocked or dead host): safe to cache. Throws on
+// failures that may pass (timeouts, resets, 5xx), so they aren't cached.
+export async function getOpenGraphData(
+	url: string,
+): Promise<OpenGraphData | null> {
+	let page: FetchedPage;
 	try {
-		const page = await fetchPublicPage(url);
-		// Error pages ("Page not found") aren't a preview of the site.
-		if (page.status >= 400) throw new Error(`HTTP ${page.status}`);
-		const data = await getPreviewFromContent(page);
-
-		// Handle different response types from link-preview-js
-		if ("title" in data && typeof data.title === "string") {
-			return {
-				title: data.title || new URL(url).hostname,
-				description:
-					"description" in data && typeof data.description === "string"
-						? cleanContent(data.description)
-						: "",
-				image:
-					"images" in data &&
-					Array.isArray(data.images) &&
-					data.images.length > 0
-						? data.images[0]
-						: "",
-				url: "url" in data && typeof data.url === "string" ? data.url : url,
-			};
-		}
-
-		// Handle media types (images, videos, etc)
-		if ("mediaType" in data) {
-			return {
-				title: new URL(url).hostname,
-				description: data.mediaType || "Media content",
-				image: data.mediaType === "image" ? url : "",
-				url,
-			};
-		}
-
-		// Fallback for other types
-		return {
-			title: new URL(url).hostname,
-			description: "",
-			image: "",
-			url,
-		};
-	} catch (error: unknown) {
-		console.warn(
-			`Link preview failed for ${url}: ${error instanceof Error ? error.message : error}`,
-		);
-		if (
-			error instanceof Error &&
-			["TimeoutError", "AbortError"].includes(error.name)
-		) {
-			return {
-				title: new URL(url).hostname,
-				description: "Preview timed out.",
-				image: "",
-				url,
-			};
-		}
-		return {
-			title: new URL(url).hostname,
-			description: "Could not load preview.",
-			image: "",
-			url,
-		};
+		page = await fetchPublicPage(url);
+	} catch (error) {
+		if (error instanceof NoPreviewError) return null;
+		if ((error as NodeJS.ErrnoException).code === "ENOTFOUND") return null;
+		throw error;
 	}
+	if (RETRYABLE_STATUS.has(page.status)) {
+		throw new Error(`HTTP ${page.status} from ${url}`);
+	}
+	// Error pages ("Page not found") aren't a preview of the site.
+	if (page.status >= 400) return null;
+
+	const data = await getPreviewFromContent(page);
+	if (!("title" in data) || typeof data.title !== "string" || !data.title) {
+		return null;
+	}
+	return {
+		title: data.title,
+		description:
+			"description" in data && typeof data.description === "string"
+				? cleanContent(data.description)
+				: "",
+		image:
+			"images" in data && Array.isArray(data.images) && data.images.length > 0
+				? data.images[0]
+				: "",
+		url: "url" in data && typeof data.url === "string" ? data.url : url,
+	};
 }

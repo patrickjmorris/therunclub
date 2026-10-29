@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { getVideoById, getChannelVideos } from "@/lib/services/video-service";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -238,8 +238,21 @@ export async function generateStaticParams() {
 	}
 }
 
+const UUID_PATTERN =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function VideoPage({ params }: VideoPageProps) {
 	const { video } = await params;
+	// The old sitemap linked /videos/<youtubeId>; send those to the UUID URL.
+	if (!UUID_PATTERN.test(video)) {
+		const [match] = await db
+			.select({ id: videos.id })
+			.from(videos)
+			.where(eq(videos.youtubeVideoId, video))
+			.limit(1);
+		if (match) permanentRedirect(`/videos/${match.id}`);
+		notFound();
+	}
 	const data = await getVideoData(video);
 
 	if (!data) {

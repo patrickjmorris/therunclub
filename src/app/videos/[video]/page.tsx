@@ -16,18 +16,13 @@ import { preloadLinks } from "@/components/common/link-preview/link-preview-prel
 import { AthleteMentions } from "@/components/athletes/athlete-mentions";
 import { AthleteReferences } from "@/components/athletes/athlete-references";
 import { MentionLoading } from "@/components/common/mention-loading";
+// Server-rendered so its 16:9 placeholder reserves space before hydration.
+import { VideoPlayer } from "@/components/videos/video-player";
 import { breadcrumbList, metaDescription, pageMetadata } from "@/lib/seo";
 import { absoluteUrl } from "@/config/site";
 import { JsonLd } from "@/components/common/json-ld";
 
 // Dynamically import components
-const DynamicVideoPlayer = (await import("next/dynamic")).default(
-	() =>
-		import("@/components/videos/video-player").then((mod) => ({
-			default: mod.VideoPlayer,
-		})),
-	{ ssr: false },
-);
 
 const DynamicTabsWithState = (await import("next/dynamic")).default(
 	() =>
@@ -317,10 +312,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 	return (
 		<div className="container py-8">
 			<JsonLd data={structuredData} />
-			<DynamicVideoPlayer
-				videoId={videoData.youtubeVideoId}
-				title={videoData.title}
-			/>
+			<VideoPlayer videoId={videoData.youtubeVideoId} title={videoData.title} />
 			<div className="mt-4">
 				<h1 className="text-2xl font-bold">{videoData.title}</h1>
 

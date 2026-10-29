@@ -1,7 +1,7 @@
 // Main page for race discovery
 import { Suspense } from "react"; // Import Suspense
-import EventListView from "./components/race-list-view";
-import { RaceFilters, COMMON_DISTANCES } from "./components/RaceFilters"; // Import RaceFilters and distance constants
+import EventListView from "../components/race-list-view";
+import { RaceFilters, COMMON_DISTANCES } from "../components/RaceFilters"; // Import RaceFilters and distance constants
 import { fetchRaces } from "@/lib/runsignup-api";
 import type { RunSignupRacesResponse, RunSignupRace } from "@/types/runsignup";
 import { getUserZipFromHeaders } from "@/lib/geolocation";
@@ -15,6 +15,14 @@ import {
 	TableRow,
 	TableCell,
 } from "@/components/ui/table";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+	title: "Find Running Races Near You",
+	description:
+		"Search upcoming 5Ks, 10Ks, half marathons, and marathons near you by distance and date, with registration links.",
+	path: "/races",
+});
 
 // Helper function to get zip from headers (simpler than API call for this page)
 async function getZipFromHeaders(): Promise<string | null> {

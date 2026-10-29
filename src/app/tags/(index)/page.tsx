@@ -2,6 +2,14 @@ import { getTopTags } from "@/lib/services/tag-service";
 import Link from "next/link";
 import { Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+	title: "Running Topics",
+	description:
+		"Browse running podcasts and videos by topic: marathon training, trail running, nutrition, gear, and more.",
+	path: "/tags",
+});
 
 export const revalidate = 3600;
 

@@ -4,13 +4,15 @@ import { GearFilters } from "@/components/gear/gear-filters";
 import { GearCard } from "@/components/gear/gear-card";
 import { queryGear } from "@/lib/db/queries/gear";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageMetadata } from "@/lib/seo";
 // Assume a pagination component exists or will be created
 // import { Pagination } from "@/components/ui/pagination";
 
-export const metadata: Metadata = {
-	title: "Browse Gear - The Run Club",
+export const metadata: Metadata = pageMetadata({
+	title: "Running Gear: Shoes, Apparel & Watches",
 	description: "Find and filter running shoes, apparel, watches, and more.",
-};
+	path: "/gear",
+});
 
 // Define search parameters type (will be used more later)
 interface GearPageProps {

@@ -90,12 +90,15 @@ export async function fetchRaces(
 	}
 }
 
+const RACE_NOT_FOUND = 201;
+
 /**
- * Fetches a single race by race_id from the RunSignup API (includes events array by default)
+ * Fetches a single race by race_id from the RunSignup API (includes events array by default).
+ * Resolves null when RunSignup has no race with this id.
  */
 export async function fetchRace(
 	raceId: number | string,
-): Promise<RunSignupRaceResponse> {
+): Promise<RunSignupRaceResponse | null> {
 	const apiKey = process.env.RUNSIGNUP_API_KEY;
 	const apiSecret = process.env.RUNSIGNUP_API_SECRET;
 	const affiliateToken = process.env.RUNSIGNUP_AFFILIATE_TOKEN;
@@ -127,7 +130,10 @@ export async function fetchRace(
 				`RunSignup API error (single race): ${res.status} ${res.statusText}`,
 			);
 		}
-		const data: RunSignupRaceResponse = JSON.parse(rawText);
+		const data: RunSignupRaceResponse & {
+			error?: { error_code: number };
+		} = JSON.parse(rawText);
+		if (data?.error?.error_code === RACE_NOT_FOUND) return null;
 		if (!data || !data.race) {
 			console.error(
 				"[RunSignup API] Invalid response structure (single race):",

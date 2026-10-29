@@ -312,9 +312,9 @@ export const getEpisodeTitles = unstable_cache(
 	{ tags: ["episodes"], revalidate: 3600 },
 );
 
-// Get episode by slug
+// Episode slugs are only unique within a podcast.
 export const getEpisode = unstable_cache(
-	async (episodeSlug: string) => {
+	async (podcastSlug: string, episodeSlug: string) => {
 		// console.log("getEpisode - Input slug:", episodeSlug);
 		const results = await db
 			.select({
@@ -338,7 +338,13 @@ export const getEpisode = unstable_cache(
 			})
 			.from(episodes)
 			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-			.where(eq(episodes.episodeSlug, episodeSlug))
+			.where(
+				and(
+					eq(podcasts.podcastSlug, podcastSlug),
+					eq(episodes.episodeSlug, episodeSlug),
+				),
+			)
+			.orderBy(desc(episodes.pubDate))
 			.limit(1);
 
 		// console.log("getEpisode - Query results:", results);

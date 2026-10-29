@@ -20,21 +20,14 @@ import {
 	AthleteMentionsSection,
 	AthleteMentionsSectionSkeleton,
 } from "@/components/athletes/AthleteMentionsSection";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-	title: "Running Videos | The Run Club",
+export const metadata: Metadata = pageMetadata({
+	title: "Running Videos",
 	description:
 		"Watch the latest running videos from top creators in the running community",
-	openGraph: {
-		title: "Running Videos | The Run Club",
-		description:
-			"Watch the latest running videos from top creators in the running community",
-		type: "website",
-	},
-	alternates: {
-		canonical: "/videos",
-	},
-};
+	path: "/videos",
+});
 
 interface PageProps {
 	searchParams: Promise<{ q?: string; category?: string }>;

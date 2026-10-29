@@ -1,5 +1,15 @@
 import { PodcastSearch } from "@/components/podcasts/podcast-search";
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = {
+	...pageMetadata({
+		title: "Podcast Search",
+		description: "Search the Podcast Index for running podcasts.",
+		path: "/podcast-search",
+	}),
+	robots: { index: false, follow: true },
+};
 
 export default function PodcastSearchPage() {
 	return (

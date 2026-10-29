@@ -12,6 +12,14 @@ import {
 	AthleteRow,
 	AthleteRowSkeleton,
 } from "@/components/athletes/AthleteRow";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+	title: "Elite Running Athletes",
+	description:
+		"Profiles of elite track, road, and trail runners: personal bests, honors, results, and the podcasts and videos that mention them.",
+	path: "/athletes",
+});
 
 export default async function AthletesPage() {
 	// Fetch all data concurrently

@@ -1,4 +1,12 @@
 import { CalculatorModeProvider } from "./components/calculator-mode-provider";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+	title: "Running Pace Calculator",
+	description:
+		"Calculate running pace, finish time, or distance for any race from 5K to marathon, with per-mile and per-kilometer splits.",
+	path: "/calculators",
+});
 
 // Enforce static rendering for this page
 export const dynamic = "force-static";

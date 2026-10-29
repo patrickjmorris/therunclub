@@ -6,6 +6,28 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Tag } from "lucide-react";
 import { EpisodeCard } from "@/components/podcasts/EpisodeCard";
+import { pageMetadata } from "@/lib/seo";
+import type { Metadata } from "next";
+
+const TYPE_LABELS = {
+	episode: { noun: "Podcast Episodes", verb: "Listen to" },
+	video: { noun: "Videos", verb: "Watch" },
+} as const;
+
+export async function generateMetadata(props: TagPageProps): Promise<Metadata> {
+	const { type, tag } = await props.params;
+	if (type !== "video" && type !== "episode") return {};
+	const decodedTag = decodeURIComponent(tag);
+	const { noun, verb } = TYPE_LABELS[type];
+	const label = decodedTag.replace(/\b\w/g, (c) => c.toUpperCase());
+	return pageMetadata({
+		title: /running/i.test(label)
+			? `${label} ${noun}`
+			: `${label} Running ${noun}`,
+		description: `${verb} the latest running ${noun.toLowerCase()} about ${decodedTag}, from top running podcasts and YouTube channels.`,
+		path: `/tags/${type}/${tag}`,
+	});
+}
 
 export const revalidate = 3600;
 

@@ -82,7 +82,7 @@ export async function createAthlete(data: z.infer<typeof createAthleteSchema>) {
 	} catch (error) {
 		console.error("Error creating athlete:", error);
 		if (error instanceof z.ZodError) {
-			throw new Error(error.errors[0].message);
+			throw new Error(error.issues[0].message);
 		}
 		if (error instanceof Error) {
 			throw error;

@@ -5,9 +5,11 @@ import { db } from "@/db/client";
 import { contentTags } from "@/db/schema";
 import { count, desc, eq, and, inArray, sql, countDistinct } from "drizzle-orm";
 import { z } from "zod";
+import { requireContentManager } from "@/lib/auth-utils";
 
 // --- Action to fetch unique tags --- <get_unique_tags>
 export async function getUniqueTags(limit = 1000, offset = 0) {
+	await requireContentManager();
 	try {
 		const tagCounts = await db
 			.select({
@@ -61,6 +63,7 @@ export async function consolidateTagsAction(
 	prevState: ConsolidateTagsState,
 	formData: FormData,
 ): Promise<ConsolidateTagsState> {
+	await requireContentManager();
 	// Return the defined state type
 	const validatedFields = ConsolidateTagsSchema.safeParse({
 		variantTag: formData.get("variantTag"),

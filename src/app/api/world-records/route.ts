@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { isAuthorizedJob } from "@/lib/api-auth";
 import { db } from "@/db/client";
 import { worldRecords } from "@/db/schema";
 import { gqlClient } from "@/lib/world-athletics";
@@ -148,7 +149,10 @@ async function updateWorldRecords() {
 	}
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+	if (!isAuthorizedJob(request)) {
+		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+	}
 	try {
 		const result = await updateWorldRecords();
 		return NextResponse.json(result);
@@ -162,7 +166,10 @@ export async function GET() {
 }
 
 // Add a POST endpoint for manual updates
-export async function POST() {
+export async function POST(request: NextRequest) {
+	if (!isAuthorizedJob(request)) {
+		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+	}
 	try {
 		const result = await updateWorldRecords();
 		return NextResponse.json(result);

@@ -1,19 +1,27 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/utils/supabase/server";
 import { db } from "@/db/client";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function updateProfile(
-	userId: string,
-	data: { fullName: string; avatarUrl?: string },
-) {
-	try {
-		const supabase = await createClient();
+async function getUserId() {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) throw new Error("Not authenticated");
+	return { supabase, userId: user.id };
+}
 
-		// Update profile in database
+export async function updateProfile(data: {
+	fullName: string;
+	avatarUrl?: string;
+}) {
+	try {
+		const { userId } = await getUserId();
+
 		await db
 			.update(profiles)
 			.set({
@@ -31,9 +39,9 @@ export async function updateProfile(
 	}
 }
 
-export async function uploadAvatar(userId: string, file: File) {
+export async function uploadAvatar(file: File) {
 	try {
-		const supabase = await createClient();
+		const { supabase, userId } = await getUserId();
 
 		const fileExt = file.name.split(".").pop();
 		const fileName = `${userId}/${Date.now()}.${fileExt}`;

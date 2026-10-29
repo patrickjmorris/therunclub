@@ -1,5 +1,3 @@
-"use server";
-
 import { getOpenGraphData } from "@/lib/og";
 
 export async function fetchLinkPreviews(urls: string[]) {

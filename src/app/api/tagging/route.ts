@@ -1,5 +1,5 @@
-import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedJob } from "@/lib/api-auth";
 import { db } from "@/db/client";
 import { videos, podcasts, episodes, contentTags } from "@/db/schema";
 import { eq, and, gte, desc, sql, not } from "drizzle-orm";
@@ -8,32 +8,6 @@ import { format, subHours } from "date-fns";
 
 // Define content types
 type ContentType = "video" | "podcast" | "episode" | "all";
-
-// Helper function to check authorization
-async function isAuthorized(request: NextRequest): Promise<boolean> {
-	const headersList = await headers();
-	const apiKeyFromHeaders = headersList.get("x-api-key");
-	const apiKeyFromRequest = request.headers.get("x-api-key");
-	const validApiKey = process.env.UPDATE_API_KEY;
-
-	// Check for cron secret
-	const authHeader = headersList.get("authorization");
-	const validCronSecret = process.env.CRON_SECRET;
-	const isCronRequest = authHeader === `Bearer ${validCronSecret}`;
-
-	if (!validApiKey && !validCronSecret) {
-		console.error(
-			"Neither API key nor CRON_SECRET configured in environment variables",
-		);
-		return false;
-	}
-
-	return (
-		apiKeyFromHeaders === validApiKey ||
-		apiKeyFromRequest === validApiKey ||
-		isCronRequest
-	);
-}
 
 // Add a list of common tag prefixes that should be preserved
 const COMMON_PREFIXES = [
@@ -737,7 +711,7 @@ async function processContentItems(
 // Main handler function
 export async function GET(request: NextRequest) {
 	// Check authorization
-	if (!(await isAuthorized(request))) {
+	if (!(isAuthorizedJob(request))) {
 		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 	}
 

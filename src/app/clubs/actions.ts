@@ -8,6 +8,7 @@ import { z } from "zod";
 import { extractClubInfo } from "@/lib/services/openai-service";
 import { revalidatePath } from "next/cache";
 import { getFilteredClubs } from "@/lib/services/club-service";
+import { requireContentManager } from "@/lib/auth-utils";
 
 // Input validation schema
 const schema = z.object({
@@ -20,6 +21,7 @@ export { getFilteredClubs };
 export const extractClubInfo_Action = createSafeActionClient()
 	.schema(schema)
 	.action(async ({ parsedInput: { text } }) => {
+		await requireContentManager();
 		try {
 			console.log("Extracting club info from:", text);
 			const extractedInfo = await extractClubInfo(text);

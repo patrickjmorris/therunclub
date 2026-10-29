@@ -43,10 +43,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	console.log("WebSub notification received");
 
-	// Log all headers for debugging
-	const headers = Object.fromEntries(request.headers.entries());
-	console.log("WebSub notification headers:", headers);
-
 	// Get required headers from the request
 	// Check for both standard header names and X- prefixed versions
 	const topic =
@@ -70,13 +66,6 @@ export async function POST(request: NextRequest) {
 		// Get the raw body for signature verification
 		const body = await request.text();
 		console.log(`WebSub notification body length: ${body.length} bytes`);
-
-		// Log a preview of the body for debugging (first 200 chars)
-		if (body.length > 0) {
-			console.log(
-				`WebSub notification body preview: ${body.substring(0, 200)}...`,
-			);
-		}
 
 		// Process the notification
 		const { statusCode, body: responseBody } =

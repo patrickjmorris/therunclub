@@ -78,8 +78,11 @@ async function repairEpisodeImages() {
 			on conflict (id) do nothing
 		`;
 		const cleared = await tx`
-			update episodes set episode_image = null
-			where id in (select id from (${missingEpisodeImages}) m)
+			update episodes e set episode_image = null
+			from episode_image_backup_20261029 b
+			where b.id = e.id
+				and e.episode_image = b.episode_image
+				and e.id in (select id from (${missingEpisodeImages}) m)
 		`;
 		console.log(`Backed up ${backedUp.count} rows`);
 		console.log(`Cleared episode_image on ${cleared.count} rows`);

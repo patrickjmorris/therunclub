@@ -175,7 +175,7 @@ export function CategoryManagement({ categories }: CategoryManagementProps) {
 				{categories.map((category) => (
 					<div
 						key={category.id}
-						className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
+						className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
 					>
 						<div>
 							<h3 className="font-semibold">{category.name}</h3>

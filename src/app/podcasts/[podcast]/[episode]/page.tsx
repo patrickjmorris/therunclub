@@ -253,7 +253,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 			/>
 			<Card className="">
 				<CardHeader className="flex flex-col lg:flex-row lg:items-start lg:gap-8 px-6">
-					<div className="w-full lg:w-[350px] lg:flex-shrink-0">
+					<div className="w-full lg:w-[350px] lg:shrink-0">
 						<Image
 							src={imageUrl ?? ""}
 							alt={episode.title}
@@ -262,7 +262,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 							className="w-full h-auto rounded-lg"
 						/>
 					</div>
-					<div className="flex-grow mt-6 lg:mt-0">
+					<div className="grow mt-6 lg:mt-0">
 						<h1 className="text-2xl font-semibold leading-tight tracking-tight">
 							{episode.title}
 						</h1>
@@ -321,7 +321,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 										content: (
 											<div className="prose dark:prose-invert max-w-none overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
 												<div
-													className="space-y-4 whitespace-pre-wrap break-words"
+													className="space-y-4 whitespace-pre-wrap wrap-break-word"
 													// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
 													dangerouslySetInnerHTML={{
 														__html: sanitizedContent,
@@ -366,7 +366,7 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 					) : (
 						<div className="prose dark:prose-invert max-w-3xl overflow-hidden [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
 							<div
-								className="space-y-4 whitespace-pre-wrap break-words"
+								className="space-y-4 whitespace-pre-wrap wrap-break-word"
 								// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is sanitized by DOMPurify and processed by addLinkStyles
 								dangerouslySetInnerHTML={{
 									__html: sanitizedContent,

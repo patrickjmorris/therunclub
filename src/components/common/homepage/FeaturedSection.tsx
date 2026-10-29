@@ -29,7 +29,7 @@ export function FeaturedChannelsSkeleton() {
 					{skeletonKeys.map((key) => (
 						<div
 							key={key}
-							className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"
+							className="rounded-lg border bg-card text-card-foreground shadow-xs overflow-hidden"
 						>
 							<div className="h-40 bg-muted animate-pulse" />
 							<div className="p-6 space-y-4">
@@ -67,7 +67,7 @@ export function FeaturedPodcastsSkeleton() {
 					{skeletonKeys.map((key) => (
 						<div
 							key={key}
-							className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"
+							className="rounded-lg border bg-card text-card-foreground shadow-xs overflow-hidden"
 						>
 							<div className="h-40 bg-muted animate-pulse" />
 							<div className="p-6 space-y-4">

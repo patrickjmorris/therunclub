@@ -24,7 +24,7 @@ export const PlayButton = forwardRef<HTMLDivElement, PlayButtonProps>(
 		return (
 			<Comp
 				ref={ref}
-				className={`group relative flex flex-shrink-0 items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 ${className}`}
+				className={`group relative flex shrink-0 items-center justify-center focus:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 ${className}`}
 				onClick={() => player.toggle()}
 				aria-label={player.playing ? "Pause" : "Play"}
 				{...props}

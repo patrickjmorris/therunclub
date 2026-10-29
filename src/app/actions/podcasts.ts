@@ -99,9 +99,9 @@ export const addPodcast = requireRole(["admin", "editor"])(
 
 			// Revalidate all podcast-related caches
 			revalidatePodcastsAndEpisodes(); // This revalidates both "podcasts" and "episodes" tags
-			revalidateTag("podcast-by-slug"); // Specifically revalidate the podcast detail page cache
-			revalidateTag("podcast"); // Revalidate any other podcast-related caches
-			revalidateTag("all-podcasts-with-last-episodes"); // Revalidate the podcasts list cache
+			revalidateTag("podcast-by-slug", { expire: 0 }); // Specifically revalidate the podcast detail page cache
+			revalidateTag("podcast", { expire: 0 }); // Revalidate any other podcast-related caches
+			revalidateTag("all-podcasts-with-last-episodes", { expire: 0 }); // Revalidate the podcasts list cache
 			revalidatePath("/podcasts"); // Also revalidate the podcasts page path
 
 			// Add a small delay to ensure cache revalidation has time to propagate

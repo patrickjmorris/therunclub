@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { updateProfile, updateAthleteImage } from "../actions";
-import { X, Instagram, Facebook, Globe, Youtube, Podcast } from "lucide-react";
+import { X, Globe, Podcast } from "lucide-react";
+import { Facebook, Instagram, Youtube } from "@/components/common/brand-icons";
 import { convertToAlpha2 } from "@/lib/utils/country-codes";
 import { AthleteImage } from "@/components/athletes/AthleteImage";
 
@@ -140,7 +141,7 @@ export function ProfileSection({
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-8">
-				<div className="relative w-48 h-48 rounded-lg overflow-hidden flex-shrink-0 mx-auto lg:mx-0">
+				<div className="relative w-48 h-48 rounded-lg overflow-hidden shrink-0 mx-auto lg:mx-0">
 					<AthleteImage
 						src={imageUrl}
 						name={name}
@@ -152,7 +153,7 @@ export function ProfileSection({
 					/>
 				</div>
 
-				<div className="flex-grow space-y-4">
+				<div className="grow space-y-4">
 					{bio && (
 						<div className="prose dark:prose-invert max-w-none">
 							<p className="text-gray-600 dark:text-gray-300">{bio}</p>

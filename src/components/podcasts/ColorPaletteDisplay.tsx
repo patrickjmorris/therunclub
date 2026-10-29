@@ -24,7 +24,7 @@ export function ColorPaletteDisplay({
 						className="space-y-1"
 					>
 						<div
-							className="w-12 h-12 rounded-md shadow-sm"
+							className="w-12 h-12 rounded-md shadow-xs"
 							style={{ backgroundColor: color }}
 							title={color}
 						/>

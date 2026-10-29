@@ -62,16 +62,16 @@ export function RaceCard({
 					</Badge>
 				)}
 			</CardHeader>
-			<CardContent className="p-4 space-y-2 flex-grow">
+			<CardContent className="p-4 space-y-2 grow">
 				<CardTitle className="text-lg font-semibold line-clamp-2">
 					{title}
 				</CardTitle>
 				<div className="flex items-center text-sm text-muted-foreground">
-					<MapPinIcon className="mr-1.5 h-4 w-4 flex-shrink-0" />
+					<MapPinIcon className="mr-1.5 h-4 w-4 shrink-0" />
 					<span>{location}</span>
 				</div>
 				<div className="flex items-center text-sm text-muted-foreground">
-					<CalendarIcon className="mr-1.5 h-4 w-4 flex-shrink-0" />
+					<CalendarIcon className="mr-1.5 h-4 w-4 shrink-0" />
 					<span>{formattedDate}</span>
 				</div>
 			</CardContent>

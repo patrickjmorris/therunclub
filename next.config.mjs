@@ -11,15 +11,20 @@ const nextConfig = {
 		loader: "custom",
 		loaderFile: "./src/lib/image-loader.ts",
 	},
+	reactCompiler: true,
 	experimental: {
 		serverActions: {
 			allowedOrigins: ["therunclub.xyz"],
 			bodySizeLimit: "3mb",
 		},
-		reactCompiler: true,
 		// ppr: "incremental",
 	},
 	serverExternalPackages: ["whatwg-url"],
+	async rewrites() {
+		return {
+			beforeFiles: [{ source: "/sitemap.xml", destination: "/sitemap-index.xml" }],
+		};
+	},
 	async headers() {
 		return [{ source: "/:path*", headers: securityHeaders }];
 	},

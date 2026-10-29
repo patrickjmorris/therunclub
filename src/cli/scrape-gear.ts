@@ -4,7 +4,7 @@ import { config } from "dotenv"; // Import dotenv config
 import { resolve } from "path";
 
 // Load .env file from the project root
-config({ path: resolve(process.cwd(), ".env") });
+config({ path: resolve(process.cwd(), ".env"), quiet: true });
 
 import { ShoesScraper } from "../lib/scraper/shoes";
 import { ApparelScraper } from "../lib/scraper/apparel";

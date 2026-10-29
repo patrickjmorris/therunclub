@@ -19,7 +19,7 @@ export { getFilteredClubs };
 
 // Action handler for extracting club info
 export const extractClubInfo_Action = createSafeActionClient()
-	.schema(schema)
+	.inputSchema(schema)
 	.action(async ({ parsedInput: { text } }) => {
 		await requireContentManager();
 		try {

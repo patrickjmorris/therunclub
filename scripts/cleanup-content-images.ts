@@ -5,8 +5,8 @@ import { supabaseAdmin } from "../src/lib/supabase-admin";
 
 async function listStorageFiles(
 	prefix: string,
-): Promise<{ name: string; id: string }[]> {
-	const allFiles: { name: string; id: string }[] = [];
+): Promise<{ name: string }[]> {
+	const allFiles: { name: string }[] = [];
 	let offset = 0;
 	const limit = 1000;
 

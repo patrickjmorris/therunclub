@@ -138,7 +138,7 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 			{/* Medal counts section */}
 			<div className="grid grid-cols-2 gap-4">
 				{(olympicGolds > 0 || olympicSilvers > 0 || olympicBronzes > 0) && (
-					<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+					<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
 						<h3 className="text-lg font-semibold mb-2">Olympic Medals</h3>
 						<div className="space-y-1">
 							{olympicGolds > 0 && (
@@ -173,7 +173,7 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 				)}
 
 				{(worldGolds > 0 || worldSilvers > 0 || worldBronzes > 0) && (
-					<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+					<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
 						<h3 className="text-lg font-semibold mb-2 dark:text-gray-100">
 							World Championship Medals
 						</h3>
@@ -220,7 +220,7 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 						{recentResults.map((result) => (
 							<div
 								key={result.id}
-								className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
+								className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
 							>
 								<div className="flex justify-between items-start">
 									<div className="space-y-1">
@@ -275,7 +275,7 @@ export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
 						{displayedHonors.map((honor) => (
 							<div
 								key={honor.id}
-								className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow flex justify-between items-center"
+								className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm flex justify-between items-center"
 							>
 								<div className="space-y-1">
 									<div className="flex items-center gap-2">

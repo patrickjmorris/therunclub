@@ -157,7 +157,7 @@ export function ExpandedPlayer({
 					<Button
 						variant="ghost"
 						size="icon"
-						className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-primary hover:bg-primary/90 active:bg-primary focus:outline-none text-primary-foreground"
+						className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-primary hover:bg-primary/90 active:bg-primary focus:outline-hidden text-primary-foreground"
 						onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
 							console.log("Play/Pause button clicked", {
 								isPlaying: player.playing,
@@ -196,7 +196,7 @@ export function ExpandedPlayer({
 						player={player}
 						size="icon"
 						variant="ghost"
-						className="group relative rounded-md focus:outline-none"
+						className="group relative rounded-md focus:outline-hidden"
 						onClick={(e) => {
 							e.stopPropagation();
 							player.toggleMute();
@@ -210,7 +210,7 @@ export function ExpandedPlayer({
 					/>
 					<PlaybackRateButton
 						player={player}
-						className="group relative rounded-md focus:outline-none text-foreground hover:text-foreground/90"
+						className="group relative rounded-md focus:outline-hidden text-foreground hover:text-foreground/90"
 					/>
 				</div>
 			</div>

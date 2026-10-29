@@ -8,7 +8,7 @@ import { processContentAthletes } from "../src/lib/services/athlete-service";
 import { config } from "dotenv";
 
 // Load environment variables
-config({ path: ".env" });
+config({ path: ".env", quiet: true });
 
 interface DetectedAthlete {
 	athleteId: string;

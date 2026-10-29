@@ -230,7 +230,7 @@ export function GearSection({ athleteSlug, gear, isAdmin }: GearSectionProps) {
 				</Card>
 			)}
 
-			<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-6">
+			<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm space-y-6">
 				<div className="flex justify-between items-center">
 					{!isAdding && !editingGearId && isAdmin && (
 						<Button onClick={() => setIsAdding(true)}>Add Gear</Button>

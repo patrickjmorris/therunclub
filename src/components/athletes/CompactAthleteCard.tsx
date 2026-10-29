@@ -17,7 +17,7 @@ export function CompactAthleteCard({ athlete }: CompactAthleteCardProps) {
 	return (
 		<Link
 			href={`/athletes/${athlete.slug}`}
-			className="block w-[150px] flex-shrink-0"
+			className="block w-[150px] shrink-0"
 		>
 			<Card className="w-[150px] overflow-hidden transition-transform hover:scale-105">
 				<CardContent className="p-0 flex flex-col items-center">

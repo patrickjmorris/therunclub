@@ -41,7 +41,7 @@ export function GearRow({ title, items, ctaLink, className }: GearRowProps) {
 						<GearCard
 							key={item.id}
 							item={item}
-							className="w-48 flex-shrink-0 md:w-56" // Adjust width as needed
+							className="w-48 shrink-0 md:w-56" // Adjust width as needed
 						/>
 					))}
 				</div>

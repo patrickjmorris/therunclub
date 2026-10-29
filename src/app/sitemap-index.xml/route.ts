@@ -2,7 +2,7 @@ import { absoluteUrl } from "@/config/site";
 import { generateSitemaps } from "../sitemap";
 
 // Next generates /sitemap/<id>.xml for each id but no index, so this route
-// serves the index that robots.txt points at.
+// serves the index. /sitemap.xml rewrites here (see next.config.mjs).
 export const revalidate = 86400;
 
 export async function GET() {

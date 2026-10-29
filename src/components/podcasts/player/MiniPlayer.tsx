@@ -21,10 +21,10 @@ export function MiniPlayer({
 
 	return (
 		<div className="fixed inset-x-0 bottom-0 w-full">
-			<div className="mx-auto max-w-screen-2xl">
-				<div className="flex items-center gap-4 bg-background/90 px-4 py-4 shadow shadow-border/80 ring-1 ring-border backdrop-blur-sm">
+			<div className="mx-auto max-w-(--breakpoint-2xl)">
+				<div className="flex items-center gap-4 bg-background/90 px-4 py-4 shadow-sm shadow-border/80 ring-1 ring-border backdrop-blur-xs">
 					<div className="flex flex-1 items-center gap-4 min-w-0 overflow-hidden">
-						<div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+						<div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-muted">
 							{imageUrl && (
 								<Image
 									src={imageUrl}
@@ -44,7 +44,7 @@ export function MiniPlayer({
 							</p>
 						</div>
 					</div>
-					<div className="flex items-center flex-shrink-0">
+					<div className="flex items-center shrink-0">
 						<Button
 							variant="ghost"
 							size="icon"

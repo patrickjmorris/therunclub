@@ -85,7 +85,7 @@ export function FeaturedChannelsRow({ channels }: FeaturedChannelsRowProps) {
 				ref={scrollContainerRef}
 				className="overflow-x-auto scrollbar-hide -mx-4 md:mx-0 px-4 md:px-0"
 			>
-				<div className="grid md:grid-flow-col grid-rows-[repeat(2,_minmax(0,_1fr))] md:grid-rows-1 auto-cols-[160px] md:auto-cols-[150px] grid-cols-5 md:grid-cols-none gap-3 pb-4 min-w-[800px] md:min-w-0">
+				<div className="grid md:grid-flow-col grid-rows-2 md:grid-rows-1 auto-cols-[160px] md:auto-cols-[150px] grid-cols-5 md:grid-cols-none gap-3 pb-4 min-w-[800px] md:min-w-0">
 					{channels.map((channel) => (
 						<Link
 							key={channel.id}
@@ -101,7 +101,7 @@ export function FeaturedChannelsRow({ channels }: FeaturedChannelsRowProps) {
 												alt={channel.title}
 												width={150}
 												height={150}
-												className="rounded-lg object-cover shadow-sm"
+												className="rounded-lg object-cover shadow-xs"
 												priority
 											/>
 										</div>

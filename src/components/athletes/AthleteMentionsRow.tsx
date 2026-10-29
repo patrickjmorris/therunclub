@@ -11,7 +11,7 @@ export function AthleteMentionsRowSkeleton() {
 	return (
 		<div className="flex overflow-hidden space-x-4 pb-4">
 			{skeletonKeys.map((key) => (
-				<div key={key} className="w-[150px] flex-shrink-0">
+				<div key={key} className="w-[150px] shrink-0">
 					<Skeleton className="aspect-square w-full rounded-full mb-2" />
 					<Skeleton className="h-4 w-3/4 mx-auto" />
 				</div>

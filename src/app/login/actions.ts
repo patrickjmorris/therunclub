@@ -23,7 +23,7 @@ export async function login(formData: FormData) {
 	// Validate input
 	const result = loginSchema.safeParse(data);
 	if (!result.success) {
-		const errorMessage = result.error.errors[0]?.message || "Invalid input";
+		const errorMessage = result.error.issues[0]?.message || "Invalid input";
 		return redirect(`/login?error=${encodeURIComponent(errorMessage)}`);
 	}
 
@@ -58,7 +58,7 @@ export async function signup(formData: FormData) {
 	// Validate input
 	const result = loginSchema.safeParse(data);
 	if (!result.success) {
-		const errorMessage = result.error.errors[0]?.message || "Invalid input";
+		const errorMessage = result.error.issues[0]?.message || "Invalid input";
 		return redirect(`/login?error=${encodeURIComponent(errorMessage)}`);
 	}
 

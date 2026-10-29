@@ -79,19 +79,17 @@ interface PaceCalculatorProps {
 // Form schema combining time and distance validation
 const formSchema = z.object({
 	// time: timeSchema, // Remove old time schema
-	hours: z.number().int().min(0, "Hours cannot be negative").default(0),
+	hours: z.number().int().min(0, "Hours cannot be negative"),
 	minutes: z
 		.number()
 		.int()
 		.min(0, "Minutes cannot be negative")
-		.max(59, "Minutes must be less than 60")
-		.default(0),
+		.max(59, "Minutes must be less than 60"),
 	seconds: z
 		.number()
 		.int()
 		.min(0, "Seconds cannot be negative")
-		.max(59, "Seconds must be less than 60")
-		.default(0),
+		.max(59, "Seconds must be less than 60"),
 	distance: z.number().positive("Distance must be greater than 0"),
 	pace: z
 		.string()
@@ -725,7 +723,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 										{(form.formState.errors.hours ||
 											form.formState.errors.minutes ||
 											form.formState.errors.seconds) && (
-											<p className="text-sm text-red-500 mt-1 min-h-[1.25rem]">
+											<p className="text-sm text-red-500 mt-1 min-h-5">
 												{form.formState.errors.hours?.message ||
 													form.formState.errors.minutes?.message ||
 													form.formState.errors.seconds?.message}
@@ -818,7 +816,7 @@ export default function PaceCalculator({ mode }: PaceCalculatorProps) {
 										}
 									/>
 									{form.formState.errors.pace && (
-										<p className="text-sm text-red-500 mt-1 min-h-[1.25rem]">
+										<p className="text-sm text-red-500 mt-1 min-h-5">
 											{form.formState.errors.pace.message}
 										</p>
 									)}

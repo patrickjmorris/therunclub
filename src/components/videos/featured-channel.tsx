@@ -45,7 +45,7 @@ export function FeaturedChannel({
 					priority
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 				/>
-				<div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60">
+				<div className="absolute inset-0 bg-linear-to-b from-black/20 to-black/60">
 					<div className="absolute top-4 left-4 flex items-center gap-3">
 						<div>
 							<h2 className="text-white font-semibold">{title}</h2>
@@ -69,7 +69,7 @@ export function FeaturedChannel({
 			</div>
 
 			{/* Videos Grid */}
-			<div className="p-4 bg-white/90 backdrop-blur-sm">
+			<div className="p-4 bg-white/90 backdrop-blur-xs">
 				<div className="grid grid-cols-2 md:grid-cols-3 gap-4">
 					{videos.map((video) => (
 						<div key={video.id}>

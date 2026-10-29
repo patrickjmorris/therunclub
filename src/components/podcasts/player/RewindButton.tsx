@@ -48,7 +48,7 @@ export const RewindButton = forwardRef<HTMLDivElement, RewindButtonProps>(
 					size === "sm" ? "8" : size === "lg" ? "12" : "10"
 				} w-${
 					size === "sm" ? "8" : size === "lg" ? "12" : "10"
-				} items-center justify-center rounded-full focus:outline-none ${className}`}
+				} items-center justify-center rounded-full focus:outline-hidden ${className}`}
 				onClick={() => player.seekBy(-amount)}
 				aria-label={`Rewind ${amount} seconds`}
 				{...props}

@@ -101,7 +101,7 @@ export function LinkPreviewList({ urls, podcastsLink }: LinkPreviewListProps) {
 							className="flex items-start gap-4 hover:opacity-80 transition-opacity"
 						>
 							{preview.images?.[0] && (
-								<div className="flex-shrink-0">
+								<div className="shrink-0">
 									<Image
 										src={preview.images[0]}
 										alt={preview.title || "Link preview"}
@@ -111,7 +111,7 @@ export function LinkPreviewList({ urls, podcastsLink }: LinkPreviewListProps) {
 									/>
 								</div>
 							)}
-							<div className="flex-grow min-w-0">
+							<div className="grow min-w-0">
 								<h3 className="font-medium line-clamp-2">{preview.title}</h3>
 								{preview.description && (
 									<p className="text-sm text-muted-foreground mt-1 line-clamp-2">

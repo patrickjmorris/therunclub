@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ExternalLink, Footprints, Instagram, MapPin } from "lucide-react";
+import { ExternalLink, Footprints, MapPin } from "lucide-react";
+import { Instagram } from "@/components/common/brand-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +51,7 @@ export function ClubCard({ club, ogData, cityHref }: ClubCardProps) {
 				</CardDescription>
 			</CardHeader>
 
-			<CardContent className="flex-grow space-y-2">
+			<CardContent className="grow space-y-2">
 				{club.website && ogData && (
 					<ClubLinkPreview website={club.website} ogData={ogData} />
 				)}

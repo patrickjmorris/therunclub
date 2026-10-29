@@ -16,7 +16,7 @@ export function TopRankedPodcastsSkeleton() {
 				</div>
 				<div className="flex overflow-hidden space-x-4 pb-4">
 					{skeletonKeys.map((key) => (
-						<div key={key} className="w-[180px] flex-shrink-0">
+						<div key={key} className="w-[180px] shrink-0">
 							<Skeleton className="aspect-square w-full rounded-md mb-2" />
 							<Skeleton className="h-4 w-3/4" />
 						</div>

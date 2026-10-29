@@ -3,7 +3,7 @@ import postgres from "postgres";
 import { config } from "dotenv";
 import * as schema from "./schema";
 
-config({ path: ".env" });
+config({ path: ".env", quiet: true });
 
 // Default to development unless explicitly set to production
 const isDevelopment = process.env.NODE_ENV !== "production";

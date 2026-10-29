@@ -22,7 +22,7 @@ function AthleteCard({ athlete }: { athlete: AthleteRowItem }) {
 	return (
 		<Link
 			href={`/athletes/${athlete.slug}`}
-			className="flex flex-col items-center space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow min-w-32"
+			className="flex flex-col items-center space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow min-w-32"
 		>
 			<div className="relative w-16 h-16">
 				<AthleteImage
@@ -76,7 +76,7 @@ export function AthleteRowSkeleton({ title }: { title: string }) {
 					<div
 						// biome-ignore lint/suspicious/noArrayIndexKey: ok for skeleton
 						key={index}
-						className="flex flex-col items-center space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow min-w-32"
+						className="flex flex-col items-center space-y-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm min-w-32"
 					>
 						<Skeleton className="w-16 h-16 rounded-full" />
 						<div className="text-center space-y-1">

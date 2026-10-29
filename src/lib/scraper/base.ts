@@ -1,55 +1,30 @@
-import { Stagehand, Page } from "@browserbasehq/stagehand";
-import pRetry, { FailedAttemptError } from "p-retry";
+import { chromium, type Browser, type Page } from "playwright";
+import pRetry from "p-retry";
 import { sleep } from "../../utils/sleep";
 
-const BROWSERBASE_API_KEY = process.env.BROWSERBASE_API_KEY;
-const BROWSERBASE_PROJECT_ID = process.env.BROWSERBASE_PROJECT_ID;
 const NAVIGATION_DELAY_MS = 2000;
 const MAX_RETRIES = 3;
 
-let validatedApiKey: string;
-let validatedProjectId: string;
-
-if (!BROWSERBASE_API_KEY || !BROWSERBASE_PROJECT_ID) {
-	console.warn(
-		"BROWSERBASE_API_KEY or BROWSERBASE_PROJECT_ID is not set. Scraper functionality will be disabled.",
-	);
-	validatedApiKey = "disabled";
-	validatedProjectId = "disabled";
-} else {
-	validatedApiKey = BROWSERBASE_API_KEY;
-	validatedProjectId = BROWSERBASE_PROJECT_ID;
-}
-
 export abstract class BaseScraper {
-	protected stagehand: Stagehand;
+	protected browser: Browser | null = null;
 	protected page: Page | null = null;
-
-	constructor() {
-		if (validatedApiKey === "disabled" || validatedProjectId === "disabled") {
-			throw new Error(
-				"Browserbase API Key and Project ID required for Stagehand.",
-			);
-		}
-		this.stagehand = new Stagehand({
-			env: "LOCAL",
-			modelName: "gpt-4o",
-			modelClientOptions: {
-				apiKey: process.env.OPENAI_API_KEY,
-			},
-		});
-		console.log("BaseScraper initialized with Stagehand (env: LOCAL).");
-	}
 
 	async init() {
 		if (!this.page) {
-			console.log("Initializing Stagehand session...");
-			await this.stagehand.init();
-			this.page = this.stagehand.page;
-			console.log("Stagehand session initialized.");
-			if (!this.page) {
-				throw new Error("Failed to get Stagehand page object after init.");
-			}
+			console.log("Launching browser...");
+			this.browser = await chromium.launch({
+				headless: false,
+				args: ["--disable-blink-features=AutomationControlled"],
+			});
+			this.page = await this.browser.newPage({
+				viewport: { width: 1288, height: 711 },
+				locale: "en-US",
+				timezoneId: "America/New_York",
+				hasTouch: true,
+				bypassCSP: true,
+				ignoreHTTPSErrors: true,
+			});
+			console.log("Browser launched.");
 		}
 		return this.page;
 	}
@@ -73,9 +48,9 @@ export abstract class BaseScraper {
 			},
 			{
 				retries: MAX_RETRIES,
-				onFailedAttempt: (error: FailedAttemptError) => {
+				onFailedAttempt: ({ error, attemptNumber }) => {
 					console.warn(
-						`Navigation attempt ${error.attemptNumber} failed. Retrying... Error: ${error.message}`,
+						`Navigation attempt ${attemptNumber} failed. Retrying... Error: ${error.message}`,
 					);
 				},
 			},
@@ -109,13 +84,14 @@ export abstract class BaseScraper {
 	abstract run(entryUrl: string): Promise<void>;
 
 	async closeSession() {
-		console.log("Attempting to close Stagehand session...");
+		console.log("Closing browser...");
 		try {
-			await this.stagehand.close();
+			await this.browser?.close();
+			this.browser = null;
 			this.page = null;
-			console.log("Stagehand session closed.");
+			console.log("Browser closed.");
 		} catch (error) {
-			console.error("Error closing Stagehand session:", error);
+			console.error("Error closing browser:", error);
 		}
 	}
 }

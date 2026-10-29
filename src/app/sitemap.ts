@@ -187,11 +187,10 @@ async function athleteCountryEntries(): Promise<MetadataRoute.Sitemap> {
 	}));
 }
 
-export default async function sitemap({
-	id,
-}: {
-	id: SitemapId;
+export default async function sitemap(props: {
+	id: Promise<SitemapId>;
 }): Promise<MetadataRoute.Sitemap> {
+	const id = await props.id;
 	if (id === "static") return staticEntries();
 	if (id === "podcasts") return podcastEntries();
 	if (id === "channels") return channelEntries();

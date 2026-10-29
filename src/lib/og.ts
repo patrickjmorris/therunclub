@@ -29,7 +29,9 @@ async function assertPublicHost(url: URL) {
 	if (url.protocol !== "http:" && url.protocol !== "https:") {
 		throw new Error(`Unsupported protocol for ${url.href}`);
 	}
-	const addresses = await lookup(url.hostname, { all: true });
+	// URL.hostname keeps brackets on IPv6 literals.
+	const host = url.hostname.replace(/^\[(.*)\]$/, "$1");
+	const addresses = await lookup(host, { all: true });
 	for (const { address, family } of addresses) {
 		const v4Mapped = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
 		const blocked = v4Mapped

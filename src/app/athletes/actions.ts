@@ -5,6 +5,7 @@ import { athletes, athleteCategories } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import { requireContentManager } from "@/lib/auth-utils";
 
 const createAthleteSchema = z.object({
 	name: z.string().min(2, "Name must be at least 2 characters"),
@@ -32,6 +33,7 @@ const categorySchema = z.object({
 });
 
 export async function createAthlete(data: z.infer<typeof createAthleteSchema>) {
+	await requireContentManager();
 	try {
 		// Validate input data
 		const validatedData = createAthleteSchema.parse(data);
@@ -90,6 +92,7 @@ export async function createAthlete(data: z.infer<typeof createAthleteSchema>) {
 }
 
 export async function createCategory(data: z.infer<typeof categorySchema>) {
+	await requireContentManager();
 	try {
 		const validatedData = categorySchema.parse(data);
 		await db.insert(athleteCategories).values({
@@ -107,6 +110,7 @@ export async function updateCategory(
 	id: string,
 	data: z.infer<typeof categorySchema>,
 ) {
+	await requireContentManager();
 	try {
 		const validatedData = categorySchema.parse(data);
 		await db
@@ -124,6 +128,7 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(id: string) {
+	await requireContentManager();
 	try {
 		await db.delete(athleteCategories).where(eq(athleteCategories.id, id));
 		revalidatePath("/athletes");

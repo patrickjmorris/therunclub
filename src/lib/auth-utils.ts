@@ -68,3 +68,12 @@ export function requireRole<TState, TArgs extends any[]>(
 		}) as T;
 	};
 }
+
+export async function requireContentManager(): Promise<void> {
+	if (!(await canManageContent())) {
+		throw new AuthError(
+			"You need admin or editor permissions to perform this action",
+			"UNAUTHORIZED",
+		);
+	}
+}

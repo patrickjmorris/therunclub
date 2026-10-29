@@ -1,5 +1,5 @@
-import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedJob } from "@/lib/api-auth";
 import { updateVideos } from "@/lib/services/video-service";
 import { updatePodcastData } from "@/lib/podcast-service";
 import { updatePodcastRankings } from "@/lib/services/taddy-service";
@@ -38,31 +38,6 @@ const isUpdating = {
 
 const LOCK_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 const lockTimeouts: { [key in ContentType]?: NodeJS.Timeout } = {};
-
-async function isAuthorized(request: NextRequest): Promise<boolean> {
-	const headersList = await headers();
-	const apiKeyFromHeaders = headersList.get("x-api-key");
-	const apiKeyFromRequest = request.headers.get("x-api-key");
-	const validApiKey = process.env.UPDATE_API_KEY;
-
-	// Check for cron secret
-	const authHeader = headersList.get("authorization");
-	const validCronSecret = process.env.CRON_SECRET;
-	const isCronRequest = authHeader === `Bearer ${validCronSecret}`;
-
-	if (!validApiKey && !validCronSecret) {
-		console.error(
-			"Neither API key nor CRON_SECRET configured in environment variables",
-		);
-		return false;
-	}
-
-	return (
-		apiKeyFromHeaders === validApiKey ||
-		apiKeyFromRequest === validApiKey ||
-		isCronRequest
-	);
-}
 
 // Helper function to update the updated_at column for a specific table
 async function updateTimestamp(type: ContentType) {
@@ -108,7 +83,7 @@ async function updateTimestamp(type: ContentType) {
 }
 
 async function handleUpdate(request: NextRequest, type: ContentType) {
-	if (!(await isAuthorized(request))) {
+	if (!(isAuthorizedJob(request))) {
 		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 	}
 

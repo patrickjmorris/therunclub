@@ -1,37 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedJob } from "@/lib/api-auth";
 import { db } from "@/db/client";
 import { websubSubscriptions, podcasts } from "@/db/schema";
 import { webSubManager } from "@/lib/websub-manager";
 import { eq, lt, and, sql } from "drizzle-orm";
-import { headers } from "next/headers";
-
-/**
- * Helper function to check if the request is authorized
- */
-async function isAuthorized(request: NextRequest): Promise<boolean> {
-	const headersList = await headers();
-	const apiKeyFromHeaders = headersList.get("x-api-key");
-	const apiKeyFromRequest = request.headers.get("x-api-key");
-	const validApiKey = process.env.UPDATE_API_KEY;
-
-	// Check for cron secret
-	const authHeader = headersList.get("authorization");
-	const validCronSecret = process.env.CRON_SECRET;
-	const isCronRequest = authHeader === `Bearer ${validCronSecret}`;
-
-	if (!validApiKey && !validCronSecret) {
-		console.error(
-			"Neither API key nor CRON_SECRET configured in environment variables",
-		);
-		return false;
-	}
-
-	return (
-		apiKeyFromHeaders === validApiKey ||
-		apiKeyFromRequest === validApiKey ||
-		isCronRequest
-	);
-}
 
 /**
  * GET handler for the WebSub management API
@@ -41,7 +13,7 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
  * - renew: Renews a specific subscription by topic (feed URL)
  */
 export async function GET(request: NextRequest) {
-	if (!(await isAuthorized(request))) {
+	if (!(isAuthorizedJob(request))) {
 		return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 	}
 

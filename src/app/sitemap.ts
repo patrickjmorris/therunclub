@@ -11,6 +11,8 @@ import {
 	videos,
 } from "@/db/schema";
 import { absoluteUrl } from "@/config/site";
+import { getClubCities } from "@/lib/services/club-service";
+import { getLatestPodcastRanking } from "@/lib/services/podcast-service";
 
 export const revalidate = 86400;
 
@@ -36,6 +38,7 @@ type SitemapId =
 	| "channels"
 	| "athletes"
 	| "tags"
+	| "club-cities"
 	| `episodes-${number}`
 	| `videos-${number}`;
 
@@ -59,6 +62,7 @@ export async function generateSitemaps(): Promise<{ id: SitemapId }[]> {
 		"channels",
 		"athletes",
 		"tags",
+		"club-cities",
 		...episodeIds,
 		...videoIds,
 	];
@@ -171,18 +175,40 @@ async function tagEntries(): Promise<MetadataRoute.Sitemap> {
 	}));
 }
 
+async function staticEntries(): Promise<MetadataRoute.Sitemap> {
+	const ranking = await getLatestPodcastRanking();
+	return [
+		...STATIC_PATHS.map((path) => ({ url: absoluteUrl(path) })),
+		...(ranking
+			? [
+					{
+						url: absoluteUrl("/podcasts/top"),
+						lastModified: new Date(ranking.fetchedAt),
+					},
+			  ]
+			: []),
+	];
+}
+
+async function clubCityEntries(): Promise<MetadataRoute.Sitemap> {
+	const cities = await getClubCities();
+	return cities.map((city) => ({
+		url: absoluteUrl(`/clubs/city/${city.slug}`),
+		lastModified: new Date(city.lastModified),
+	}));
+}
+
 export default async function sitemap({
 	id,
 }: {
 	id: SitemapId;
 }): Promise<MetadataRoute.Sitemap> {
-	if (id === "static") {
-		return STATIC_PATHS.map((path) => ({ url: absoluteUrl(path) }));
-	}
+	if (id === "static") return staticEntries();
 	if (id === "podcasts") return podcastEntries();
 	if (id === "channels") return channelEntries();
 	if (id === "athletes") return athleteEntries();
 	if (id === "tags") return tagEntries();
+	if (id === "club-cities") return clubCityEntries();
 	if (id.startsWith("episodes-")) return episodeEntries(chunkIndex(id));
 	if (id.startsWith("videos-")) return videoEntries(chunkIndex(id));
 	return [];

@@ -90,6 +90,25 @@ export function breadcrumbList(items: { name: string; path: string }[]) {
 	};
 }
 
+export function itemList(
+	name: string,
+	items: ({ name: string; path: string } | Record<string, unknown>)[],
+) {
+	return {
+		"@context": "https://schema.org",
+		"@type": "ItemList",
+		name,
+		numberOfItems: items.length,
+		itemListElement: items.map((item, index) => ({
+			"@type": "ListItem",
+			position: index + 1,
+			...("path" in item && typeof item.path === "string"
+				? { name: item.name, url: absoluteUrl(item.path) }
+				: { item }),
+		})),
+	};
+}
+
 // Episode durations arrive as seconds ("1801"), "mm:ss", or "hh:mm:ss".
 export function isoDuration(raw: string | null | undefined) {
 	if (!raw) return undefined;

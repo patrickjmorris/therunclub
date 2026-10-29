@@ -1,28 +1,27 @@
-import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
-import { Metadata } from "next";
-import { isUuid } from "@/lib/utils";
-import { getVideoById, getChannelVideos } from "@/lib/services/video-service";
-import { notFound, permanentRedirect } from "next/navigation";
-import { formatDistanceToNow, format } from "date-fns";
-import { Eye, ThumbsUp, MessageCircle, Tag } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { extractUrlsFromText } from "@/lib/extract-urls";
+import { format, formatDistanceToNow } from "date-fns";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { Eye, MessageCircle, Tag, ThumbsUp } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { eq, desc, isNotNull } from "drizzle-orm";
-import { videos, channels } from "@/db/schema";
-import { db } from "@/db/client";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
-import { createWeeklyCache } from "@/lib/utils/cache";
-import { and } from "drizzle-orm";
-import { preloadLinks } from "@/components/common/link-preview/link-preview-preloader";
-import { AthleteMentions } from "@/components/athletes/athlete-mentions";
 import { AthleteReferences } from "@/components/athletes/athlete-references";
+import { JsonLd } from "@/components/common/json-ld";
+import { preloadLinks } from "@/components/common/link-preview/link-preview-preloader";
 import { MentionLoading } from "@/components/common/mention-loading";
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
+import { Badge } from "@/components/ui/badge";
+import { PlainTextWithLinks } from "@/components/videos/plain-text-with-links";
 // Server-rendered so its 16:9 placeholder reserves space before hydration.
 import { VideoPlayer } from "@/components/videos/video-player";
-import { breadcrumbList, metaDescription, pageMetadata } from "@/lib/seo";
 import { absoluteUrl } from "@/config/site";
-import { JsonLd } from "@/components/common/json-ld";
+import { db } from "@/db/client";
+import { channels, videos } from "@/db/schema";
+import { extractUrlsFromText } from "@/lib/extract-urls";
+import { breadcrumbList, metaDescription, pageMetadata } from "@/lib/seo";
+import { getChannelVideos, getVideoById } from "@/lib/services/video-service";
+import { isUuid } from "@/lib/utils";
+import { createWeeklyCache } from "@/lib/utils/cache";
 
 // Dynamically import components
 
@@ -76,17 +75,6 @@ const DynamicMoreContent = (await import("next/dynamic")).default(
 export const dynamic = "force-static";
 export const revalidate = 604800; // 1 week
 
-// Convert URLs to links in text content
-function convertUrlsToLinks(text: string): string {
-	if (!text) return "";
-	const urlRegex =
-		/(\bhttps?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
-	return text.replace(
-		urlRegex,
-		'<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
-	);
-}
-
 function youtubeThumbnail(video: {
 	youtubeVideoId: string;
 	thumbnailUrl: string | null;
@@ -131,9 +119,6 @@ const getVideoData = createWeeklyCache(
 			const urls = video.description
 				? extractUrlsFromText(video.description)
 				: [];
-			const descriptionWithLinks = video.description
-				? convertUrlsToLinks(video.description)
-				: "";
 
 			return {
 				video,
@@ -142,7 +127,6 @@ const getVideoData = createWeeklyCache(
 				likes,
 				comments,
 				urls,
-				descriptionWithLinks,
 			};
 		} catch (error) {
 			console.error("Error in getVideoData:", error);
@@ -253,15 +237,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 		notFound();
 	}
 
-	const {
-		video: videoData,
-		moreVideos,
-		views,
-		likes,
-		comments,
-		urls,
-		descriptionWithLinks,
-	} = data;
+	const { video: videoData, moreVideos, views, likes, comments, urls } = data;
 
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
@@ -289,14 +265,14 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						"@type": "Organization",
 						name: videoData.channelTitle,
 						url: absoluteUrl(channelPath),
-				  }
+					}
 				: undefined,
 			interactionStatistic: videoData.viewCount
 				? {
 						"@type": "InteractionCounter",
 						interactionType: { "@type": "WatchAction" },
 						userInteractionCount: Number(videoData.viewCount),
-				  }
+					}
 				: undefined,
 		},
 		breadcrumbList([
@@ -390,11 +366,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
 										label: "Description",
 										content: (
 											<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap wrap-break-word [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
-												<div
-													// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
-													dangerouslySetInnerHTML={{
-														__html: descriptionWithLinks,
-													}}
+												<PlainTextWithLinks
+													text={videoData.description ?? ""}
 												/>
 											</div>
 										),
@@ -433,12 +406,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
 						</>
 					) : (
 						<div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap wrap-break-word [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_a]:decoration-blue-600/30 dark:[&_a]:decoration-blue-400/30 [&_a:hover]:decoration-blue-600 dark:[&_a:hover]:decoration-blue-400 [&_a]:transition-colors">
-							<div
-								// biome-ignore lint/security/noDangerouslySetInnerHtml: Content is escaped and URLs are safely converted to links
-								dangerouslySetInnerHTML={{
-									__html: descriptionWithLinks,
-								}}
-							/>
+							<PlainTextWithLinks text={videoData.description ?? ""} />
 						</div>
 					)}
 				</div>

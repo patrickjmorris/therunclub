@@ -3,6 +3,13 @@ const securityHeaders = [
 	{ key: "X-Frame-Options", value: "SAMEORIGIN" },
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 	{ key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+	// Scripts, images and audio come from many hosts (podcast feeds, YouTube),
+	// so the policy only locks down plugins, base/form targets and framing.
+	{
+		key: "Content-Security-Policy",
+		value:
+			"base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'",
+	},
 ];
 
 /** @type {import('next').NextConfig} */

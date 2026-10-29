@@ -1,21 +1,23 @@
 import type { MetadataRoute } from "next";
-import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import {
-	athleteMentions,
-	athletes,
-	channels,
-	contentTags,
-	episodes,
-	podcasts,
-	videos,
-} from "@/db/schema";
+import { athletes, channels, episodes, podcasts, videos } from "@/db/schema";
 import { absoluteUrl } from "@/config/site";
+import {
+	getAthleteCountries,
+	isNotableAthlete,
+} from "@/lib/services/athlete-service";
+import { getClubCities } from "@/lib/services/club-service";
+import { getLatestPodcastRanking } from "@/lib/services/podcast-service";
+import {
+	getTagHubs,
+	isCanonicalHub,
+	tagHubPath,
+} from "@/lib/services/tag-service";
 
 export const revalidate = 86400;
 
 const URLS_PER_FILE = 40000;
-const MIN_ITEMS_PER_TAG = 10;
 
 const STATIC_PATHS = [
 	"/",
@@ -36,6 +38,8 @@ type SitemapId =
 	| "channels"
 	| "athletes"
 	| "tags"
+	| "club-cities"
+	| "athlete-countries"
 	| `episodes-${number}`
 	| `videos-${number}`;
 
@@ -59,6 +63,8 @@ export async function generateSitemaps(): Promise<{ id: SitemapId }[]> {
 		"channels",
 		"athletes",
 		"tags",
+		"club-cities",
+		"athlete-countries",
 		...episodeIds,
 		...videoIds,
 	];
@@ -127,9 +133,6 @@ async function videoEntries(chunk: number): Promise<MetadataRoute.Sitemap> {
 	}));
 }
 
-// Most athlete rows are a name and a results table. List only profiles with
-// a bio, a photo, or a podcast/video mention so the sitemap leads with pages
-// that have something to rank for.
 async function athleteEntries(): Promise<MetadataRoute.Sitemap> {
 	const rows = await db
 		.select({
@@ -137,15 +140,7 @@ async function athleteEntries(): Promise<MetadataRoute.Sitemap> {
 			lastModified: sql<Date>`coalesce(${athletes.updatedAt}, ${athletes.createdAt})`,
 		})
 		.from(athletes)
-		.where(
-			and(
-				isNotNull(athletes.worldAthleticsId),
-				sql`(length(coalesce(${athletes.bio}, '')) > 50
-					or ${athletes.imageUrl} is not null
-					or exists (select 1 from ${athleteMentions}
-						where ${athleteMentions.athleteId} = ${athletes.worldAthleticsId}))`,
-			),
-		)
+		.where(isNotableAthlete)
 		.orderBy(athletes.slug);
 	return rows.map((row) => ({
 		url: absoluteUrl(`/athletes/${row.slug}`),
@@ -154,20 +149,41 @@ async function athleteEntries(): Promise<MetadataRoute.Sitemap> {
 }
 
 async function tagEntries(): Promise<MetadataRoute.Sitemap> {
-	const rows = await db
-		.select({
-			type: contentTags.contentType,
-			tag: contentTags.tag,
-			lastModified: sql<Date>`max(${contentTags.createdAt})`,
-		})
-		.from(contentTags)
-		.where(sql`${contentTags.contentType} in ('video', 'episode')`)
-		.groupBy(contentTags.contentType, contentTags.tag)
-		.having(gte(count(), MIN_ITEMS_PER_TAG))
-		.orderBy(contentTags.contentType, contentTags.tag);
-	return rows.map((row) => ({
-		url: absoluteUrl(`/tags/${row.type}/${encodeURIComponent(row.tag)}`),
-		lastModified: row.lastModified ? new Date(row.lastModified) : undefined,
+	const hubs = await getTagHubs();
+	return hubs.filter(isCanonicalHub).map((hub) => ({
+		url: absoluteUrl(tagHubPath(hub)),
+		lastModified: new Date(hub.lastModified),
+	}));
+}
+
+async function staticEntries(): Promise<MetadataRoute.Sitemap> {
+	const ranking = await getLatestPodcastRanking();
+	return [
+		...STATIC_PATHS.map((path) => ({ url: absoluteUrl(path) })),
+		...(ranking
+			? [
+					{
+						url: absoluteUrl("/podcasts/top"),
+						lastModified: new Date(ranking.fetchedAt),
+					},
+			  ]
+			: []),
+	];
+}
+
+async function clubCityEntries(): Promise<MetadataRoute.Sitemap> {
+	const cities = await getClubCities();
+	return cities.map((city) => ({
+		url: absoluteUrl(`/clubs/city/${city.slug}`),
+		lastModified: new Date(city.lastModified),
+	}));
+}
+
+async function athleteCountryEntries(): Promise<MetadataRoute.Sitemap> {
+	const countries = await getAthleteCountries();
+	return countries.map((country) => ({
+		url: absoluteUrl(`/athletes/country/${country.slug}`),
+		lastModified: new Date(country.lastModified),
 	}));
 }
 
@@ -176,13 +192,13 @@ export default async function sitemap({
 }: {
 	id: SitemapId;
 }): Promise<MetadataRoute.Sitemap> {
-	if (id === "static") {
-		return STATIC_PATHS.map((path) => ({ url: absoluteUrl(path) }));
-	}
+	if (id === "static") return staticEntries();
 	if (id === "podcasts") return podcastEntries();
 	if (id === "channels") return channelEntries();
 	if (id === "athletes") return athleteEntries();
 	if (id === "tags") return tagEntries();
+	if (id === "club-cities") return clubCityEntries();
+	if (id === "athlete-countries") return athleteCountryEntries();
 	if (id.startsWith("episodes-")) return episodeEntries(chunkIndex(id));
 	if (id.startsWith("videos-")) return videoEntries(chunkIndex(id));
 	return [];

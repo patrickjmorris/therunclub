@@ -17,7 +17,8 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Youtube } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Youtube } from "@/components/common/brand-icons";
 import { useState, useEffect, useRef, useTransition } from "react";
 import type { AddChannelState } from "@/app/actions/types";
 

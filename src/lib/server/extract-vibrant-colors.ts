@@ -1,5 +1,5 @@
 import "server-only";
-import Vibrant from "node-vibrant";
+import { Vibrant } from "node-vibrant/node";
 import sharp from "sharp";
 
 export async function extractVibrantColors(

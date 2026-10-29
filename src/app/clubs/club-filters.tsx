@@ -10,7 +10,8 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, X, ExternalLink, Footprints, Instagram } from "lucide-react";
+import { MapPin, X, ExternalLink, Footprints } from "lucide-react";
+import { Instagram } from "@/components/common/brand-icons";
 import { useQueryState } from "nuqs";
 import { useState, useEffect } from "react";
 import { type RunningClub } from "@/db/schema";

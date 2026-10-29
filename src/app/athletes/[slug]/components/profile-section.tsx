@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { updateProfile, updateAthleteImage } from "../actions";
-import { X, Instagram, Facebook, Globe, Youtube, Podcast } from "lucide-react";
+import { X, Globe, Podcast } from "lucide-react";
+import { Facebook, Instagram, Youtube } from "@/components/common/brand-icons";
 import { convertToAlpha2 } from "@/lib/utils/country-codes";
 import { AthleteImage } from "@/components/athletes/AthleteImage";
 

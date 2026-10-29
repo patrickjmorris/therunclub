@@ -16,7 +16,7 @@ export async function updateSession(request: NextRequest) {
 				getAll() {
 					return request.cookies.getAll();
 				},
-				setAll(cookiesToSet) {
+				setAll(cookiesToSet, headers) {
 					for (const { name, value, options } of cookiesToSet) {
 						request.cookies.set(name, value);
 					}
@@ -25,6 +25,9 @@ export async function updateSession(request: NextRequest) {
 					});
 					for (const { name, value, options } of cookiesToSet) {
 						supabaseResponse.cookies.set(name, value, options);
+					}
+					for (const [key, value] of Object.entries(headers)) {
+						supabaseResponse.headers.set(key, value);
 					}
 				},
 			},

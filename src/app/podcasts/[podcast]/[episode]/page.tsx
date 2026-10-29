@@ -28,7 +28,14 @@ import { LinkPreviewErrorBoundary } from "@/components/common/link-preview/link-
 import { MoreContent } from "@/components/common/content/more-content";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { LinkPreviewClientWrapper } from "@/components/common/link-preview/link-preview-client-wrapper";
-import { metaDescription, pageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/common/json-ld";
+import { absoluteUrl } from "@/config/site";
+import {
+	breadcrumbList,
+	isoDuration,
+	metaDescription,
+	pageMetadata,
+} from "@/lib/seo";
 
 export const dynamic = "force-static";
 export const revalidate = 604800;
@@ -205,31 +212,43 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
 
+	const episodePath = `/podcasts/${episode.podcastSlug}/${episode.episodeSlug}`;
+	const podcastPath = `/podcasts/${episode.podcastSlug}`;
 	const jsonLd = {
 		"@context": "https://schema.org",
 		"@type": "PodcastEpisode",
 		name: episode.title,
+		url: absoluteUrl(episodePath),
 		datePublished: safeHandleDate(episode.pubDate, { returnEmpty: true }),
-		description:
-			episode.content || `Listen to ${episode.title} on The Run Club`,
-		duration: episode.duration,
+		description: metaDescription(
+			episode.content,
+			`Listen to ${episode.title} on The Run Club`,
+		),
+		image: imageUrl || undefined,
 		associatedMedia: {
 			"@type": "MediaObject",
 			contentUrl: episode.enclosureUrl,
+			duration: isoDuration(episode.duration),
 		},
 		partOfSeries: {
 			"@type": "PodcastSeries",
 			name: episode.podcastTitle,
-			image: episode.podcastImage,
+			url: absoluteUrl(podcastPath),
+			image: episode.podcastImage || undefined,
 		},
 	};
 
 	return (
 		<div className="space-y-8">
-			<script
-				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			<JsonLd
+				data={[
+					jsonLd,
+					breadcrumbList([
+						{ name: "Podcasts", path: "/podcasts" },
+						{ name: episode.podcastTitle, path: podcastPath },
+						{ name: episode.title, path: episodePath },
+					]),
+				]}
 			/>
 			<Card className="">
 				<CardHeader className="flex flex-col lg:flex-row lg:items-start lg:gap-8 px-6">

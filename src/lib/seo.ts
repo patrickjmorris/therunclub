@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/config/site";
+import { absoluteUrl, siteConfig } from "@/config/site";
 
 type OgImage = { url: string; width?: number; height?: number; alt?: string };
 
@@ -75,4 +75,32 @@ export function metaDescription(
 ) {
 	const text = html ? plainText(html) : "";
 	return text ? truncate(text) : fallback;
+}
+
+export function breadcrumbList(items: { name: string; path: string }[]) {
+	return {
+		"@context": "https://schema.org",
+		"@type": "BreadcrumbList",
+		itemListElement: items.map((item, index) => ({
+			"@type": "ListItem",
+			position: index + 1,
+			name: item.name,
+			item: absoluteUrl(item.path),
+		})),
+	};
+}
+
+// Episode durations arrive as seconds ("1801"), "mm:ss", or "hh:mm:ss".
+export function isoDuration(raw: string | null | undefined) {
+	if (!raw) return undefined;
+	if (raw.startsWith("PT")) return raw;
+	const parts = raw.split(":").map(Number);
+	if (parts.some((part) => Number.isNaN(part))) return undefined;
+	const seconds = parts.reduce((total, part) => total * 60 + part, 0);
+	const h = Math.floor(seconds / 3600);
+	const m = Math.floor((seconds % 3600) / 60);
+	const s = Math.round(seconds % 60);
+	return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}${
+		s || (!h && !m) ? `${s}S` : ""
+	}`;
 }

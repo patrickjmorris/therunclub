@@ -10,6 +10,9 @@ import { db } from "@/db/client";
 import { channels } from "@/db/schema";
 import dynamic from "next/dynamic";
 import { metaDescription, pageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/common/json-ld";
+import { absoluteUrl } from "@/config/site";
+import { breadcrumbList } from "@/lib/seo";
 
 // Dynamically import components
 const InfiniteVideoGrid = dynamic(
@@ -134,11 +137,11 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 
 	const jsonLd = {
 		"@context": "https://schema.org",
-		"@type": "WebPage",
+		"@type": "CollectionPage",
 		name: channel.title,
 		description: channel.description,
 		image: channel.thumbnailUrl,
-		url: `/videos/channels/${channel.id}`,
+		url: absoluteUrl(`/videos/channels/${channel.id}`),
 	};
 
 	return (
@@ -194,10 +197,15 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 				</Suspense>
 			</div>
 
-			<script
-				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			<JsonLd
+				data={[
+					jsonLd,
+					breadcrumbList([
+						{ name: "Videos", path: "/videos" },
+						{ name: "Channels", path: "/videos/channels" },
+						{ name: channel.title, path: `/videos/channels/${channel.id}` },
+					]),
+				]}
 			/>
 		</div>
 	);

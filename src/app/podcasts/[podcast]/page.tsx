@@ -15,6 +15,9 @@ import { createStandardCache } from "@/lib/utils/cache";
 import dynamicImport from "next/dynamic";
 import { nanoid } from "nanoid";
 import { metaDescription, pageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/common/json-ld";
+import { absoluteUrl } from "@/config/site";
+import { breadcrumbList, plainText } from "@/lib/seo";
 
 // Dynamically import the episode list component
 const DynamicEpisodeList = dynamicImport(
@@ -116,29 +119,37 @@ export default async function PodcastPage(props: {
 		"@context": "https://schema.org",
 		"@type": "PodcastSeries",
 		name: podcast.title,
-		description: podcast.description,
+		description: podcast.description
+			? plainText(podcast.description)
+			: undefined,
 		author: {
 			"@type": "Person",
 			name: podcast.author,
 		},
 		image: podcast.image || podcast.itunesImage,
-		url: `/podcasts/${podcast.podcastSlug}`,
+		url: absoluteUrl(`/podcasts/${podcast.podcastSlug}`),
 		episodes: episodes.map((episode) => ({
 			"@type": "PodcastEpisode",
 			name: episode.title,
 			datePublished: episode.pubDate
 				? new Date(episode.pubDate).toISOString()
-				: "",
-			url: `/podcasts/${podcast.podcastSlug}/${episode.episodeSlug}`,
+				: undefined,
+			url: absoluteUrl(
+				`/podcasts/${podcast.podcastSlug}/${episode.episodeSlug}`,
+			),
 		})),
 	};
 
 	return (
 		<div className="container py-8">
-			<script
-				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+			<JsonLd
+				data={[
+					jsonLd,
+					breadcrumbList([
+						{ name: "Podcasts", path: "/podcasts" },
+						{ name: podcast.title, path: `/podcasts/${podcast.podcastSlug}` },
+					]),
+				]}
 			/>
 			<div className="mt-8">
 				<h2 className="text-xl font-semibold mb-4">Latest Episodes</h2>

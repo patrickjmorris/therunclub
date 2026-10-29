@@ -18,6 +18,8 @@ import { getGearByAthleteId } from "@/lib/db/queries/gear";
 import { Skeleton } from "@/components/ui/skeleton";
 import { metaDescription, pageMetadata } from "@/lib/seo";
 import { absoluteUrl } from "@/config/site";
+import { JsonLd } from "@/components/common/json-ld";
+import { breadcrumbList } from "@/lib/seo";
 
 // Route segment config
 export const dynamic = "force-static";
@@ -198,24 +200,30 @@ export default async function AthletePage({
 		"@context": "https://schema.org",
 		"@type": "Person",
 		name: athlete.name,
-		bio: athlete.bio,
-		nationality: athlete.countryName,
-		image: athlete.imageUrl,
+		description: athlete.bio || undefined,
+		nationality: athlete.countryName
+			? { "@type": "Country", name: athlete.countryName }
+			: undefined,
+		image: athlete.imageUrl || undefined,
 		url: absoluteUrl(`/athletes/${athlete.slug}`),
 		sameAs: [
 			athlete.socialMedia?.twitter,
 			athlete.socialMedia?.instagram,
 			athlete.socialMedia?.facebook,
 			athlete.socialMedia?.website,
-		].filter((url): url is string => typeof url === "string"),
+		].filter((url): url is string => Boolean(url)),
 	};
 
 	return (
 		<>
-			<script
-				type="application/ld+json"
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: JSON data is generated server-side and safe
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+			<JsonLd
+				data={[
+					structuredData,
+					breadcrumbList([
+						{ name: "Athletes", path: "/athletes" },
+						{ name: athlete.name, path: `/athletes/${athlete.slug}` },
+					]),
+				]}
 			/>
 			<main className="min-h-screen bg-gray-50 dark:bg-gray-900/50">
 				<div className="container mx-auto py-8 px-4">

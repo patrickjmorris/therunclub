@@ -16,7 +16,9 @@ import { preloadLinks } from "@/components/common/link-preview/link-preview-prel
 import { AthleteMentions } from "@/components/athletes/athlete-mentions";
 import { AthleteReferences } from "@/components/athletes/athlete-references";
 import { MentionLoading } from "@/components/common/mention-loading";
-import { metaDescription, pageMetadata } from "@/lib/seo";
+import { breadcrumbList, metaDescription, pageMetadata } from "@/lib/seo";
+import { absoluteUrl } from "@/config/site";
+import { JsonLd } from "@/components/common/json-ld";
 
 // Dynamically import components
 const DynamicVideoPlayer = (await import("next/dynamic")).default(
@@ -257,8 +259,51 @@ export default async function VideoPage({ params }: VideoPageProps) {
 	// Start preloading the link previews
 	const preloadedData = preloadLinks(urls);
 
+	const videoPath = `/videos/${videoData.id}`;
+	const channelPath = `/videos/channels/${videoData.channelId}`;
+	const structuredData = [
+		{
+			"@context": "https://schema.org",
+			"@type": "VideoObject",
+			name: videoData.title,
+			description: metaDescription(
+				videoData.description,
+				`Watch ${videoData.title} on The Run Club`,
+			),
+			thumbnailUrl: [youtubeThumbnail(videoData)],
+			uploadDate: videoData.publishedAt
+				? new Date(videoData.publishedAt).toISOString()
+				: undefined,
+			duration: videoData.duration ?? undefined,
+			embedUrl: `https://www.youtube.com/embed/${videoData.youtubeVideoId}`,
+			url: absoluteUrl(videoPath),
+			author: videoData.channelTitle
+				? {
+						"@type": "Organization",
+						name: videoData.channelTitle,
+						url: absoluteUrl(channelPath),
+				  }
+				: undefined,
+			interactionStatistic: videoData.viewCount
+				? {
+						"@type": "InteractionCounter",
+						interactionType: { "@type": "WatchAction" },
+						userInteractionCount: Number(videoData.viewCount),
+				  }
+				: undefined,
+		},
+		breadcrumbList([
+			{ name: "Videos", path: "/videos" },
+			...(videoData.channelTitle
+				? [{ name: videoData.channelTitle, path: channelPath }]
+				: []),
+			{ name: videoData.title, path: videoPath },
+		]),
+	];
+
 	return (
 		<div className="container py-8">
+			<JsonLd data={structuredData} />
 			<DynamicVideoPlayer
 				videoId={videoData.youtubeVideoId}
 				title={videoData.title}

@@ -1760,6 +1760,18 @@ export interface AthleteCountry {
 	lastModified: string;
 }
 
+// World Athletics official names, mapped to what people search for.
+const COUNTRY_DISPLAY_NAMES: Record<string, string> = {
+	"PR of China": "China",
+	"Great Britain & N.I.": "Great Britain",
+	"DPR of Korea": "North Korea",
+	"Islamic Republic of Iran": "Iran",
+	"Hong Kong, China": "Hong Kong",
+	"Republic of North Macedonia": "North Macedonia",
+	"Republic of Yemen": "Yemen",
+	"Commonwealth of Dominica": "Dominica",
+};
+
 export const getAthleteCountries = unstable_cache(
 	async (): Promise<AthleteCountry[]> => {
 		const rows = await db
@@ -1785,8 +1797,8 @@ export const getAthleteCountries = unstable_cache(
 				? [
 						{
 							code: row.code,
-							name: row.name,
-							slug: slugify(row.name),
+							name: COUNTRY_DISPLAY_NAMES[row.name] ?? row.name,
+							slug: slugify(COUNTRY_DISPLAY_NAMES[row.name] ?? row.name),
 							count: row.count,
 							lastModified: new Date(row.lastModified).toISOString(),
 						},

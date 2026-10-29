@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import { contentTags, videos, episodes, podcasts } from "@/db/schema";
-import { eq, and, desc, sql, count, gte, inArray } from "drizzle-orm";
+import { eq, and, or, desc, sql, count, gte } from "drizzle-orm";
 import { subDays, format } from "date-fns";
 import { createDailyCache } from "@/lib/utils/cache";
 
@@ -93,8 +93,15 @@ export type TagHubType = "episode" | "video";
 export interface TagHub {
 	type: TagHubType;
 	tag: string;
+	// Largest variant of the same topic ("elite athlete" -> "elite athletes");
+	// only canonical hubs are listed, the rest point their canonical here.
+	canonicalTag: string;
 	count: number;
 	lastModified: string;
+}
+
+function topicKey(type: string, tag: string) {
+	return `${type}:${tag.toLowerCase().replace(/[\s-]+/g, "").replace(/s$/, "")}`;
 }
 
 export const getTagHubs = createDailyCache(
@@ -107,13 +114,30 @@ export const getTagHubs = createDailyCache(
 				lastModified: sql<string>`max(${contentTags.createdAt})`,
 			})
 			.from(contentTags)
-			.where(inArray(contentTags.contentType, ["episode", "video"]))
+			.where(
+				or(
+					and(
+						eq(contentTags.contentType, "episode"),
+						sql`exists (select 1 from ${episodes} where ${episodes.id} = ${contentTags.contentId})`,
+					),
+					and(
+						eq(contentTags.contentType, "video"),
+						sql`exists (select 1 from ${videos} where ${videos.id} = ${contentTags.contentId})`,
+					),
+				),
+			)
 			.groupBy(contentTags.contentType, contentTags.tag)
 			.having(gte(count(), MIN_ITEMS_PER_TAG))
 			.orderBy(desc(count()), contentTags.tag);
+		const canonicalByTopic = new Map<string, string>();
+		for (const row of rows) {
+			const key = topicKey(row.type, row.tag);
+			if (!canonicalByTopic.has(key)) canonicalByTopic.set(key, row.tag);
+		}
 		return rows.map((row) => ({
 			type: row.type as TagHubType,
 			tag: row.tag,
+			canonicalTag: canonicalByTopic.get(topicKey(row.type, row.tag)) ?? row.tag,
 			count: row.count,
 			lastModified: new Date(row.lastModified).toISOString(),
 		}));
@@ -121,6 +145,10 @@ export const getTagHubs = createDailyCache(
 	["tag-hubs"],
 	["tags"],
 );
+
+export function isCanonicalHub(hub: TagHub) {
+	return hub.tag === hub.canonicalTag;
+}
 
 export function tagHubPath(hub: Pick<TagHub, "type" | "tag">) {
 	return `/tags/${hub.type}/${encodeURIComponent(hub.tag)}`;

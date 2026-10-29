@@ -3,6 +3,7 @@ import {
 	type TagHub,
 	type TagHubType,
 	getTagHubs,
+	isCanonicalHub,
 	tagHubPath,
 } from "@/lib/services/tag-service";
 import { pageMetadata } from "@/lib/seo";
@@ -41,7 +42,9 @@ export default async function TagsPage() {
 				<TopicSection
 					key={type}
 					title={title}
-					hubs={hubs.filter((hub) => hub.type === type)}
+					hubs={hubs.filter(
+						(hub) => hub.type === type && isCanonicalHub(hub),
+					)}
 				/>
 			))}
 		</div>

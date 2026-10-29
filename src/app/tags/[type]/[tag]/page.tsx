@@ -54,7 +54,7 @@ export async function generateMetadata(props: TagPageProps): Promise<Metadata> {
 		)} running ${noun.toLowerCase()} about ${
 			hub.tag
 		} from top running ${source}, newest first.`,
-		path: tagHubPath(hub),
+		path: tagHubPath({ type: hub.type, tag: hub.canonicalTag }),
 	});
 }
 

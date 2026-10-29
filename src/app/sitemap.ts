@@ -9,7 +9,11 @@ import {
 } from "@/lib/services/athlete-service";
 import { getClubCities } from "@/lib/services/club-service";
 import { getLatestPodcastRanking } from "@/lib/services/podcast-service";
-import { getTagHubs, tagHubPath } from "@/lib/services/tag-service";
+import {
+	getTagHubs,
+	isCanonicalHub,
+	tagHubPath,
+} from "@/lib/services/tag-service";
 
 export const revalidate = 86400;
 
@@ -146,7 +150,7 @@ async function athleteEntries(): Promise<MetadataRoute.Sitemap> {
 
 async function tagEntries(): Promise<MetadataRoute.Sitemap> {
 	const hubs = await getTagHubs();
-	return hubs.map((hub) => ({
+	return hubs.filter(isCanonicalHub).map((hub) => ({
 		url: absoluteUrl(tagHubPath(hub)),
 		lastModified: new Date(hub.lastModified),
 	}));

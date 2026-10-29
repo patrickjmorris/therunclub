@@ -8,6 +8,12 @@ export const siteConfig = {
 		twitter: "https://twitter.com/therunclub",
 		github: "https://github.com/patrickjmorris/therunclub",
 	},
+	spotSports: {
+		name: "Spot Sports",
+		url: "https://www.spotsports.com",
+		utmSource: "therunclub",
+		utmMedium: "referral",
+	},
 };
 
 export type SiteConfig = typeof siteConfig;

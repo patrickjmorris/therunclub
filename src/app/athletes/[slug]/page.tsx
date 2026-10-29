@@ -1,3 +1,4 @@
+import { SpotSportsCta } from "@/components/spot-sports/spot-sports-cta";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db/client";
@@ -303,6 +304,8 @@ export default async function AthletePage({
 										/>
 									</Suspense>
 								)}
+
+								<SpotSportsCta placement="athlete_detail" />
 							</div>
 						</div>
 					</div>

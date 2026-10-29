@@ -133,7 +133,7 @@
     "@types/react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.5.3",
+    "@biomejs/biome": "^2.6.4",
     "@types/yargs": "^17.0.35",
     "drizzle-kit": "^0.31.11",
     "supabase": "^1.226.4",

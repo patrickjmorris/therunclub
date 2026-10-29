@@ -1,7 +1,10 @@
-import { getTopTags } from "@/lib/services/tag-service";
-import Link from "next/link";
 import { Tag } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+	type TagHub,
+	type TagHubType,
+	getTagHubs,
+	tagHubPath,
+} from "@/lib/services/tag-service";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -11,90 +14,59 @@ export const metadata = pageMetadata({
 	path: "/tags",
 });
 
-export const revalidate = 3600;
+export const dynamic = "force-static";
+export const revalidate = 86400;
+
+const SECTIONS: { type: TagHubType; title: string }[] = [
+	{ type: "episode", title: "Podcast episode topics" },
+	{ type: "video", title: "Video topics" },
+];
 
 export default async function TagsPage() {
-	// Get top tags for videos and episodes
-	const videoTags = await getTopTags("video", 365, 30); // Get top 30 video tags from the past year
-	const episodeTags = await getTopTags("episode", 365, 30); // Get top 30 episode tags from the past year
+	const hubs = await getTagHubs();
 
 	return (
 		<div className="container px-4 py-12 md:px-6 md:py-24">
-			<div className="mb-12">
+			<div className="mb-12 max-w-3xl">
 				<h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
-					Content Tags
+					Running Topics
 				</h1>
 				<p className="mt-4 text-xl text-muted-foreground">
-					Browse content by tags to discover videos and podcasts on specific
-					topics
+					Every topic with at least 10 podcast episodes or videos, from marathon
+					training to trail running. Most covered topics first.
 				</p>
 			</div>
 
-			{/* Video Tags Section */}
-			<section className="mb-16">
-				<div className="flex items-center mb-6">
-					<Tag className="mr-3 h-6 w-6" />
-					<h2 className="text-3xl font-bold">Video Tags</h2>
-				</div>
-
-				<div className="flex flex-wrap gap-3">
-					{videoTags.map((tag) => (
-						<Button
-							key={tag.tag}
-							variant="outline"
-							size="lg"
-							asChild
-							className="flex items-center gap-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-						>
-							<Link href={`/tags/video/${encodeURIComponent(tag.tag)}`}>
-								{tag.tag}
-								<span className="text-xs bg-muted px-2 py-1 rounded-full dark:bg-slate-700">
-									{tag.count}
-								</span>
-							</Link>
-						</Button>
-					))}
-
-					{videoTags.length === 0 && (
-						<p className="text-muted-foreground">
-							No video tags available yet.
-						</p>
-					)}
-				</div>
-			</section>
-
-			{/* Episode Tags Section */}
-			<section>
-				<div className="flex items-center mb-6">
-					<Tag className="mr-3 h-6 w-6" />
-					<h2 className="text-3xl font-bold">Podcast Episode Tags</h2>
-				</div>
-
-				<div className="flex flex-wrap gap-3">
-					{episodeTags.map((tag) => (
-						<Button
-							key={tag.tag}
-							variant="outline"
-							size="lg"
-							asChild
-							className="flex items-center gap-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-						>
-							<Link href={`/tags/episode/${encodeURIComponent(tag.tag)}`}>
-								{tag.tag}
-								<span className="text-xs bg-muted px-2 py-1 rounded-full dark:bg-slate-700">
-									{tag.count}
-								</span>
-							</Link>
-						</Button>
-					))}
-
-					{episodeTags.length === 0 && (
-						<p className="text-muted-foreground">
-							No episode tags available yet.
-						</p>
-					)}
-				</div>
-			</section>
+			{SECTIONS.map(({ type, title }) => (
+				<TopicSection
+					key={type}
+					title={title}
+					hubs={hubs.filter((hub) => hub.type === type)}
+				/>
+			))}
 		</div>
+	);
+}
+
+function TopicSection({ title, hubs }: { title: string; hubs: TagHub[] }) {
+	if (hubs.length === 0) return null;
+	return (
+		<section className="mb-16">
+			<div className="flex items-center mb-6">
+				<Tag className="mr-3 h-6 w-6" />
+				<h2 className="text-3xl font-bold">
+					{title}{" "}
+					<span className="text-muted-foreground text-xl">({hubs.length})</span>
+				</h2>
+			</div>
+			{/* Plain anchors keep 1,400+ links light in the HTML and RSC payload. */}
+			<ul className="columns-2 sm:columns-3 lg:columns-4 gap-6 text-sm [&_li]:py-1 [&_a:hover]:underline [&_small]:text-muted-foreground">
+				{hubs.map((hub) => (
+					<li key={hub.tag}>
+						<a href={tagHubPath(hub)}>{hub.tag}</a> <small>{hub.count}</small>
+					</li>
+				))}
+			</ul>
+		</section>
 	);
 }

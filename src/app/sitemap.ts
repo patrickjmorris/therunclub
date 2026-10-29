@@ -1,14 +1,7 @@
 import type { MetadataRoute } from "next";
-import { count, desc, eq, gte, sql } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import {
-	athletes,
-	channels,
-	contentTags,
-	episodes,
-	podcasts,
-	videos,
-} from "@/db/schema";
+import { athletes, channels, episodes, podcasts, videos } from "@/db/schema";
 import { absoluteUrl } from "@/config/site";
 import {
 	getAthleteCountries,
@@ -16,11 +9,11 @@ import {
 } from "@/lib/services/athlete-service";
 import { getClubCities } from "@/lib/services/club-service";
 import { getLatestPodcastRanking } from "@/lib/services/podcast-service";
+import { getTagHubs, tagHubPath } from "@/lib/services/tag-service";
 
 export const revalidate = 86400;
 
 const URLS_PER_FILE = 40000;
-const MIN_ITEMS_PER_TAG = 10;
 
 const STATIC_PATHS = [
 	"/",
@@ -152,20 +145,10 @@ async function athleteEntries(): Promise<MetadataRoute.Sitemap> {
 }
 
 async function tagEntries(): Promise<MetadataRoute.Sitemap> {
-	const rows = await db
-		.select({
-			type: contentTags.contentType,
-			tag: contentTags.tag,
-			lastModified: sql<Date>`max(${contentTags.createdAt})`,
-		})
-		.from(contentTags)
-		.where(sql`${contentTags.contentType} in ('video', 'episode')`)
-		.groupBy(contentTags.contentType, contentTags.tag)
-		.having(gte(count(), MIN_ITEMS_PER_TAG))
-		.orderBy(contentTags.contentType, contentTags.tag);
-	return rows.map((row) => ({
-		url: absoluteUrl(`/tags/${row.type}/${encodeURIComponent(row.tag)}`),
-		lastModified: row.lastModified ? new Date(row.lastModified) : undefined,
+	const hubs = await getTagHubs();
+	return hubs.map((hub) => ({
+		url: absoluteUrl(tagHubPath(hub)),
+		lastModified: new Date(hub.lastModified),
 	}));
 }
 

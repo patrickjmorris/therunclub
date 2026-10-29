@@ -312,47 +312,39 @@ class WebSubManager {
 			return { statusCode: 400, body: "Missing required parameters" };
 		}
 
-		if (mode !== "subscribe" && mode !== "unsubscribe") {
+		// This app never unsubscribes, so any unsubscribe verification is unsolicited.
+		if (mode === "unsubscribe") {
+			return { statusCode: 404, body: "Unsubscribe not requested" };
+		}
+
+		if (mode !== "subscribe") {
 			return { statusCode: 400, body: "Invalid mode" };
 		}
 
 		try {
-			if (mode === "subscribe") {
-				// Calculate expiration time
-				const expiresAt = new Date();
-				expiresAt.setSeconds(
-					expiresAt.getSeconds() + (leaseSeconds || DEFAULT_LEASE_SECONDS),
+			// Calculate expiration time
+			const expiresAt = new Date();
+			expiresAt.setSeconds(
+				expiresAt.getSeconds() + (leaseSeconds || DEFAULT_LEASE_SECONDS),
+			);
+
+			// Update subscription status to active
+			await db
+				.update(websubSubscriptions)
+				.set({
+					status: "active",
+					expiresAt,
+					leaseSeconds: leaseSeconds || DEFAULT_LEASE_SECONDS,
+					updatedAt: new Date(),
+				})
+				.where(
+					and(
+						eq(websubSubscriptions.topic, topic),
+						eq(websubSubscriptions.status, "pending"),
+					),
 				);
 
-				// Update subscription status to active
-				await db
-					.update(websubSubscriptions)
-					.set({
-						status: "active",
-						expiresAt,
-						leaseSeconds: leaseSeconds || DEFAULT_LEASE_SECONDS,
-						updatedAt: new Date(),
-					})
-					.where(
-						and(
-							eq(websubSubscriptions.topic, topic),
-							eq(websubSubscriptions.status, "pending"),
-						),
-					);
-
-				console.log(`Subscription verified for ${topic}`);
-			} else {
-				// Update subscription status to expired for unsubscribe
-				await db
-					.update(websubSubscriptions)
-					.set({
-						status: "expired",
-						updatedAt: new Date(),
-					})
-					.where(eq(websubSubscriptions.topic, topic));
-
-				console.log(`Unsubscription verified for ${topic}`);
-			}
+			console.log(`Subscription verified for ${topic}`);
 
 			// Return the challenge string to confirm verification
 			return { statusCode: 200, body: challenge };

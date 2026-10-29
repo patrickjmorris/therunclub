@@ -48,7 +48,6 @@
   },
   "browserslist": "defaults, not ie <= 11",
   "dependencies": {
-    "@browserbasehq/stagehand": "^2.5.9",
     "@hookform/resolvers": "^3.10.0",
     "@next/third-parties": "^16.4.3",
     "@radix-ui/react-alert-dialog": "^1.2.1",
@@ -107,6 +106,7 @@
     "nuqs": "^2.10.2",
     "openai": "^4.104.0",
     "p-retry": "^6.2.1",
+    "playwright": "^1.64.1",
     "postcss": "^8.5.32",
     "postgres": "^3.4.9",
     "react": "^19.3.1",

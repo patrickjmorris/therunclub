@@ -16,6 +16,8 @@ import { MentionLoading } from "@/components/common/mention-loading";
 import { GearRow } from "@/components/gear/gear-row";
 import { getGearByAthleteId } from "@/lib/db/queries/gear";
 import { Skeleton } from "@/components/ui/skeleton";
+import { metaDescription, pageMetadata } from "@/lib/seo";
+import { absoluteUrl } from "@/config/site";
 
 // Route segment config
 export const dynamic = "force-static";
@@ -108,42 +110,20 @@ export async function generateMetadata({
 		};
 	}
 
-	const description =
-		athlete.bio ||
-		`Profile page for ${athlete.name}${
-			athlete.countryName ? ` from ${athlete.countryName}` : ""
-		}`;
-	const imageUrl = athlete.imageUrl || "";
-
-	return {
+	return pageMetadata({
 		title: athlete.name,
-		description: description,
-		openGraph: {
-			type: "profile",
-			title: athlete.name,
-			description: description,
-			siteName: "The Run Club",
-			images: athlete.imageUrl
-				? [
-						{
-							url: imageUrl,
-							width: 350,
-							height: 350,
-							alt: athlete.name,
-						},
-				  ]
-				: [],
-		},
-		twitter: {
-			card: "summary_large_image",
-			title: athlete.name,
-			description: description,
-			images: athlete.imageUrl ? [imageUrl] : [],
-		},
-		alternates: {
-			canonical: `/athletes/${athlete.slug}`,
-		},
-	};
+		description: metaDescription(
+			athlete.bio,
+			`Profile page for ${athlete.name}${
+				athlete.countryName ? ` from ${athlete.countryName}` : ""
+			}`,
+		),
+		path: `/athletes/${athlete.slug}`,
+		images: athlete.imageUrl
+			? [{ url: athlete.imageUrl, alt: athlete.name }]
+			: undefined,
+		type: "profile",
+	});
 }
 
 // Skeleton for the athlete gear section
@@ -221,7 +201,7 @@ export default async function AthletePage({
 		bio: athlete.bio,
 		nationality: athlete.countryName,
 		image: athlete.imageUrl,
-		url: `https://therunclub.com/athletes/${athlete.slug}`,
+		url: absoluteUrl(`/athletes/${athlete.slug}`),
 		sameAs: [
 			athlete.socialMedia?.twitter,
 			athlete.socialMedia?.instagram,

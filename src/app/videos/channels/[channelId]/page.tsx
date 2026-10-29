@@ -9,6 +9,7 @@ import { sql, isNotNull, desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import { channels } from "@/db/schema";
 import dynamic from "next/dynamic";
+import { metaDescription, pageMetadata } from "@/lib/seo";
 
 // Dynamically import components
 const InfiniteVideoGrid = dynamic(
@@ -71,39 +72,17 @@ export async function generateMetadata({
 
 	if (!channel) return {};
 
-	const imageUrl = channel.thumbnailUrl || "";
-	const description =
-		channel.description?.substring(0, 155) ||
-		`Watch videos from ${channel.title} on The Run Club`;
-
-	return {
+	return pageMetadata({
 		title: channel.title,
-		description: description,
-		openGraph: {
-			type: "website",
-			title: channel.title,
-			description: description,
-			siteName: "The Run Club",
-			images: [
-				{
-					url: imageUrl,
-					width: 1200,
-					height: 630,
-					alt: channel.title,
-				},
-			],
-			locale: "en_US",
-		},
-		twitter: {
-			card: "summary_large_image",
-			title: channel.title,
-			description: description,
-			images: [imageUrl],
-		},
-		alternates: {
-			canonical: `/videos/channels/${resolvedParams.channelId}`,
-		},
-	};
+		description: metaDescription(
+			channel.description,
+			`Watch videos from ${channel.title} on The Run Club`,
+		),
+		path: `/videos/channels/${channel.id}`,
+		images: channel.thumbnailUrl
+			? [{ url: channel.thumbnailUrl, alt: channel.title }]
+			: undefined,
+	});
 }
 
 export default async function ChannelPage({ params }: ChannelPageProps) {

@@ -14,6 +14,7 @@ import { BasicEpisode } from "@/types/shared";
 import { createStandardCache } from "@/lib/utils/cache";
 import dynamicImport from "next/dynamic";
 import { nanoid } from "nanoid";
+import { metaDescription, pageMetadata } from "@/lib/seo";
 
 // Dynamically import the episode list component
 const DynamicEpisodeList = dynamicImport(
@@ -64,39 +65,16 @@ export async function generateMetadata({
 	if (!data || !data.podcast) return {};
 
 	const podcast = data.podcast;
-	const imageUrl = podcast.image || podcast.itunesImage || "";
-	const description =
-		podcast.description?.substring(0, 155) ||
-		`Listen to ${podcast.title} on The Run Club`;
-
-	return {
+	const imageUrl = podcast.image || podcast.itunesImage;
+	return pageMetadata({
 		title: podcast.title,
-		description: description,
-		openGraph: {
-			type: "website",
-			title: podcast.title,
-			description: description,
-			siteName: "The Run Club",
-			images: [
-				{
-					url: imageUrl,
-					width: 1200,
-					height: 630,
-					alt: podcast.title,
-				},
-			],
-			locale: "en_US",
-		},
-		twitter: {
-			card: "summary_large_image",
-			title: podcast.title,
-			description: description,
-			images: [imageUrl],
-		},
-		alternates: {
-			canonical: `/podcasts/${resolvedParams.podcast}`,
-		},
-	};
+		description: metaDescription(
+			podcast.description,
+			`Listen to ${podcast.title} on The Run Club`,
+		),
+		path: `/podcasts/${podcast.podcastSlug}`,
+		images: imageUrl ? [{ url: imageUrl, alt: podcast.title }] : undefined,
+	});
 }
 
 export async function generateStaticParams() {

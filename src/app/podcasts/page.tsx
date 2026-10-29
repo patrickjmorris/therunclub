@@ -26,21 +26,14 @@ import {
 	AthleteMentionsSection,
 	AthleteMentionsSectionSkeleton,
 } from "@/components/athletes/AthleteMentionsSection";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-	title: "Running Podcasts | The Run Club",
+export const metadata: Metadata = pageMetadata({
+	title: "Running Podcasts",
 	description:
 		"Discover the latest episodes from your favorite running podcasts",
-	openGraph: {
-		title: "Running Podcasts | The Run Club",
-		description:
-			"Discover the latest episodes from your favorite running podcasts",
-		type: "website",
-	},
-	alternates: {
-		canonical: "/podcasts",
-	},
-};
+	path: "/podcasts",
+});
 
 interface PageProps {
 	searchParams: Promise<{ q?: string; category?: string }>;

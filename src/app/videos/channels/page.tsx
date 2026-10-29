@@ -5,17 +5,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Metadata } from "next";
 import { Globe, Play, Users, Video } from "lucide-react";
 import { getAllChannels } from "@/lib/services/video-service";
+import { pageMetadata } from "@/lib/seo";
 
 // Define metadata for SEO
-export const metadata: Metadata = {
-	title: "Running Channels | The Run Club",
+export const metadata: Metadata = pageMetadata({
+	title: "Running Channels",
 	description: "Discover the best running channels and content creators",
-	openGraph: {
-		title: "Running Channels | The Run Club",
-		description: "Discover the best running channels and content creators",
-		type: "website",
-	},
-};
+	path: "/videos/channels",
+});
 
 function formatCompactNumber(num: number): string {
 	if (num >= 1000000)

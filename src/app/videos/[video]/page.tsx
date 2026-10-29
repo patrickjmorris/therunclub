@@ -16,6 +16,7 @@ import { preloadLinks } from "@/components/common/link-preview/link-preview-prel
 import { AthleteMentions } from "@/components/athletes/athlete-mentions";
 import { AthleteReferences } from "@/components/athletes/athlete-references";
 import { MentionLoading } from "@/components/common/mention-loading";
+import { metaDescription, pageMetadata } from "@/lib/seo";
 
 // Dynamically import components
 const DynamicVideoPlayer = (await import("next/dynamic")).default(
@@ -84,6 +85,16 @@ function convertUrlsToLinks(text: string): string {
 	return text.replace(
 		urlRegex,
 		'<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+	);
+}
+
+function youtubeThumbnail(video: {
+	youtubeVideoId: string;
+	thumbnailUrl: string | null;
+}) {
+	return (
+		video.thumbnailUrl ??
+		`https://i.ytimg.com/vi/${video.youtubeVideoId}/hqdefault.jpg`
 	);
 }
 
@@ -156,19 +167,23 @@ export async function generateMetadata({
 	}
 
 	const { video: videoData } = data;
-
+	const metadata = pageMetadata({
+		title: videoData.title,
+		description: metaDescription(
+			videoData.description,
+			`Watch ${videoData.title} on The Run Club`,
+		),
+		path: `/videos/${videoData.id}`,
+		images: [{ url: youtubeThumbnail(videoData), alt: videoData.title }],
+		type: "video.other",
+	});
 	return {
-		title: `${videoData.title} | The Run Club`,
-		description: videoData.description ?? undefined,
+		...metadata,
 		keywords: videoData.tags,
 		openGraph: {
-			title: videoData.title,
-			description: videoData.description ?? undefined,
-			type: "video.other",
+			...metadata.openGraph,
 			videos: [
-				{
-					url: `https://youtube.com/watch?v=${videoData.youtubeVideoId}`,
-				},
+				{ url: `https://www.youtube.com/watch?v=${videoData.youtubeVideoId}` },
 			],
 		},
 	};

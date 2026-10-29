@@ -28,6 +28,7 @@ import { LinkPreviewErrorBoundary } from "@/components/common/link-preview/link-
 import { MoreContent } from "@/components/common/content/more-content";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { LinkPreviewClientWrapper } from "@/components/common/link-preview/link-preview-client-wrapper";
+import { metaDescription, pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-static";
 export const revalidate = 604800;
@@ -164,43 +165,21 @@ export async function generateMetadata({
 	}
 
 	const { episode, imageUrl } = data;
-	const title = `${episode.title} | ${episode.podcastTitle}`;
-	const description = episode.content
-		? `${episode.content.substring(0, 155).replace(/<[^>]*>/g, "")}...`
-		: `Listen to ${episode.title} on The Run Club`;
-
+	const metadata = pageMetadata({
+		title: `${episode.title} | ${episode.podcastTitle}`,
+		description: metaDescription(
+			episode.content,
+			`Listen to ${episode.title} on The Run Club`,
+		),
+		path: `/podcasts/${podcastSlug}/${episodeSlug}`,
+		images: imageUrl ? [{ url: imageUrl, alt: episode.title }] : undefined,
+		type: "article",
+	});
 	return {
-		title,
-		description,
+		...metadata,
 		openGraph: {
-			title,
-			description,
-			type: "article",
-			images: [
-				{
-					url: imageUrl,
-					width: 350,
-					height: 350,
-					alt: episode.title,
-				},
-			],
-			audio: episode.enclosureUrl
-				? [
-						{
-							url: episode.enclosureUrl,
-							type: "audio/mpeg",
-						},
-				  ]
-				: undefined,
-		},
-		twitter: {
-			card: "summary_large_image",
-			title,
-			description,
-			images: imageUrl ? [imageUrl] : undefined,
-		},
-		alternates: {
-			canonical: `/podcasts/${podcastSlug}/${episodeSlug}`,
+			...metadata.openGraph,
+			audio: [{ url: episode.enclosureUrl, type: "audio/mpeg" }],
 		},
 	};
 }

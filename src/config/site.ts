@@ -1,7 +1,9 @@
+const url = "https://www.therunclub.xyz";
+
 export const siteConfig = {
 	name: "The Run Club",
-	url: "https://www.therunclub.xyz",
-	ogImage: "https://therunclub.xyz/og.jpg",
+	url,
+	ogImage: `${url}/opengraph-image`,
 	description:
 		"The Run Club is a podcast about running, fitness, and everything in between.",
 	links: {

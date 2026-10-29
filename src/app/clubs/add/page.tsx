@@ -31,8 +31,6 @@ export default function AddClubPage() {
 		const formData = new FormData(form);
 		const text = formData.get("text");
 
-		console.log("Submitting form with text:", text);
-
 		try {
 			execute({ text: text as string });
 		} catch (error) {

@@ -46,24 +46,20 @@ function SubmitButton() {
 
 // Helper function to process YouTube channel URLs and handles
 function processYouTubeChannelInput(input: string): string {
-	console.log("Processing channel input:", input);
 	const trimmed = input.trim();
 
 	// Direct handle: @username
 	if (/^@[\w\.-]+$/.test(trimmed)) {
-		console.log("Direct handle format detected:", trimmed);
 		return trimmed;
 	}
 
 	// Username without @: add it
 	if (/^[\w\.-]+$/.test(trimmed) && !trimmed.startsWith("UC")) {
-		console.log("Adding @ to username:", trimmed);
 		return `@${trimmed}`;
 	}
 
 	// Channel ID: just return it
 	if (/^UC[\w-]{21,22}$/.test(trimmed)) {
-		console.log("Channel ID detected:", trimmed);
 		return trimmed;
 	}
 
@@ -71,7 +67,6 @@ function processYouTubeChannelInput(input: string): string {
 	if (trimmed.includes("youtube.com/@")) {
 		const match = trimmed.match(/youtube\.com\/@([\w\.-]+)/i);
 		if (match?.[1]) {
-			console.log("Extracted handle from URL:", match[1]);
 			return `@${match[1]}`;
 		}
 	}
@@ -81,12 +76,10 @@ function processYouTubeChannelInput(input: string): string {
 		/youtube\.com\/channel\/(UC[\w-]{21,22})/i,
 	);
 	if (channelMatch?.[1]) {
-		console.log("Extracted channel ID from URL:", channelMatch[1]);
 		return channelMatch[1];
 	}
 
 	// No transformation needed/possible, return as is
-	console.log("No transformation applied, returning as is");
 	return trimmed;
 }
 
@@ -177,7 +170,6 @@ export function ChannelImportDialog() {
 		newFormData.append("url", processedUrl);
 
 		// Log the processed URL
-		console.log("Submitting channel with processed URL:", processedUrl);
 
 		// Use startTransition to wrap the formAction call
 		startTransition(() => {

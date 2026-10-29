@@ -19,20 +19,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function UserNav() {
 	const { userProfile, loading, logout } = useAuth();
 
-	console.log(
-		"[UserNav] Rendering - Loading:",
-		loading,
-		"Profile:",
-		userProfile,
-	);
-
 	if (loading) {
-		console.log("[UserNav] Rendering Skeleton (loading is true)");
 		return <Skeleton className="h-8 w-8 rounded-full" />;
 	}
 
 	if (!userProfile) {
-		console.log("[UserNav] Rendering Login Button (loading false, no profile)");
 		return (
 			<Button variant="ghost" asChild>
 				<Link href="/login">Login</Link>
@@ -40,9 +31,6 @@ export function UserNav() {
 		);
 	}
 
-	console.log(
-		"[UserNav] Rendering Dropdown Menu (loading false, profile exists)",
-	);
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>

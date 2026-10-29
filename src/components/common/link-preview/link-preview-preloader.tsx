@@ -1,5 +1,3 @@
-"use server";
-
 import { fetchLinkPreviews } from "@/app/api/link-preview/actions";
 import { cache } from "react";
 

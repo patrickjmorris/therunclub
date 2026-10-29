@@ -399,17 +399,12 @@ class WebSubManager {
 			);
 		}
 
-		// Verify the notification signature if provided
-		if (signature) {
-			const isValid = this.verifySignature(
-				body,
-				signature,
-				subscription.secret,
-			);
-			if (!isValid) {
-				console.warn(`Invalid signature for topic: ${topic}`);
-				return { statusCode: 403, body: "Invalid signature" };
-			}
+		if (
+			!signature ||
+			!this.verifySignature(body, signature, subscription.secret)
+		) {
+			console.warn(`Missing or invalid signature for topic: ${topic}`);
+			return { statusCode: 403, body: "Invalid signature" };
 		}
 
 		try {

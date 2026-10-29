@@ -35,7 +35,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
 
 			// Upload new avatar if provided
 			if (avatarFile.size > 0) {
-				const result = await uploadAvatar(initialProfile.id, avatarFile);
+				const result = await uploadAvatar(avatarFile);
 				if (result.error) {
 					throw new Error(result.error);
 				}
@@ -43,7 +43,7 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
 			}
 
 			// Update profile
-			const result = await updateProfile(initialProfile.id, {
+			const result = await updateProfile({
 				fullName,
 				avatarUrl,
 			});

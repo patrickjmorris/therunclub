@@ -6,11 +6,10 @@ import { useQueryState } from "nuqs";
 import { useState, useEffect } from "react";
 import { type RunningClub } from "@/db/schema";
 import { ClubCard } from "./club-card";
-import type { OpenGraphData } from "@/lib/og";
 
 interface ClubFiltersProps {
 	cities: string[];
-	initialClubs: Array<RunningClub & { ogData: OpenGraphData | null }>;
+	initialClubs: RunningClub[];
 	cityHrefs: Record<string, string>;
 }
 
@@ -21,9 +20,7 @@ export function ClubFilters({
 }: ClubFiltersProps) {
 	const [city, setCity] = useQueryState("city");
 	const [filteredClubs, setFilteredClubs] =
-		useState<Array<RunningClub & { ogData: OpenGraphData | null }>>(
-			initialClubs,
-		);
+		useState<RunningClub[]>(initialClubs);
 
 	// Filter clubs client-side when city changes
 	useEffect(() => {
@@ -67,7 +64,6 @@ export function ClubFilters({
 					<ClubCard
 						key={club.id}
 						club={club}
-						ogData={club.ogData}
 						cityHref={cityHrefs[club.location.city]}
 					/>
 				))}

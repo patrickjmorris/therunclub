@@ -46,20 +46,3 @@ export function formatTime(seconds: number): string {
 	}
 	return `${m}:${s.toString().padStart(2, "0")}`;
 }
-
-// Calculate VDOT (VO2max estimate) using Daniels' Running Formula
-export function calculateVDOT(raceDistance: number, raceTime: number): number {
-	// Calculate velocity in meters per second
-	const velocity = raceDistance / raceTime;
-
-	// Calculate percent of VO2max using Daniels' formula
-	const percentVO2Max = -4.6 + 0.182258 * velocity + 0.000104 * velocity ** 2;
-
-	// Apply correction factors based on race duration
-	return (
-		percentVO2Max /
-		(0.8 +
-			0.1894393 * Math.exp(-0.012778 * raceTime) +
-			0.2989558 * Math.exp(-0.1932605 * raceTime))
-	);
-}

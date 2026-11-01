@@ -15,25 +15,6 @@ export const getClubsData = createWeeklyCache(
 	["clubs"],
 );
 
-// Get popular running clubs
-export const getPopularRunClubs = createWeeklyCache(
-	async () => {
-		return db
-			.select({
-				id: runningClubs.id,
-				clubName: runningClubs.clubName,
-				description: runningClubs.description,
-				location: runningClubs.location,
-				website: runningClubs.website,
-				socialMedia: runningClubs.socialMedia,
-			})
-			.from(runningClubs)
-			.limit(3);
-	},
-	["popular-clubs"],
-	["clubs"],
-);
-
 // Get filtered clubs by city
 export const getFilteredClubs = createWeeklyCache(
 	async (city: string | null) => {

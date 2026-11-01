@@ -189,40 +189,6 @@ export async function getVideoInfo(videoId: string): Promise<VideoInfo | null> {
 	});
 }
 
-// Add batch video fetching
-export async function getVideosInfo(videoIds: string[]): Promise<VideoInfo[]> {
-	try {
-		const response = await fetch(
-			`${YOUTUBE_HOST}/youtube/v3/videos?part=snippet,statistics&id=${videoIds.join(
-				",",
-			)}&key=${process.env.YOUTUBE_API_KEY}`,
-		);
-
-		if (!response.ok) {
-			throw new Error(`YouTube API error: ${response.statusText}`);
-		}
-
-		const data = await response.json();
-		return data.items;
-	} catch (err) {
-		console.error("Error fetching videos info:", err);
-		return [];
-	}
-}
-
-// Add rate limiting helper
-const RATE_LIMIT = 100; // Requests per day
-let requestCount = 0;
-const requestResetTime = Date.now() + 24 * 60 * 60 * 1000;
-
-function checkRateLimit() {
-	if (requestCount >= RATE_LIMIT) {
-		throw new Error("YouTube API rate limit exceeded");
-	}
-
-	requestCount++;
-}
-
 export async function getChannelInfo(
 	channelId: string,
 ): Promise<ChannelInfo | null> {
@@ -265,26 +231,6 @@ export async function getAllPlaylistItems(
 		}
 
 		return playlistItems;
-	} catch (err) {
-		console.log(err);
-	}
-
-	return null;
-}
-
-export async function getPlaylistItems(
-	playlistId: string,
-): Promise<PlaylistItem[] | null> {
-	try {
-		const response = await fetch(
-			`${YOUTUBE_HOST}/youtube/v3/playlistItems?part=snippet&maxResults=5&playlistId=${playlistId}&key=${process.env.YOUTUBE_API_KEY}`,
-		);
-
-		const data: { items: PlaylistItem[] } = await response.json();
-
-		const playlist5Items = data.items;
-
-		return playlist5Items;
 	} catch (err) {
 		console.log(err);
 	}

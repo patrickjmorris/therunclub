@@ -28,15 +28,6 @@ export const createCache = <Inputs extends unknown[], Output>(
 };
 
 /**
- * Creates a cache with short-lived revalidation (5 minutes)
- */
-export const createShortCache = <Inputs extends unknown[], Output>(
-	callback: (...args: Inputs) => Promise<Output>,
-	keyParts: string[],
-	tags?: string[],
-) => createCache(callback, keyParts, { revalidate: 300, tags });
-
-/**
  * Creates a cache with standard revalidation (1 hour)
  */
 export const createStandardCache = <Inputs extends unknown[], Output>(

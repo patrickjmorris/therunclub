@@ -1,14 +1,13 @@
 import { db } from "@/db/client";
 import { podcasts, episodes, type Episode, type Podcast } from "@/db/schema";
 import { webSubManager } from "@/lib/websub-manager";
-import { eq, sql, isNull } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Parser from "rss-parser";
-import { updatePodcastColors } from "@/lib/server/update-podcast-colors";
 import { createPodcastIndexClient } from "@/lib/podcast-index";
 import type { iTunesSearchResponse } from "@/lib/itunes-types";
 import { decode } from "html-entities";
 import { slugify } from "@/lib/utils";
-import { parseDate, safeDateParse } from "@/lib/date-utils";
+import { parseDate } from "@/lib/date-utils";
 import { optimizeImage } from "@/lib/image-utils";
 
 const BATCH_SIZE = 5;
@@ -817,34 +816,6 @@ export async function updatePodcastByFeedUrl(feedUrl: string) {
 
 	// Process the single podcast using the existing processPodcast function
 	return processPodcast(podcast, parser);
-}
-
-export async function updateAllPodcastColors() {
-	try {
-		// Get all podcasts without a vibrant color
-		const allPodcasts = await db
-			.select()
-			.from(podcasts)
-			.where(isNull(podcasts.vibrantColor));
-
-		// Update colors for each podcast
-		for (const podcast of allPodcasts) {
-			if (podcast.image) {
-				try {
-					console.log(`Updating colors for podcast ${podcast.id}`);
-					await updatePodcastColors(podcast.id, podcast.image);
-					console.log(`Successfully updated colors for podcast ${podcast.id}`);
-				} catch (error) {
-					console.error(`Error updating podcast ${podcast.id}:`, error);
-				}
-			}
-		}
-
-		console.log("Finished updating podcast colors");
-	} catch (error) {
-		console.error("Error updating podcast colors:", error);
-		process.exit(1);
-	}
 }
 
 export async function addNewPodcast(feedUrl: string) {

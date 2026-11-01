@@ -15,12 +15,10 @@ import {
 	sql,
 	and,
 	inArray,
-	like,
 	isNotNull,
 	ilike,
 	gte,
 	or,
-	notInArray,
 	not,
 	isNull,
 } from "drizzle-orm";
@@ -490,62 +488,6 @@ export const getAthleteRecentMentions = unstable_cache(
 	}, // 1 hour
 );
 
-export const getEpisodeAthleteReferences = unstable_cache(
-	async (episodeId: string, limit = 5) => {
-		// Get the highest confidence mention IDs for each athlete
-		const mentionIds = await db.execute<{ id: string }>(sql`
-			SELECT DISTINCT ON (athlete_id) id
-			FROM athlete_mentions
-			WHERE contentId = ${episodeId} AND contentType = 'podcast' 
-			ORDER BY athlete_id, confidence DESC
-			LIMIT ${limit}
-		`);
-
-		// Fetch the full details for these mentions
-		return db.query.athleteMentions.findMany({
-			where: inArray(
-				athleteMentions.id,
-				mentionIds.map((m) => m.id),
-			),
-			with: {
-				athlete: {
-					columns: {
-						id: true,
-						worldAthleticsId: true,
-						name: true,
-						imageUrl: true,
-						slug: true,
-						bio: true,
-					},
-				},
-			},
-			orderBy: [desc(athleteMentions.confidence)],
-		});
-	},
-	["episode-athlete-references"],
-	{ tags: ["mentions", "athletes"], revalidate: 3600 }, // 1 hour
-);
-
-export const getAthleteBySlug = unstable_cache(
-	async (slug: string) => {
-		return db.query.athletes.findFirst({
-			where: eq(athletes.slug, slug),
-			columns: {
-				id: true,
-				worldAthleticsId: true,
-				name: true,
-				slug: true,
-				imageUrl: true,
-				bio: true,
-				countryName: true,
-				countryCode: true,
-			},
-		});
-	},
-	["athlete-by-slug"],
-	{ tags: ["athletes"], revalidate: 3600 }, // 1 hour
-);
-
 export const getAthleteData = unstable_cache(
 	async (slug: string) => {
 		const athlete = await db.query.athletes.findFirst({
@@ -567,17 +509,6 @@ export const getAthleteData = unstable_cache(
 		tags: ["athletes", "honors", "results", "sponsors", "gear", "events"],
 		revalidate: 3600,
 	}, // 1 hour
-);
-
-export const getAllAthletes = unstable_cache(
-	async () => {
-		return db
-			.select({ slug: athletes.slug })
-			.from(athletes)
-			.where(isNotNull(athletes.slug));
-	},
-	["all-athletes"],
-	{ tags: ["athletes"], revalidate: 86400 }, // 24 hours
 );
 
 export const getOlympicGoldMedalists = unstable_cache(
@@ -675,137 +606,6 @@ export const getAthletesByCountry = unstable_cache(
 	},
 	["athletes-by-country"],
 	{ tags: ["athletes"], revalidate: 3600 * 24 * 30 }, // 30 days
-);
-
-interface GetAthletesQueryParams {
-	fromDate: string;
-	limit: number;
-	offset: number;
-	goldMedalistIds: string[];
-}
-
-export const getAllAthletesWithDisciplines = unstable_cache(
-	async ({
-		fromDate,
-		limit,
-		offset,
-		goldMedalistIds,
-	}: GetAthletesQueryParams) => {
-		const query = db
-			.select({
-				athlete: athletes,
-				disciplines: sql<
-					string[]
-				>`array_agg(DISTINCT ${athleteResults.discipline})`,
-			})
-			.from(athletes)
-			.leftJoin(
-				athleteResults,
-				and(
-					eq(athletes.worldAthleticsId, athleteResults.athleteId),
-					gte(athleteResults.date, fromDate),
-				),
-			)
-			.where(
-				or(
-					and(
-						isNotNull(athletes.worldAthleticsId),
-						inArray(athletes.worldAthleticsId, goldMedalistIds),
-					),
-					and(
-						isNotNull(athletes.worldAthleticsId),
-						notInArray(athletes.worldAthleticsId, goldMedalistIds),
-					),
-				),
-			)
-			.groupBy(athletes.id)
-			.orderBy(desc(athletes.name))
-			.limit(limit)
-			.offset(offset);
-
-		return query; // Removed await here as unstable_cache handles the promise
-	},
-	["all-athletes-with-disciplines"],
-	{ tags: ["athletes", "results"], revalidate: 3600 }, // 1 hour
-);
-
-export const getAthleteCount = unstable_cache(
-	async () => {
-		const result = await db
-			.select({
-				count: sql<number>`count(*)`.mapWith(Number),
-			})
-			.from(athletes);
-		return result[0]?.count ?? 0;
-	},
-	["athlete-count"],
-	{ tags: ["athletes"] },
-);
-
-// Search athletes with improved scoring
-export const searchAthletes = unstable_cache(
-	async (query: string, limit = 10) => {
-		const formattedQuery = query
-			.trim()
-			.split(/\s+/)
-			.map((term) => `${term}:*`)
-			.join(" & ");
-
-		return db
-			.select({
-				athlete: {
-					id: athletes.worldAthleticsId,
-					name: athletes.name,
-					imageUrl: athletes.imageUrl,
-					slug: athletes.slug,
-					bio: athletes.bio,
-				},
-				mentionCount: sql<number>`COUNT(DISTINCT ${athleteMentions.id})`,
-				resultCount: sql<number>`COUNT(DISTINCT ${athleteResults.id})`,
-				honorCount: sql<number>`COUNT(DISTINCT ${athleteHonors.id})`,
-				searchRank: sql<number>`ts_rank(
-				to_tsvector('english', 
-					${athletes.name} || ' ' || 
-					coalesce(${athletes.bio}, '')
-				),
-				to_tsquery('english', ${formattedQuery})
-			)`,
-			})
-			.from(athletes)
-			.leftJoin(
-				athleteMentions,
-				eq(athletes.worldAthleticsId, athleteMentions.athleteId),
-			)
-			.leftJoin(
-				athleteResults,
-				eq(athletes.worldAthleticsId, athleteResults.athleteId),
-			)
-			.leftJoin(
-				athleteHonors,
-				eq(athletes.worldAthleticsId, athleteHonors.athleteId),
-			)
-			.where(
-				sql`to_tsvector('english', 
-				${athletes.name} || ' ' || 
-				coalesce(${athletes.bio}, '')
-			) @@ to_tsquery('english', ${formattedQuery})`,
-			)
-			.groupBy(athletes.id)
-			.orderBy(
-				desc(
-					sql`
-					(${sql.raw("searchRank")} * 0.4) + 
-					(log(COUNT(DISTINCT ${athleteMentions.id}) + 1) * 0.3) +
-					(log(COUNT(DISTINCT ${athleteResults.id}) + COUNT(DISTINCT ${
-						athleteHonors.id
-					}) + 1) * 0.3)
-				`,
-				),
-			)
-			.limit(limit);
-	},
-	["search-athletes"],
-	{ tags: ["athletes", "mentions", "results", "honors"], revalidate: 600 }, // 10 minutes
 );
 
 // Import the athlete data from World Athletics API
@@ -1499,10 +1299,6 @@ export async function processEpisodeAthletes(episodeId: string) {
 	return processContentAthletes(episodeId, "podcast");
 }
 
-export async function processVideoAthletes(videoId: string) {
-	return processContentAthletes(videoId, "video");
-}
-
 export const getAllCategories = unstable_cache(
 	async () => {
 		try {
@@ -1523,156 +1319,6 @@ export const getAllCategories = unstable_cache(
 	["all-athlete-categories"],
 	{ tags: ["athleteCategories"], revalidate: 86400 }, // 24 hours
 );
-
-/**
- * Update existing athletes in the database
- */
-export async function updateExistingAthletes(limit?: number) {
-	const results = {
-		processed: 0,
-		errors: 0,
-		updated: 0,
-		skipped: 0,
-	};
-
-	try {
-		// Get existing athletes ordered by last update
-		const athletesToUpdate = await db
-			.select({
-				worldAthleticsId: athletes.worldAthleticsId,
-				name: athletes.name,
-				updatedAt: athletes.updatedAt,
-			})
-			.from(athletes)
-			.where(isNotNull(athletes.worldAthleticsId))
-			.orderBy(athletes.updatedAt)
-			.limit(limit || 50);
-
-		console.log(
-			`[Athlete Update] Found ${athletesToUpdate.length} athletes to update`,
-		);
-		// Process athletes in batches of 10
-		const BATCH_SIZE = 10;
-		for (let i = 0; i < athletesToUpdate.length; i += BATCH_SIZE) {
-			const batch = athletesToUpdate.slice(i, i + BATCH_SIZE);
-			console.log(
-				`[Athlete Update] Processing batch ${
-					Math.floor(i / BATCH_SIZE) + 1
-				}/${Math.ceil(athletesToUpdate.length / BATCH_SIZE)}`,
-			);
-
-			// Process batch concurrently
-			const batchResults = await Promise.allSettled(
-				batch.map(async (athlete) => {
-					if (!athlete.worldAthleticsId) {
-						console.log(
-							`[Athlete Update] Skipping athlete ${athlete.name} - no World Athletics ID`,
-						);
-						results.skipped++;
-						return;
-					}
-
-					try {
-						console.log(
-							`[Athlete Update] Processing ${athlete.name} (${athlete.worldAthleticsId})`,
-						);
-						const athleteData = await getAthleteFromWorldAthletics(
-							athlete.worldAthleticsId,
-						);
-
-						if (!athleteData) {
-							console.log(`[Athlete Update] No data found for ${athlete.name}`);
-							results.skipped++;
-							return;
-						}
-
-						// Update athlete basic info
-						await db
-							.update(athletes)
-							.set({
-								name: athleteData.name,
-								countryCode: athleteData.countryCode ?? null,
-								countryName: athleteData.countryName ?? null,
-								dateOfBirth: parseBirthDate(athleteData.dateOfBirth),
-								updatedAt: sql`CURRENT_TIMESTAMP`,
-							})
-							.where(eq(athletes.worldAthleticsId, athlete.worldAthleticsId));
-
-						// Update personal bests
-						if (athleteData.personalBests && athlete.worldAthleticsId) {
-							await Promise.all(
-								athleteData.personalBests.map(async (result) => {
-									const resultId = `${athlete.worldAthleticsId}-${result.discipline}-${result.date}`;
-									return db
-										.insert(athleteResults)
-										.values({
-											id: resultId,
-											athleteId: athlete.worldAthleticsId ?? "",
-											competitionName: result.eventName,
-											date: result.date,
-											discipline: result.discipline,
-											performance: result.mark,
-											place: null,
-											wind: null,
-										})
-										.onConflictDoNothing();
-								}),
-							);
-						}
-
-						// Update honors
-						if (athleteData.honours) {
-							await Promise.all(
-								athleteData.honours.flatMap((honor) =>
-									honor.results.map(async (result) => {
-										const honorId = `${athlete.worldAthleticsId}-${honor.categoryName}-${result.competition}-${result.discipline}`;
-										return db
-											.insert(athleteHonors)
-											.values({
-												id: honorId,
-												athleteId: athlete.worldAthleticsId ?? "",
-												categoryName: honor.categoryName,
-												competition: result.competition,
-												discipline: result.discipline,
-												mark: result.mark,
-												place: result.place,
-											})
-											.onConflictDoNothing();
-									}),
-								),
-							);
-						}
-
-						results.updated++;
-						console.log(
-							`[Athlete Update] Successfully updated ${athlete.name}`,
-						);
-					} catch (error) {
-						console.error(
-							`[Athlete Update] Error updating ${athlete.name}:`,
-							error,
-						);
-						results.errors++;
-					}
-				}),
-			);
-
-			results.processed += batch.length;
-
-			// Add delay between batches
-			if (i + BATCH_SIZE < athletesToUpdate.length) {
-				console.log("[Athlete Update] Waiting between batches...");
-				await new Promise((resolve) => setTimeout(resolve, 1000));
-			}
-		}
-	} catch (error) {
-		console.error("[Athlete Update] Fatal error during update:", error);
-		throw error;
-	}
-
-	console.log("[Athlete Update] Update complete:", results);
-	return results;
-}
 
 export type RecentlyMentionedAthlete = Pick<
 	typeof athletes.$inferSelect,

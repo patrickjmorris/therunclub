@@ -6,19 +6,9 @@ import {
 	type Episode,
 	podcastRankings,
 } from "@/db/schema";
-import { desc, ilike, sql, eq, and, like, isNotNull } from "drizzle-orm";
+import { desc, sql, eq, and, like, isNotNull } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { fetchTopRunningPodcasts } from "./taddy-service";
-
-// Get latest podcasts
-export async function getLatestPodcasts(limit = 30, offset = 0) {
-	return db
-		.select()
-		.from(podcasts)
-		.orderBy(desc(podcasts.lastBuildDate))
-		.limit(limit)
-		.offset(offset);
-}
 
 // Search podcasts
 export async function searchPodcasts(query: string, limit = 30) {
@@ -29,27 +19,6 @@ export async function searchPodcasts(query: string, limit = 30) {
 			sql`to_tsvector('english', ${podcasts.title} || ' ' || ${podcasts.description}) @@ to_tsquery('english', ${query})`,
 		)
 		.orderBy(desc(podcasts.lastBuildDate))
-		.limit(limit);
-}
-
-// Get podcast by ID
-export async function getPodcastById(podcastId: string) {
-	const [podcast] = await db
-		.select()
-		.from(podcasts)
-		.where(sql`${podcasts.id} = ${podcastId}`)
-		.limit(1);
-
-	return podcast;
-}
-
-// Get episodes for a podcast
-export async function getPodcastEpisodes(podcastId: string, limit = 30) {
-	return db
-		.select()
-		.from(episodes)
-		.where(sql`${episodes.podcastId} = ${podcastId}`)
-		.orderBy(desc(episodes.pubDate))
 		.limit(limit);
 }
 
@@ -103,155 +72,6 @@ export const getNewEpisodes = unstable_cache(
 	{ tags: ["episodes"], revalidate: 3600 }, // 1 hour in seconds
 );
 
-// Get last ten episodes
-export const getLastTenEpisodes = unstable_cache(
-	async (podcastId: string) => {
-		return db
-			.select({
-				id: episodes.id,
-				title: episodes.title,
-				pubDate: episodes.pubDate,
-				image: episodes.episodeImage,
-				podcastId: episodes.podcastId,
-				podcastTitle: podcasts.title,
-				podcastImage: podcasts.podcastImage,
-				itunesImage: podcasts.itunesImage,
-				duration: episodes.duration,
-				content: episodes.content,
-				episodeSlug: episodes.episodeSlug,
-				podcastSlug: podcasts.podcastSlug,
-				podcastAuthor: podcasts.author,
-				enclosureUrl: episodes.enclosureUrl,
-				explicit: episodes.explicit,
-			})
-			.from(episodes)
-			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-			.where(eq(episodes.podcastId, podcastId))
-			.orderBy(desc(episodes.pubDate))
-			.limit(10);
-	},
-	["last-ten-episodes"],
-	{ tags: ["episodes"], revalidate: 3600 },
-);
-
-// Get last episode
-export const getLastEpisode = unstable_cache(
-	async (podcastTitle: string) => {
-		return db
-			.select()
-			.from(episodes)
-			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-			.where(eq(podcasts.title, podcastTitle))
-			.orderBy(desc(episodes.pubDate))
-			.limit(1)
-			.then((results) => results[0] || null);
-	},
-	["last-episode"],
-	{ tags: ["episodes"], revalidate: 3600 },
-);
-
-// Get last episodes by podcast
-export const getLastEpisodesByPodcast = unstable_cache(
-	async () => {
-		const rankedEpisodes = db
-			.select({
-				podcastTitle: podcasts.title,
-				podcastId: podcasts.id,
-				podcastImage: podcasts.podcastImage,
-				itunesImage: podcasts.itunesImage,
-				episodeTitle: episodes.title,
-				episodeId: episodes.id,
-				episodePubDate: episodes.pubDate,
-				episodeSlug: episodes.episodeSlug,
-				podcastSlug: podcasts.podcastSlug,
-				rowNum:
-					sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as(
-						"rowNum",
-					),
-			})
-			.from(episodes)
-			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-			.as("ranked");
-
-		return db
-			.select({
-				podcastTitle: rankedEpisodes.podcastTitle,
-				podcastId: rankedEpisodes.podcastId,
-				podcastImage: rankedEpisodes.podcastImage,
-				itunesImage: rankedEpisodes.itunesImage,
-				episodeTitle: rankedEpisodes.episodeTitle,
-				episodeId: rankedEpisodes.episodeId,
-				episodePubDate: rankedEpisodes.episodePubDate,
-				episodeSlug: rankedEpisodes.episodeSlug,
-				podcastSlug: rankedEpisodes.podcastSlug,
-			})
-			.from(rankedEpisodes)
-			.where(sql`${rankedEpisodes.rowNum} = 1`);
-	},
-	["last-episodes-by-podcast"],
-	{ tags: ["podcasts", "episodes"], revalidate: 3600 },
-);
-
-// Get podcast metadata
-export const getPodcastMetadata = unstable_cache(
-	async (podcastId: string) => {
-		return db
-			.select({
-				title: podcasts.title,
-				description: podcasts.description,
-				image: podcasts.podcastImage,
-				itunesImage: podcasts.itunesImage,
-				author: podcasts.author,
-				itunesExplicit: podcasts.itunesExplicit,
-			})
-			.from(podcasts)
-			.where(eq(podcasts.id, podcastId))
-			.then((results) => results[0] || null);
-	},
-	["podcast-metadata"],
-	{ tags: ["podcasts"] },
-);
-
-// Get podcast and last episodes
-export const getPodcastAndLastEpisodes = unstable_cache(
-	async () => {
-		const lastEpisode = db
-			.select({
-				episodeId: episodes.id,
-				podcastId: episodes.podcastId,
-				rowNum:
-					sql<number>`row_number() over (partition by ${episodes.podcastId} order by ${episodes.pubDate} desc)`.as(
-						"rowNum",
-					),
-			})
-			.from(episodes)
-			.groupBy(episodes.id, episodes.podcastId)
-			.as("lastEpisode");
-
-		return db
-			.select({
-				title: podcasts.title,
-				podcastId: podcasts.id,
-				image: podcasts.podcastImage,
-				itunesImage: podcasts.itunesImage,
-				episodeTitle: episodes.title,
-				episodeId: episodes.id,
-				episodePubDate: episodes.pubDate,
-				episodeSlug: episodes.episodeSlug,
-				podcastSlug: podcasts.podcastSlug,
-			})
-			.from(podcasts)
-			.innerJoin(
-				lastEpisode,
-				and(eq(podcasts.id, lastEpisode.podcastId), eq(lastEpisode.rowNum, 1)),
-			)
-			.innerJoin(episodes, eq(podcasts.id, episodes.podcastId))
-			.orderBy(desc(lastEpisode.rowNum));
-	},
-	["podcasts-and-last-episodes"],
-	{ tags: ["podcasts", "episodes"], revalidate: 3600 },
-);
-
 // Get all podcasts and last episodes
 export const getAllPodcastAndLastEpisodes = unstable_cache(
 	async () => {
@@ -293,23 +113,6 @@ export const getAllPodcastAndLastEpisodes = unstable_cache(
 	},
 	["all-podcasts-with-last-episodes"],
 	{ tags: ["podcasts", "episodes"], revalidate: 3600 }, // 1 hour in seconds
-);
-
-// Get episode titles
-export const getEpisodeTitles = unstable_cache(
-	async (podcastId: string) => {
-		return db
-			.select({
-				id: episodes.id,
-				title: episodes.title,
-			})
-			.from(episodes)
-			.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id))
-			.where(eq(episodes.podcastId, podcastId))
-			.orderBy(desc(episodes.pubDate));
-	},
-	["episode-titles"],
-	{ tags: ["episodes"], revalidate: 3600 },
 );
 
 // Episode slugs are only unique within a podcast.

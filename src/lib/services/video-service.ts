@@ -1,9 +1,8 @@
 import { db } from "@/db/client";
 import { isUuid } from "@/lib/utils";
 import { videos, channels, type Video, type Channel } from "@/db/schema";
-import { desc, eq, ilike, sql, isNotNull } from "drizzle-orm";
+import { desc, eq, sql, isNotNull } from "drizzle-orm";
 import {
-	CHANNELS,
 	getChannelInfo,
 	getAllPlaylistItems,
 	getVideoInfo,
@@ -151,41 +150,6 @@ export async function getChannelVideos(
 		.offset(offset);
 }
 
-// Get videos with channel info
-export async function getVideosWithChannels(limit = 30) {
-	return db
-		.select({
-			video: videos,
-			channel: channels,
-		})
-		.from(videos)
-		.innerJoin(channels, eq(videos.channelId, channels.id))
-		.orderBy(desc(videos.publishedAt))
-		.limit(limit);
-}
-
-// Search videos with channel info
-export async function searchVideosWithChannels(query: string, limit = 30) {
-	return db
-		.select({
-			video: videos,
-			channel: channels,
-		})
-		.from(videos)
-		.innerJoin(channels, eq(videos.channelId, channels.id))
-		.where(
-			sql`to_tsvector('english', ${videos.title} || ' ' || ${videos.description}) @@ to_tsquery('english', ${query})`,
-		)
-		.orderBy(desc(videos.publishedAt))
-		.limit(limit);
-}
-
-// Types for the combined queries
-export interface VideoWithChannel {
-	video: Video;
-	channel: Channel;
-}
-
 // Process a single video efficiently
 export async function processVideo(
 	videoId: string,
@@ -267,63 +231,6 @@ export async function processVideo(
 	} catch (error) {
 		console.error(`Error processing video ${videoId}:`, error);
 		return { status: "error" as const, error };
-	}
-}
-
-// Add this helper function for processing selected videos
-async function processSelectedVideos(channelId: string, forceUpdate = false) {
-	console.log("\nProcessing selected videos for channel:", channelId);
-
-	try {
-		// Get all videos for this channel from our database
-		const existingVideos = await db
-			.select({
-				id: videos.id,
-				youtubeVideoId: videos.youtubeVideoId,
-				updatedAt: videos.updatedAt,
-			})
-			.from(videos)
-			.where(eq(videos.channelId, channelId));
-
-		if (!existingVideos.length) {
-			console.log("No videos found for channel");
-			return [];
-		}
-
-		console.log(`Found ${existingVideos.length} videos to process`);
-
-		// Process videos in batches of 50 (YouTube API limit)
-		const batchSize = 50;
-		const videoResults = [];
-
-		for (let i = 0; i < existingVideos.length; i += batchSize) {
-			const batch = existingVideos.slice(i, i + batchSize);
-			console.log(
-				`Processing batch ${i / batchSize + 1} of ${Math.ceil(
-					existingVideos.length / batchSize,
-				)}`,
-			);
-
-			// Process each video in the batch
-			for (const video of batch) {
-				const result = await processVideo(
-					video.youtubeVideoId,
-					channelId,
-					forceUpdate,
-				);
-				videoResults.push(result);
-			}
-
-			// Add a small delay between batches to avoid rate limiting
-			if (i + batchSize < existingVideos.length) {
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-		}
-
-		return videoResults;
-	} catch (error) {
-		console.error("Error processing selected videos:", error);
-		return [];
 	}
 }
 
@@ -611,24 +518,6 @@ export async function getChannelsNeedingUpdate(
 	return randomSample
 		? query.orderBy(sql`RANDOM()`).limit(limit)
 		: query.orderBy(channels.updatedAt).limit(limit);
-}
-
-// Add a function to update only selected videos
-export async function updateSelectedVideos(
-	options: {
-		limit?: number;
-		videosPerChannel?: number;
-		maxVideos?: number;
-		forceUpdate?: boolean;
-		minHoursSinceUpdate?: number;
-		randomSample?: boolean;
-	} = {},
-) {
-	return updateVideos({
-		...options,
-		updateByLastUpdated: true,
-		importTypeFilter: "selected_videos" as const,
-	});
 }
 
 // Update the updateVideos interface to include importTypeFilter

@@ -1,8 +1,6 @@
 import { db } from "@/db/client";
 import { videos, channels, podcasts, episodes } from "@/db/schema";
-import { desc, sql, asc } from "drizzle-orm";
-import DOMPurify from "isomorphic-dompurify";
-import { cache } from "react";
+import { desc, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { createWeeklyCache } from "@/lib/utils/cache";
 import { eq } from "drizzle-orm";
@@ -28,17 +26,6 @@ export type PodcastSearchResult = SearchResult & {
 	feedUrl: string | null;
 	lastBuildDate: Date | null;
 };
-
-// Helper function to strip HTML and limit text length
-function processContent(
-	content: string | null,
-	maxLength = 250,
-): string | null {
-	if (!content) return null;
-	// Strip HTML tags and get text content only
-	const textContent = DOMPurify.sanitize(content, { ALLOWED_TAGS: [] });
-	return textContent.substring(0, maxLength);
-}
 
 // Format the query for PostgreSQL full-text search
 function formatSearchQuery(query: string): string {
@@ -360,103 +347,6 @@ function prepareSearchQuery(query: string): string {
 	// Join words with & for AND logic
 	return words.join(" & ");
 }
-
-/**
- * Optimized universal search across podcasts, episodes, and videos
- * Uses plainto_tsquery for safer user input handling
- */
-export const universalSearch = createWeeklyCache(
-	async (query: string, limit = 30) => {
-		if (!query || query.trim().length < 2) {
-			return {
-				podcasts: [],
-				episodes: [],
-				videos: [],
-			};
-		}
-
-		const preparedQuery = prepareSearchQuery(query);
-
-		// Execute searches in parallel for better performance
-		const [podcastResults, episodeResults, videoResults] = await Promise.all([
-			// Podcast search
-			db
-				.select({
-					id: podcasts.id,
-					title: podcasts.title,
-					image: podcasts.podcastImage,
-					description: podcasts.description,
-					type: sql<string>`'podcast'`.as("type"),
-					rank: sql<number>`ts_rank(
-					to_tsvector('english', ${podcasts.title} || ' ' || COALESCE(${podcasts.description}, '')), 
-					to_tsquery('english', ${preparedQuery})
-				)`.as("rank"),
-				})
-				.from(podcasts)
-				.where(
-					sql`to_tsvector('english', ${podcasts.title} || ' ' || COALESCE(${podcasts.description}, '')) @@ to_tsquery('english', ${preparedQuery})`,
-				)
-				.orderBy(desc(sql<string>`rank`))
-				.limit(Number(limit)),
-
-			// Episode search
-			db
-				.select({
-					id: episodes.id,
-					title: episodes.title,
-					podcastId: episodes.podcastId,
-					podcastTitle: podcasts.title,
-					podcastImage: podcasts.podcastImage,
-					podcastSlug: podcasts.podcastSlug,
-					episodeSlug: episodes.episodeSlug,
-					pubDate: episodes.pubDate,
-					type: sql<string>`'episode'`.as("type"),
-					rank: sql<number>`ts_rank(
-					to_tsvector('english', ${episodes.title} || ' ' || COALESCE(${episodes.content}, '')), 
-					to_tsquery('english', ${preparedQuery})
-				)`.as("rank"),
-				})
-				.from(episodes)
-				.innerJoin(podcasts, eq(episodes.podcastId, podcasts.id)) // Use INNER JOIN instead of LEFT JOIN
-				.where(
-					sql`to_tsvector('english', ${episodes.title} || ' ' || COALESCE(${episodes.content}, '')) @@ to_tsquery('english', ${preparedQuery})`,
-				)
-				.orderBy(desc(sql<string>`rank`))
-				.limit(Number(limit)),
-
-			// Video search
-			db
-				.select({
-					id: videos.id,
-					title: videos.title,
-					description: videos.description,
-					thumbnailUrl: videos.thumbnailUrl,
-					channelTitle: channels.title,
-					publishedAt: videos.publishedAt,
-					type: sql<string>`'video'`.as("type"),
-					rank: sql<number>`ts_rank(
-					to_tsvector('english', ${videos.title} || ' ' || COALESCE(${videos.description}, '')), 
-					to_tsquery('english', ${preparedQuery})
-				)`.as("rank"),
-				})
-				.from(videos)
-				.innerJoin(channels, eq(videos.channelId, channels.id))
-				.where(
-					sql`to_tsvector('english', ${videos.title} || ' ' || COALESCE(${videos.description}, '')) @@ to_tsquery('english', ${preparedQuery})`,
-				)
-				.orderBy(desc(sql<string>`rank`))
-				.limit(Number(limit)),
-		]);
-
-		return {
-			podcasts: podcastResults,
-			episodes: episodeResults,
-			videos: videoResults,
-		};
-	},
-	["universal-search"],
-	["search"],
-);
 
 /**
  * Enhanced search for podcasts with ranking

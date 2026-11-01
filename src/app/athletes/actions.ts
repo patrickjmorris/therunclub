@@ -1,10 +1,9 @@
 "use server";
 
 import { db } from "@/db/client";
-import { athletes, athleteCategories } from "@/db/schema";
+import { athletes } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
 import { requireContentManager } from "@/lib/auth-utils";
 
 const createAthleteSchema = z.object({
@@ -25,11 +24,6 @@ const createAthleteSchema = z.object({
 			strava: z.string().optional(),
 		})
 		.optional(),
-});
-
-const categorySchema = z.object({
-	name: z.string().min(2, "Name must be at least 2 characters"),
-	description: z.string().optional(),
 });
 
 export async function createAthlete(data: z.infer<typeof createAthleteSchema>) {
@@ -88,52 +82,5 @@ export async function createAthlete(data: z.infer<typeof createAthleteSchema>) {
 			throw error;
 		}
 		throw new Error("Failed to create athlete");
-	}
-}
-
-export async function createCategory(data: z.infer<typeof categorySchema>) {
-	await requireContentManager();
-	try {
-		const validatedData = categorySchema.parse(data);
-		await db.insert(athleteCategories).values({
-			name: validatedData.name,
-			description: validatedData.description || null,
-		});
-		revalidatePath("/athletes");
-	} catch (error) {
-		console.error("Error creating category:", error);
-		throw new Error("Failed to create category");
-	}
-}
-
-export async function updateCategory(
-	id: string,
-	data: z.infer<typeof categorySchema>,
-) {
-	await requireContentManager();
-	try {
-		const validatedData = categorySchema.parse(data);
-		await db
-			.update(athleteCategories)
-			.set({
-				name: validatedData.name,
-				description: validatedData.description || null,
-			})
-			.where(eq(athleteCategories.id, id));
-		revalidatePath("/athletes");
-	} catch (error) {
-		console.error("Error updating category:", error);
-		throw new Error("Failed to update category");
-	}
-}
-
-export async function deleteCategory(id: string) {
-	await requireContentManager();
-	try {
-		await db.delete(athleteCategories).where(eq(athleteCategories.id, id));
-		revalidatePath("/athletes");
-	} catch (error) {
-		console.error("Error deleting category:", error);
-		throw new Error("Failed to delete category");
 	}
 }

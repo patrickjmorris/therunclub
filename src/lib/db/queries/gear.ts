@@ -1,8 +1,6 @@
 import { db } from "@/db/client";
 import {
 	gear,
-	selectGearSchema,
-	insertGearSchema,
 	NewGear,
 	Gear,
 	athleteGear,
@@ -20,12 +18,6 @@ import {
 	SQL,
 	AnyColumn,
 } from "drizzle-orm";
-
-// Function to get a gear item by its ID
-export async function getGearById(id: string): Promise<Gear | null> {
-	const result = await db.select().from(gear).where(eq(gear.id, id)).limit(1);
-	return result[0] || null;
-}
 
 // Function to get a gear item by its slug
 export async function getGearBySlug(slug: string): Promise<Gear | null> {

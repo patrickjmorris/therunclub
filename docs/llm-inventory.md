@@ -24,7 +24,7 @@ Owner is inferred: Patrick Morris is the only committer on these files, and ther
 
 ## Usage evidence
 
-No recorded use in the last 18 months. Each table's writes stop by May 2025, while content kept arriving.
+No recorded use in over 17 months. Each table's writes stop by May 2025, while content kept arriving.
 
 | Check | Result |
 |---|---|
@@ -48,7 +48,7 @@ The code is still live even though it looks unused. `/clubs/add` is linked from 
 
 `?model=` is not validated:
 - Anyone with either secret can run any model on our OpenAI key.
-- `batchSize` and `hours` have no cap, and `forceTag` retags content that already has tags.
+- `batchSize` and `hours` have no cap, and `skipTagged=false` retags content that already has tags. `forceTag` is accepted but has no effect.
 - Commit `8e0569a` (2026-10-28) added this auth helper and describes it as fixing a `Bearer undefined` bypass. Earlier exposure depended on whether `CRON_SECRET` was set in prod, which was not checked.
 
 **Club extraction: authenticated.** `requireContentManager` runs before the OpenAI call (`src/app/clubs/actions.ts:24`), so only admins and editors reach the model. The page itself is public.

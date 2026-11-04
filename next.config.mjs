@@ -15,8 +15,23 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	images: {
-		loader: "custom",
+		// Not loader: "custom": that turns off /_next/image on Vercel.
 		loaderFile: "./src/lib/image-loader.ts",
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "akzhyzwiwjxtjuirmqyx.supabase.co",
+				pathname: "/storage/v1/object/public/content-images/podcasts/**",
+			},
+			{
+				protocol: "https",
+				hostname: "akzhyzwiwjxtjuirmqyx.supabase.co",
+				pathname: "/storage/v1/object/public/athlete-images/**",
+			},
+		],
+		// Supabase sends no-cache on these objects. Vercel bills a transformation
+		// on every cache miss or stale read, so hold results for a month.
+		minimumCacheTTL: 2678400,
 	},
 	reactCompiler: true,
 	experimental: {

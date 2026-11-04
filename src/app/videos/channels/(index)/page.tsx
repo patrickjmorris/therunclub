@@ -7,6 +7,8 @@ import { Globe, Play, Users, Video } from "lucide-react";
 import { getAllChannels } from "@/lib/services/video-service";
 import { pageMetadata } from "@/lib/seo";
 
+export const revalidate = 3600;
+
 // Define metadata for SEO
 export const metadata: Metadata = pageMetadata({
 	title: "Running Channels",

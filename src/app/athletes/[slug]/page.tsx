@@ -6,15 +6,12 @@ import { eq, isNotNull } from "drizzle-orm";
 import { athleteHonors, athletes } from "@/db/schema";
 import { ProfileSection } from "./components/profile-section";
 import { AthleteProfile } from "./athlete-profile";
-import { SponsorsSection } from "./components/sponsors-section";
-import { GearSection } from "./components/gear-section";
 import { EventsSection } from "./components/events-section";
 import AthleteMentionsSection from "./components/mentions-section";
 import {
 	getAthleteCountries,
 	getAthleteData,
 } from "@/lib/services/athlete-service";
-import { canManageContent } from "@/lib/auth-utils";
 import { Suspense } from "react";
 import { MentionLoading } from "@/components/common/mention-loading";
 import { GearRow } from "@/components/gear/gear-row";
@@ -176,9 +173,8 @@ export default async function AthletePage({
 	params: Promise<{ slug: string }>;
 }) {
 	const resolvedParams = await params;
-	const [athlete, isAdmin, countries] = await Promise.all([
+	const [athlete, countries] = await Promise.all([
 		getAthleteData(resolvedParams.slug),
-		canManageContent(),
 		getAthleteCountries(),
 	]);
 
@@ -243,7 +239,6 @@ export default async function AthletePage({
 						{/* Profile Information */}
 						<div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-8">
 							<ProfileSection
-								athleteSlug={athlete.slug}
 								name={athlete.name}
 								bio={athlete.bio}
 								imageUrl={athlete.imageUrl}
@@ -252,7 +247,6 @@ export default async function AthletePage({
 								countryCode={athlete.countryCode}
 								socialMedia={athlete.socialMedia}
 								verified={athlete.verified ?? undefined}
-								isAdmin={isAdmin}
 							/>
 						</div>
 
@@ -260,7 +254,7 @@ export default async function AthletePage({
 						<div className="mt-8 lg:grid lg:grid-cols-12 lg:gap-8">
 							{/* Left column - Stats and Honors */}
 							<div className="lg:col-span-4">
-								<AthleteProfile athlete={athlete} isAdmin={isAdmin} />
+								<AthleteProfile athlete={athlete} />
 							</div>
 
 							{/* Right column - Sponsors, Gear, Events, Mentions */}
@@ -278,7 +272,6 @@ export default async function AthletePage({
 
 								{/* Events Section */}
 								<EventsSection
-									athleteSlug={athlete.slug}
 									events={
 										athlete.events?.map((event) => ({
 											// Ensure correct mapping based on actual event structure
@@ -293,8 +286,7 @@ export default async function AthletePage({
 											result: event.result,
 										})) ?? []
 									}
-									isAdmin={isAdmin}
-								/>
+									/>
 
 								{/* Mentions Section */}
 								{athlete.worldAthleticsId && (

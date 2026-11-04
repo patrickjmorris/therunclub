@@ -2,7 +2,6 @@ import { CommandMenu } from "@/components/common/command-menu";
 import { MainNav } from "@/components/common/nav/main-nav";
 import { MobileNav } from "@/components/common/mobile-nav";
 import { ModeToggle } from "@/components/common/mode-toggle";
-import { UserNav } from "@/components/common/nav/user-nav";
 
 export function SiteHeader() {
 	return (
@@ -16,7 +15,6 @@ export function SiteHeader() {
 					</div>
 
 					<div className="ml-auto flex items-center space-x-4">
-						<UserNav />
 						<ModeToggle />
 					</div>
 				</div>

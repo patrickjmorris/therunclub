@@ -1,14 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { updateProfile, updateAthleteImage } from "../actions";
 import { X, Globe, Podcast } from "lucide-react";
 import { Facebook, Instagram, Youtube } from "@/components/common/brand-icons";
 import { convertToAlpha2 } from "@/lib/utils/country-codes";
@@ -34,12 +24,10 @@ interface SocialMedia {
 }
 
 interface ProfileSectionProps {
-	athleteSlug: string;
 	name: string;
 	bio?: string | null;
 	socialMedia?: SocialMedia | null;
 	verified?: boolean;
-	isAdmin?: boolean;
 	imageUrl?: string | null;
 	countryName?: string | null;
 	countryHref?: string;
@@ -47,58 +35,15 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({
-	athleteSlug,
 	name,
 	bio,
 	socialMedia,
 	verified,
-	isAdmin,
 	imageUrl,
 	countryName,
 	countryHref,
 	countryCode,
 }: ProfileSectionProps) {
-	const [isEditing, setIsEditing] = useState(false);
-	const [isLoadingImage, setIsLoadingImage] = useState(false);
-
-	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		const formData = new FormData(e.currentTarget);
-		const data = {
-			bio: formData.get("bio") as string,
-			socialMedia: {
-				twitter: formData.get("twitter") as string,
-				instagram: formData.get("instagram") as string,
-				facebook: formData.get("facebook") as string,
-				website: formData.get("website") as string,
-				youtube: formData.get("youtube") as string,
-				podcast: formData.get("podcast") as string,
-			},
-			verified: isAdmin ? formData.get("verified") === "on" : verified,
-			imageUrl: (formData.get("imageUrl") as string) || undefined,
-		};
-
-		try {
-			await updateProfile(athleteSlug, data);
-			setIsEditing(false);
-		} catch (error) {
-			console.error("Error updating profile:", error);
-			alert("Failed to update profile. Please try again.");
-		}
-	};
-
-	const handleFetchImage = async () => {
-		try {
-			setIsLoadingImage(true);
-			await updateAthleteImage(athleteSlug);
-		} catch (error) {
-			console.error("Error fetching image:", error);
-			alert("Failed to find a suitable image. Please try again later.");
-		} finally {
-			setIsLoadingImage(false);
-		}
-	};
-
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-start">
@@ -126,18 +71,6 @@ export function ProfileSection({
 						</p>
 					)}
 				</div>
-				{!isEditing && isAdmin && (
-					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							onClick={handleFetchImage}
-							disabled={isLoadingImage}
-						>
-							{isLoadingImage ? "Finding Image..." : "Find Image"}
-						</Button>
-						<Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
-					</div>
-				)}
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-8">
@@ -238,112 +171,6 @@ export function ProfileSection({
 					)}
 				</div>
 			</div>
-
-			{isEditing && (
-				<Card className="p-4">
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<div className="grid gap-4">
-							<div>
-								<Label htmlFor="bio">Bio</Label>
-								<Textarea
-									id="bio"
-									name="bio"
-									defaultValue={bio || ""}
-									rows={4}
-								/>
-							</div>
-							<div>
-								<Label htmlFor="twitter">X Username</Label>
-								<Input
-									id="twitter"
-									name="twitter"
-									defaultValue={socialMedia?.twitter || ""}
-									placeholder="@username"
-								/>
-							</div>
-							<div>
-								<Label htmlFor="instagram">Instagram Username</Label>
-								<Input
-									id="instagram"
-									name="instagram"
-									defaultValue={socialMedia?.instagram || ""}
-									placeholder="username"
-								/>
-							</div>
-							<div>
-								<Label htmlFor="facebook">Facebook URL</Label>
-								<Input
-									id="facebook"
-									name="facebook"
-									type="url"
-									defaultValue={socialMedia?.facebook || ""}
-									placeholder="https://facebook.com/..."
-								/>
-							</div>
-							<div>
-								<Label htmlFor="website">Personal Website</Label>
-								<Input
-									id="website"
-									name="website"
-									type="url"
-									defaultValue={socialMedia?.website || ""}
-									placeholder="https://..."
-								/>
-							</div>
-							<div>
-								<Label htmlFor="youtube">YouTube Channel</Label>
-								<Input
-									id="youtube"
-									name="youtube"
-									type="url"
-									defaultValue={socialMedia?.youtube || ""}
-									placeholder="https://youtube.com/..."
-								/>
-							</div>
-							<div>
-								<Label htmlFor="podcast">Podcast Link</Label>
-								<Input
-									id="podcast"
-									name="podcast"
-									type="url"
-									defaultValue={socialMedia?.podcast || ""}
-									placeholder="https://..."
-								/>
-							</div>
-							<div>
-								<Label htmlFor="imageUrl">Image URL</Label>
-								<Input
-									id="imageUrl"
-									name="imageUrl"
-									type="url"
-									defaultValue={imageUrl || ""}
-									placeholder="https://..."
-								/>
-							</div>
-							{isAdmin && (
-								<div className="flex items-center space-x-2">
-									<Switch
-										id="verified"
-										name="verified"
-										defaultChecked={verified}
-									/>
-									<Label htmlFor="verified">Verified Athlete</Label>
-								</div>
-							)}
-						</div>
-						<div className="flex justify-end space-x-2">
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => setIsEditing(false)}
-							>
-								Cancel
-							</Button>
-							<Button type="submit">Save Changes</Button>
-						</div>
-					</form>
-				</Card>
-			)}
 		</div>
 	);
 }

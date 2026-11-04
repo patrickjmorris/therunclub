@@ -12,7 +12,6 @@ type Athlete = InferSelectModel<typeof athletes> & {
 
 interface AthleteProfileProps {
 	athlete: Athlete;
-	isAdmin?: boolean;
 }
 
 function getMedalColor(place: string | null) {
@@ -29,7 +28,7 @@ function getMedalColor(place: string | null) {
 	}
 }
 
-export function AthleteProfile({ athlete, isAdmin }: AthleteProfileProps) {
+export function AthleteProfile({ athlete }: AthleteProfileProps) {
 	const [showAllHonors, setShowAllHonors] = useState(false);
 	const [showAllResults, setShowAllResults] = useState(false);
 	// console.log("Athlete honors:", athlete.honors);

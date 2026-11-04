@@ -7,7 +7,6 @@ import { fontSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import { Analytics } from "@/components/common/analytics";
 import { ThemeProvider } from "@/components/common/theme-provider";
-import { ServerAuthWrapper } from "@/components/auth/server-auth-provider";
 import { TailwindIndicator } from "@/components/common/tailwind-indicator";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SiteHeader } from "@/components/common/site-header";
@@ -105,29 +104,27 @@ export default function RootLayout({ children }: RootLayoutProps) {
 						fontSans.variable,
 					)}
 				>
-					<ServerAuthWrapper>
-						<ThemeProvider
-							attribute="class"
-							defaultTheme="system"
-							enableSystem
-							disableTransitionOnChange
-						>
-							<AudioProvider>
-								<SiteHeader />
-								<main className="relative flex flex-1 min-h-screen flex-col bg-background">
-									<NuqsAdapter>{children}</NuqsAdapter>
-								</main>
-								<SiteFooter />
-								<div className="fixed inset-x-0 bottom-0 z-50 lg:right-0 lg:left-auto lg:w-3/4">
-									<AudioPlayer />
-								</div>
-								<Toaster />
-								<TailwindIndicator />
-								<Analytics />
-								<SpeedInsights />
-							</AudioProvider>
-						</ThemeProvider>
-					</ServerAuthWrapper>
+					<ThemeProvider
+						attribute="class"
+						defaultTheme="system"
+						enableSystem
+						disableTransitionOnChange
+					>
+						<AudioProvider>
+							<SiteHeader />
+							<main className="relative flex flex-1 min-h-screen flex-col bg-background">
+								<NuqsAdapter>{children}</NuqsAdapter>
+							</main>
+							<SiteFooter />
+							<div className="fixed inset-x-0 bottom-0 z-50 lg:right-0 lg:left-auto lg:w-3/4">
+								<AudioPlayer />
+							</div>
+							<Toaster />
+							<TailwindIndicator />
+							<Analytics />
+							<SpeedInsights />
+						</AudioProvider>
+					</ThemeProvider>
 				</body>
 			</html>
 		</>

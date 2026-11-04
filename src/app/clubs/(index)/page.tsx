@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ClubFilters } from "@/app/clubs/club-filters";
 import { getClubCities, getClubsData } from "@/lib/services/club-service";
 import { pageMetadata } from "@/lib/seo";
@@ -34,9 +33,6 @@ export default async function ClubsPage() {
 						Find and join running clubs in your area
 					</p>
 				</div>
-				<Link href="/clubs/add">
-					<Button>Add Club</Button>
-				</Link>
 			</div>
 
 			<nav aria-label="Running clubs by city" className="mb-8">
